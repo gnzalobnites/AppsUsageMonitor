@@ -1,0 +1,5173 @@
+package com.gnzalobnites.appsusagemonitor
+
+// Agrega ESTE import al inicio del archivo
+import com.gnzalobnites.appsusagemonitor.banner.BannerManager
+
+// El resto del código permanece igual
+import android.accessibilityservice.AccessibilityService
+import android.content.BroadcastReceiver
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
+import android.util.Log
+import android.view.accessibility.AccessibilityEvent
+import kotlinx.coroutines.*
+import java.util.concurrent.TimeUnit
+import java.util.*
+
+class FocusAwareService : AccessibilityService() {
+
+    private lateinit var userPreferences: UserPreferences
+    private lateinit var database: AppDatabase
+    private lateinit var bannerManager: BannerManager
+    private var activeSession: UsageSession? = null
+    
+    // Variables para debounce
+    private var lastPackageName: String? = null
+    private var lastEventTime = 0L
+    private val DEBOUNCE_DELAY_MS = 500L
+    private val handler = Handler(Looper.getMainLooper())
+    private var debounceRunnable: Runnable? = null
+    
+    // Temporizador para evitar múltiples terminaciones rápidas
+    private var lastSessionEndTime = 0L
+    private val MIN_SESSION_END_INTERVAL_MS = 1000L
+    
+    // Job para corrutinas
+    private var serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
+    
+    // ViewModel simplificado
+    private lateinit var serviceViewModel: SimpleServiceViewModel
+    
+    // Broadcast Receiver para comunicación con BannerManager
+    private val bannerExitReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                "APP_EXIT_DETECTED" -> {
+                    val packageName = intent.getStringExtra("packageName")
+                    Log.d(TAG, "📡 BannerManager detectó salida de app: $packageName")
+                    
+                    // Asegurar que la sesión termina
+                    if (activeSession?.packageName == packageName) {
+                        endCurrentSession()
+                    }
+                }
+                "FORCE_HIDE_BANNER" -> {
+                    Log.d(TAG, "📡 Recibida orden de forzar ocultamiento de banner")
+                    // El BannerManager ya maneja esto internamente
+                }
+            }
+        }
+    }
+    
+    companion object {
+        const val TAG = "FocusAwareService"
+        
+        fun isServiceEnabled(context: Context): Boolean {
+            val serviceName = ComponentName(context, FocusAwareService::class.java)
+            val enabledServices = Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: ""
+            
+            val isEnabled = enabledServices.contains(serviceName.flattenToString())
+            Log.d(TAG, "Servicio habilitado: $isEnabled")
+            return isEnabled
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        serviceViewModel = SimpleServiceViewModel()
+        Log.d(TAG, "✅ SimpleServiceViewModel creado")
+    }
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        Log.d(TAG, "Servicio de accesibilidad CONECTADO")
+        
+        try {
+            userPreferences = UserPreferences.getInstance(this)
+            database = AppDatabase.getDatabase(this)
+            bannerManager = BannerManager(this)
+            bannerManager.initialize(userPreferences, database)
+            
+            // Registrar receiver para comunicación bidireccional
+            registerBannerReceiver()
+            
+            // Notificar que el servicio está listo
+            sendServiceStateBroadcast(true)
+            
+            // Verificar permiso de UsageStats
+            checkUsageStatsPermission()
+            
+            Log.d(TAG, "✅ Servicio completamente inicializado")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error en onServiceConnected: ${e.message}", e)
+        }
+    }
+
+    private fun registerBannerReceiver() {
+        try {
+            val filter = IntentFilter().apply {
+                addAction("APP_EXIT_DETECTED")
+                addAction("FORCE_HIDE_BANNER")
+            }
+            registerReceiver(bannerExitReceiver, filter)
+            Log.d(TAG, "✅ Receptor de banner registrado")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error registrando receptor: ${e.message}")
+        }
+    }
+
+    private fun checkUsageStatsPermission() {
+        if (!bannerManager.hasUsageStatsPermission()) {
+            Log.d(TAG, "⚠️ Permiso UsageStats no concedido - se recomienda para mayor precisión")
+            // No hacemos nada, el BannerManager usará fallback
+        } else {
+            Log.d(TAG, "✅ Permiso UsageStats concedido - máxima precisión")
+        }
+    }
+
+    private fun sendServiceStateBroadcast(isRunning: Boolean) {
+        val intent = Intent("SERVICE_STATE_CHANGED").apply {
+            putExtra("isRunning", isRunning)
+        }
+        sendBroadcast(intent)
+    }
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        
+        val packageName = event.packageName?.toString() ?: return
+        
+        val currentTime = System.currentTimeMillis()
+        
+        // Debounce: ignorar eventos muy seguidos del mismo paquete
+        if (packageName == lastPackageName && (currentTime - lastEventTime) < DEBOUNCE_DELAY_MS) {
+            Log.d(TAG, "⏳ Debounce: ignorando evento rápido para $packageName")
+            return
+        }
+        
+        lastPackageName = packageName
+        lastEventTime = currentTime
+        
+        // Cancelar debounce anterior
+        debounceRunnable?.let { handler.removeCallbacks(it) }
+        
+        // Usar debounce para procesar después de un pequeño delay
+        debounceRunnable = Runnable {
+            processAppChange(packageName)
+        }
+        handler.postDelayed(debounceRunnable!!, 300L)
+    }
+
+    private fun processAppChange(packageName: String) {
+        Log.d(TAG, "🔍 Procesando cambio a app: $packageName")
+        
+        // Filtrar apps del sistema
+        if (isSystemApp(packageName)) {
+            Log.d(TAG, "⚙️ App del sistema detectada: $packageName")
+            
+            if (shouldKeepSessionActive(packageName)) {
+                Log.d(TAG, "🛡️ App de sistema seguro - NO terminar sesión")
+                return
+            } else if (activeSession != null) {
+                Log.d(TAG, "📱 App del sistema relevante → terminar sesión")
+                endCurrentSession()
+            }
+            return
+        }
+
+        Log.d(TAG, "📱 App de usuario detectada: $packageName")
+
+        // Verificar si esta app está monitoreada
+        val isMonitored = userPreferences.showBanner && userPreferences.isMonitored(packageName)
+        
+        // Manejar cambios de app
+        handleAppTransition(packageName, isMonitored)
+        
+        // Actualizar ViewModel
+        updateViewModel(packageName)
+    }
+
+    private fun isSystemApp(packageName: String): Boolean {
+        val systemAppsToFilter = listOf(
+            "android",
+            "com.android.systemui",
+            this.packageName,
+            "com.google.android.inputmethod.latin",
+            "com.google.android.inputmethod",
+            "com.sec.android.inputmethod",
+            "com.samsung.android.honeyboard",
+            "com.samsung.android.svoiceime",
+            "com.samsung.android.clipboardsaveservice",
+            "com.swiftkey.swiftkeyconfigurator",
+            "com.touchtype.swiftkey",
+            "com.gboard",
+            "com.samsung.android.sidegesturepad",
+            "com.samsung.android.app.gestureservice",
+            "com.samsung.android.onehandedmode",
+            "com.samsung.android.edgepanel",
+            "com.samsung.android.edge.feature",
+            "com.samsung.android.service.edge",
+            "com.samsung.android.service.peoplestripe",
+            "com.samsung.android.service.gesture",
+            "com.samsung.android.app.cocktailbarservice",
+            "com.samsung.android.easysetup",
+            "com.android.systemui.quickpanel",
+            "com.android.systemui.qspanel",
+            "com.android.systemui.statusbar",
+            "com.android.systemui.notification",
+            "com.google.android.documentsui",
+            "com.android.documentsui",
+            "com.google.android.providers.media.module",
+            "com.sec.android.app.launcher",
+            "com.google.android.apps.nexuslauncher",
+            "com.android.launcher3",
+            "com.samsung.android.app.aodservice",
+            "com.samsung.android.bixby.agent",
+            "com.samsung.android.bixby.wakeup",
+            "com.samsung.android.visionintelligence",
+            "com.samsung.android.app.settings.bixby",
+            "com.samsung.android.app.routines",
+            "com.samsung.android.app.reminder",
+            "com.android.systemui.keyguard",
+            "com.samsung.android.kidsinstaller",
+            "com.samsung.android.app.screenrecorder",
+            "com.samsung.android.service.livedrawing",
+            "com.samsung.android.service.airview",
+            "com.samsung.android.app.cameraedge",
+            "com.samsung.android.service.aircommand"
+        )
+        
+        return systemAppsToFilter.contains(packageName)
+    }
+
+    private fun shouldKeepSessionActive(packageName: String): Boolean {
+        val systemAppsThatDontEndSession = listOf(
+            "com.google.android.inputmethod",
+            "com.sec.android.inputmethod",
+            "com.samsung.android.honeyboard",
+            "com.samsung.android.svoiceime",
+            "com.samsung.android.sidegesturepad",
+            "com.samsung.android.app.gestureservice",
+            "com.samsung.android.edgepanel",
+            "com.android.systemui",
+            "com.android.systemui.statusbar",
+            "com.android.systemui.notification",
+            "com.android.systemui.quickpanel",
+            "com.android.systemui.qspanel",
+            "com.android.systemui.keyguard",
+            this.packageName
+        )
+        
+        return systemAppsThatDontEndSession.any { packageName.contains(it) }
+    }
+
+    private fun handleAppTransition(packageName: String, isMonitored: Boolean) {
+        // 1. Siempre terminar sesión anterior si existe Y la nueva app es DIFERENTE
+        if (activeSession != null && activeSession?.packageName != packageName) {
+            Log.d(TAG, "🔄 Cambiando de app: ${activeSession?.packageName} → $packageName")
+            endCurrentSession()
+            
+            // Pequeña pausa para asegurar que la sesión anterior se termina
+            handler.postDelayed({
+                // 2. Si la nueva app está monitoreada, iniciar nueva sesión
+                if (isMonitored) {
+                    Log.d(TAG, "✅ App monitoreada → INICIAR nueva sesión: $packageName")
+                    startNewSession(packageName)
+                } else {
+                    Log.d(TAG, "📌 App NO monitoreada: $packageName (sin nueva sesión)")
+                }
+            }, 100)
+        } 
+        // 3. Si NO hay sesión activa y la app está monitoreada, iniciar sesión
+        else if (activeSession == null && isMonitored) {
+            Log.d(TAG, "✅ App monitoreada → INICIAR primera sesión: $packageName")
+            startNewSession(packageName)
+        }
+        // 4. Si es la MISMA app y está monitoreada, solo continuar
+        else if (activeSession?.packageName == packageName && isMonitored) {
+            Log.d(TAG, "📌 Continuando sesión para: $packageName")
+            
+            // Verificar si la sesión es muy vieja (más de 1 hora sin banner)
+            val sessionAge = System.currentTimeMillis() - activeSession!!.startTime
+            if (sessionAge > TimeUnit.HOURS.toMillis(1)) {
+                Log.d(TAG, "🔄 Sesión muy vieja (${sessionAge/60000}min), reiniciando...")
+                restartSession(packageName)
+            }
+        }
+    }
+
+    private fun startNewSession(packageName: String) {
+        val currentTime = System.currentTimeMillis()
+        
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = currentTime
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        
+        val todayDate = calendar.timeInMillis
+        
+        val newSession = UsageSession(
+            packageName = packageName,
+            startTime = currentTime,
+            endTime = null,
+            date = todayDate
+        )
+
+        serviceScope.launch {
+            try {
+                Log.d(TAG, "💾 Guardando sesión para: $packageName")
+                
+                val sessionId = withContext(Dispatchers.IO) {
+                    database.usageDao().insert(newSession)
+                }
+                
+                activeSession = newSession.copy(id = sessionId)
+                bannerManager.startSession(packageName)
+                
+                Log.d(TAG, "🎬 Sesión INICIADA con ID: $sessionId")
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error iniciando sesión: ${e.message}", e)
+            }
+        }
+    }
+
+    private fun restartSession(packageName: String) {
+        serviceScope.launch {
+            try {
+                endCurrentSession()
+                
+                delay(500) // Pequeña pausa
+                
+                startNewSession(packageName)
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error reiniciando sesión: ${e.message}", e)
+            }
+        }
+    }
+
+    private fun endCurrentSession() {
+        val currentTime = System.currentTimeMillis()
+        
+        // Evitar múltiples terminaciones rápidas
+        if ((currentTime - lastSessionEndTime) < MIN_SESSION_END_INTERVAL_MS) {
+            Log.d(TAG, "⏱️ Evitando terminación rápida consecutiva")
+            return
+        }
+        
+        activeSession?.let { session ->
+            if (session.endTime == null) {
+                val duration = currentTime - session.startTime
+                val updatedSession = session.copy(endTime = currentTime)
+                
+                serviceScope.launch {
+                    try {
+                        Log.d(TAG, "⏹️ Finalizando sesión para: ${session.packageName} (duración: ${duration}ms)")
+                        
+                        withContext(Dispatchers.IO) {
+                            database.usageDao().update(updatedSession)
+                        }
+                        
+                        activeSession = null
+                        lastSessionEndTime = currentTime
+                        bannerManager.endSession()
+                        
+                        Log.d(TAG, "✅ Sesión FINALIZADA y guardada")
+                        
+                    } catch (e: Exception) {
+                        Log.e(TAG, "❌ Error finalizando sesión: ${e.message}", e)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun updateViewModel(packageName: String) {
+        val currentSessionDuration = if (activeSession != null) {
+            System.currentTimeMillis() - activeSession!!.startTime
+        } else {
+            0L
+        }
+        
+        serviceViewModel.updateFromService(
+            currentPackage = packageName,
+            duration = currentSessionDuration,
+            bannerVisible = activeSession != null
+        )
+    }
+
+    // ======================================================
+    // MÉTODOS PARA BANNERS DE PRUEBA (compatibilidad)
+    // ======================================================
+
+    fun showTestBanner() {
+        handler.post {
+            try {
+                Log.d(TAG, "🧪 Mostrando banner de prueba")
+                bannerManager.showTestBanner()
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error en banner de prueba: ${e.message}")
+            }
+        }
+    }
+
+    fun showCustomBanner(message: String, duration: Int) {
+        handler.post {
+            try {
+                Log.d(TAG, "📨 Mostrando banner personalizado: '$message'")
+                bannerManager.showTestBanner(message) // Usamos showTestBanner con mensaje
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error en banner personalizado: ${e.message}")
+            }
+        }
+    }
+
+    // ======================================================
+    // CICLO DE VIDA DEL SERVICIO
+    // ======================================================
+
+    override fun onInterrupt() {
+        Log.d(TAG, "⚠️ Servicio interrumpido")
+        endCurrentSession()
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        Log.d(TAG, "🔌 Servicio desvinculado")
+        
+        try {
+            endCurrentSession()
+            bannerManager.cleanup()
+            
+            // Cancelar todas las corrutinas
+            serviceScope.cancel()
+            
+            // Desregistrar receiver
+            try {
+                unregisterReceiver(bannerExitReceiver)
+                Log.d(TAG, "✅ Receptor desregistrado")
+            } catch (e: Exception) {
+                Log.w(TAG, "⚠️ Error al desregistrar receptor: ${e.message}")
+            }
+            
+            // Limpiar handlers
+            debounceRunnable?.let { handler.removeCallbacks(it) }
+            handler.removeCallbacksAndMessages(null)
+            
+            // Notificar que el servicio se detuvo
+            sendServiceStateBroadcast(false)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error en onUnbind: ${e.message}", e)
+        }
+        
+        return super.onUnbind(intent)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d(TAG, "💥 Servicio destruido")
+        
+        try {
+            serviceScope.cancel()
+            bannerManager.cleanup()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error en onDestroy: ${e.message}")
+        }
+    }
+
+    // ======================================================
+    // CLASE VIEWMODEL SIMPLIFICADA
+    // ======================================================
+
+    class SimpleServiceViewModel {
+        private var currentPackage: String? = null
+        private var currentDuration: Long = 0L
+        private var bannerVisible: Boolean = false
+        
+        fun updateFromService(
+            currentPackage: String? = null,
+            duration: Long = 0L,
+            bannerVisible: Boolean = false,
+            totalTime: String = "0m"
+        ) {
+            currentPackage?.let { this.currentPackage = it }
+            if (duration > 0) this.currentDuration = duration
+            this.bannerVisible = bannerVisible
+            Log.d("SimpleServiceViewModel", "Actualizado: $currentPackage, $currentDuration ms")
+        }
+        
+        fun getCurrentPackage(): String? = currentPackage
+        fun getCurrentDuration(): Long = currentDuration
+        fun isBannerVisible(): Boolean = bannerVisible
+    }
+}// UsageSession.kt
+package com.gnzalobnites.appsusagemonitor
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import java.util.*
+
+/**
+ * Representa una sesión de uso de una aplicación.
+ *
+ * - startTime: momento en que el usuario entró a la app (en milisegundos desde Epoch).
+ * - endTime: momento en que salió (null si la sesión está activa).
+ * - packageName: identificador único de la app (ej. "com.instagram.android").
+ * - date: fecha del día (solo fecha, sin hora) para facilitar consultas diarias.
+ */
+@Entity(tableName = "usage_sessions")
+data class UsageSession(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val packageName: String,
+    val startTime: Long,
+    val endTime: Long? = null,
+    val date: Long // Se calculará en los constructores
+) {
+    companion object {
+        /**
+         * Calcula la fecha (sin hora) a partir de un timestamp
+         */
+        fun calculateDateFromTimestamp(timestamp: Long): Long {
+            return Calendar.getInstance().apply {
+                timeInMillis = timestamp
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+        }
+    }
+    
+    /**
+     * Constructor principal que calcula la fecha basada en startTime
+     */
+    constructor(
+        packageName: String,
+        startTime: Long,
+        endTime: Long? = null
+    ) : this(
+        id = 0,
+        packageName = packageName,
+        startTime = startTime,
+        endTime = endTime,
+        date = calculateDateFromTimestamp(startTime)
+    )
+    
+    /**
+     * Constructor para migración de datos existentes
+     */
+    constructor(
+        id: Long,
+        packageName: String,
+        startTime: Long,
+        endTime: Long? = null
+    ) : this(
+        id = id,
+        packageName = packageName,
+        startTime = startTime,
+        endTime = endTime,
+        date = calculateDateFromTimestamp(startTime)
+    )
+}
+package com.gnzalobnites.appsusagemonitor
+
+import android.content.Context
+import androidx.room.Database
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+
+@Database(
+    entities = [UsageSession::class],
+    version = 2,  // Cambiado de 1 a 2
+    exportSchema = false
+)
+abstract class AppDatabase : RoomDatabase() {
+
+    abstract fun usageDao(): UsageDao
+
+    companion object {
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
+        // Migración de versión 1 a 2: agregar columna 'date'
+        private val MIGRATION_1_2: Migration = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Agregar columna 'date' 
+                database.execSQL("""
+                    ALTER TABLE usage_sessions 
+                    ADD COLUMN date INTEGER NOT NULL DEFAULT 0
+                """)
+                
+                // Actualizar registros existentes
+                database.execSQL("""
+                    UPDATE usage_sessions 
+                    SET date = (
+                        startTime - (startTime % (1000 * 60 * 60 * 24))
+                    )
+                """)
+            }
+        }
+
+        fun getDatabase(context: Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "usage_database"
+                )
+                .addMigrations(MIGRATION_1_2)  // Agregar migración
+                .fallbackToDestructiveMigration()  // Para desarrollo
+                .build()
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
+}package com.gnzalobnites.appsusagemonitor
+
+import android.content.Context
+import android.content.SharedPreferences
+import android.util.Log
+import java.util.concurrent.TimeUnit
+
+class UserPreferences private constructor(context: Context) {
+
+    private val prefs: SharedPreferences = context.getSharedPreferences(
+        "user_preferences",
+        Context.MODE_PRIVATE
+    )
+
+    var showBanner: Boolean
+        get() = prefs.getBoolean(KEY_SHOW_BANNER, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_SHOW_BANNER, value).apply()
+            Log.d("UserPreferences", "showBanner establecido a: $value")
+        }
+
+    var bannerIntervalMinutes: Int
+        get() = prefs.getInt(KEY_BANNER_INTERVAL_MIN, 5)
+        set(value) = prefs.edit().putInt(KEY_BANNER_INTERVAL_MIN, value).apply()
+
+    var bannerDurationSeconds: Int
+        get() = prefs.getInt(KEY_BANNER_DURATION_SEC, 5)
+        set(value) = prefs.edit().putInt(KEY_BANNER_DURATION_SEC, value).apply()
+
+    var monitoredApps: Set<String>
+        get() = prefs.getStringSet(KEY_MONITORED_APPS, emptySet()) ?: emptySet()
+        set(value) = prefs.edit().putStringSet(KEY_MONITORED_APPS, value).apply()
+        
+    var isDarkMode: Boolean
+        get() = prefs.getBoolean(KEY_DARK_MODE, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_DARK_MODE, value).apply()
+            Log.d("UserPreferences", "Modo oscuro establecido a: $value")
+        }
+
+    // ✅ ELIMINADO: isDemoMode completamente
+
+    // =============================================
+    // ✅ CORREGIDO: Soporte para 10 segundos (-1)
+    // =============================================
+    fun getBannerIntervalMs(): Long {
+        val minutes = bannerIntervalMinutes
+        
+        return when {
+            minutes == -1 -> {
+                Log.d("UserPreferences", "⚙️ Intervalo: 10 segundos (10000ms)")
+                10000L
+            }
+            minutes == 0 -> {
+                Log.d("UserPreferences", "⚙️ Intervalo: 1 segundo (1000ms)")
+                1000L
+            }
+            else -> {
+                val ms = TimeUnit.MINUTES.toMillis(minutes.toLong())
+                Log.d("UserPreferences", "⚙️ Intervalo: $minutes min → ${ms}ms")
+                ms
+            }
+        }
+    }
+    
+    // =============================================
+    // ✅ CORREGIDO: Mostrar texto correcto para 10 segundos
+    // =============================================
+    fun getBannerIntervalDisplayText(): String {
+        return when (bannerIntervalMinutes) {
+            -1 -> "10 segundos"
+            0  -> "1 segundo (PRUEBAS)"
+            else -> "$bannerIntervalMinutes minutos"
+        }
+    }
+
+    fun clearMonitoredApps() {
+        prefs.edit().remove(KEY_MONITORED_APPS).apply()
+        Log.d("UserPreferences", "Apps monitoreadas limpiadas")
+    }
+    
+    fun isMonitored(packageName: String): Boolean {
+        return monitoredApps.contains(packageName)
+    }
+
+    fun addMonitoredApp(packageName: String) {
+        val newSet = monitoredApps.toMutableSet().apply { add(packageName) }
+        monitoredApps = newSet
+        Log.d("UserPreferences", "App agregada: $packageName (total: ${newSet.size})")
+    }
+
+    fun removeMonitoredApp(packageName: String) {
+        val newSet = monitoredApps.toMutableSet().apply { remove(packageName) }
+        monitoredApps = newSet
+        Log.d("UserPreferences", "App removida: $packageName (total: ${newSet.size})")
+    }
+    
+    fun clearAll() {
+        val editor = prefs.edit()
+        editor.clear()
+        editor.apply()
+        Log.d("UserPreferences", "Todas las preferencias han sido eliminadas")
+    }
+
+    companion object {
+        private const val KEY_SHOW_BANNER = "show_banner"
+        private const val KEY_BANNER_INTERVAL_MIN = "banner_interval_min"
+        private const val KEY_BANNER_DURATION_SEC = "banner_duration_sec"
+        private const val KEY_MONITORED_APPS = "monitored_apps"
+        private const val KEY_DARK_MODE = "dark_mode"
+        // ✅ ELIMINADO: KEY_DEMO_MODE
+
+        @Volatile
+        private var INSTANCE: UserPreferences? = null
+
+        fun getInstance(context: Context): UserPreferences {
+            return INSTANCE ?: synchronized(this) {
+                val instance = UserPreferences(context.applicationContext)
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
+}package com.gnzalobnites.appsusagemonitor
+
+import java.util.Calendar
+
+object TimeUtils {
+
+    fun getStartOfDay(timestamp: Long = System.currentTimeMillis()): Long {
+        val cal = Calendar.getInstance().apply {
+            timeInMillis = timestamp
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        return cal.timeInMillis
+    }
+
+    fun getEndOfDay(timestamp: Long = System.currentTimeMillis()): Long {
+        return getStartOfDay(timestamp) + 24 * 60 * 60 * 1000 - 1
+    }
+
+    fun isSameDay(t1: Long, t2: Long): Boolean {
+        val cal1 = Calendar.getInstance().apply { timeInMillis = t1 }
+        val cal2 = Calendar.getInstance().apply { timeInMillis = t2 }
+        return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+               cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
+    }
+    
+    // Nuevo: Verificar si un timestamp es de hoy
+    fun isToday(timestamp: Long): Boolean {
+        return isSameDay(timestamp, System.currentTimeMillis())
+    }
+}
+package com.gnzalobnites.appsusagemonitor
+
+import androidx.room.*
+
+@Dao
+interface UsageDao {
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(session: UsageSession): Long
+
+    @Update
+    suspend fun update(session: UsageSession)
+
+    @Query("SELECT * FROM usage_sessions WHERE packageName = :packageName AND endTime IS NULL ORDER BY startTime DESC LIMIT 1")
+    suspend fun getActiveSession(packageName: String): UsageSession?
+    
+    @Query("DELETE FROM usage_sessions WHERE startTime < :timestamp")
+    suspend fun deleteOldRecords(timestamp: Long)
+    
+    @Query("DELETE FROM usage_sessions WHERE endTime IS NULL")
+    suspend fun deleteIncompleteSessions()
+
+    // Obtener tiempo de UNA app específica hoy - ACTUALIZADO para usar columna 'date'
+    @Query("""
+        SELECT COALESCE(SUM(
+            CASE 
+                WHEN endTime IS NOT NULL THEN 
+                    (endTime - startTime)
+                ELSE 
+                    CASE 
+                        WHEN (:now - startTime) < 24 * 60 * 60 * 1000 THEN 
+                            (:now - startTime)  -- Sesión activa hoy
+                        ELSE 
+                            0  -- Sesión muy vieja, ignorar
+                    END
+            END
+        ), 0) 
+        FROM usage_sessions 
+        WHERE packageName = :packageName 
+        AND date = :dateMillis
+    """)
+    suspend fun getAppTimeToday(packageName: String, dateMillis: Long, now: Long): Long
+    
+    // Obtener tiempo de UNA app específica hoy - VERSIÓN ALTERNATIVA CON todayMidnight
+    @Query("""
+        SELECT COALESCE(SUM(
+            CASE 
+                WHEN endTime IS NOT NULL THEN 
+                    (endTime - startTime)
+                ELSE 
+                    CASE 
+                        WHEN startTime >= :todayMidnight THEN 
+                            (:currentTime - startTime)  -- Sesión activa hoy
+                        ELSE 
+                            0  -- Sesión vieja sin cerrar
+                    END
+        END
+        ), 0) 
+        FROM usage_sessions 
+        WHERE packageName = :packageName 
+        AND date = :todayMidnight
+    """)
+    suspend fun getAppTimeTodayWithMidnight(
+        packageName: String, 
+        todayMidnight: Long, 
+        currentTime: Long
+    ): Long
+
+    // REEMPLAZADO: Obtener tiempo de TODAS las apps monitoreadas hoy - VERSIÓN MEJORADA
+    @Query("""
+        SELECT COALESCE(SUM(
+            CASE 
+                WHEN endTime IS NOT NULL THEN 
+                    (endTime - startTime)
+                ELSE 
+                    CASE 
+                        WHEN startTime >= :todayMidnight THEN 
+                            (:currentTime - startTime)  -- Sesión activa hoy
+                        ELSE 
+                            0  -- Sesión vieja sin cerrar (de otro día)
+                    END
+            END
+        ), 0) 
+        FROM usage_sessions 
+        WHERE packageName IN (:monitoredPackages)
+        AND date = :todayMidnight
+    """)
+    suspend fun getTotalMonitoredTimeToday(
+        monitoredPackages: List<String>, 
+        todayMidnight: Long, 
+        currentTime: Long
+    ): Long
+
+    // ALIAS para getAppTimeToday (mantener compatibilidad con código existente)
+    suspend fun getCurrentAppTimeToday(packageName: String, dateMillis: Long, now: Long): Long {
+        return getAppTimeToday(packageName, dateMillis, now)
+    }
+
+    // Consultas básicas existentes - ACTUALIZADAS
+    @Query("SELECT * FROM usage_sessions WHERE endTime IS NULL")
+    suspend fun getActiveSessions(): List<UsageSession>
+    
+    @Query("SELECT * FROM usage_sessions WHERE packageName = :packageName ORDER BY startTime DESC LIMIT 1")
+    suspend fun getLatestSessionForApp(packageName: String): UsageSession?
+    
+    // Obtener sesiones de hoy por fecha exacta
+    @Query("SELECT * FROM usage_sessions WHERE date = :currentDate ORDER BY startTime DESC")
+    suspend fun getTodaySessions(currentDate: Long): List<UsageSession>
+    
+    // Obtener todas las sesiones de apps monitoreadas hoy - ACTUALIZADO
+    @Query("""
+        SELECT * FROM usage_sessions 
+        WHERE packageName IN (:monitoredPackages)
+        AND date = :dateMillis
+        ORDER BY startTime DESC
+    """)
+    suspend fun getTodayMonitoredSessions(monitoredPackages: List<String>, dateMillis: Long): List<UsageSession>
+    
+    // Verificar si hay datos en la base de datos (para debugging) - ACTUALIZADO
+    @Query("SELECT COUNT(*) FROM usage_sessions WHERE date = :dateMillis")
+    suspend fun getTodaySessionCount(dateMillis: Long): Int
+
+    // ==================== MÉTODOS PARA EL BOTÓN "TIEMPOS" ====================
+
+    // 1. Obtener sesiones entre dos fechas
+    @Query("""
+        SELECT * FROM usage_sessions 
+        WHERE startTime >= :startTime AND startTime <= :endTime 
+        ORDER BY startTime DESC
+    """)
+    suspend fun getSessionsBetween(startTime: Long, endTime: Long): List<UsageSession>
+
+    // 2. Obtener total de registros en la BD
+    @Query("SELECT COUNT(*) FROM usage_sessions")
+    suspend fun getTotalRecordsCount(): Int
+
+    // 3. Obtener fecha del registro más antiguo
+    @Query("SELECT MIN(startTime) FROM usage_sessions")
+    suspend fun getOldestRecordDate(): Long?
+
+    // 4. Obtener fecha del registro más reciente
+    @Query("SELECT MAX(startTime) FROM usage_sessions")
+    suspend fun getNewestRecordDate(): Long?
+
+    // 5. Obtener estadísticas por app para un día específico - ACTUALIZADO
+    @Query("""
+        SELECT 
+            packageName,
+            COUNT(*) as sessionCount,
+            SUM(
+                CASE 
+                    WHEN endTime IS NOT NULL THEN 
+                        (endTime - startTime)
+                    ELSE 
+                        CASE 
+                            WHEN (:now - startTime) < 24 * 60 * 60 * 1000 THEN 
+                                (:now - startTime)
+                            ELSE 
+                                0
+                        END
+                END
+            ) as totalTime
+        FROM usage_sessions 
+        WHERE date = :dateMillis
+        GROUP BY packageName
+        ORDER BY totalTime DESC
+    """)
+    suspend fun getDailyStatsByApp(dateMillis: Long, now: Long): List<DailyAppStats>
+    
+    // ==================== CONSULTAS PARA VERIFICACIÓN DE FECHAS ====================
+    
+    // Verificar que las fechas se almacenan correctamente
+    @Query("SELECT DISTINCT date FROM usage_sessions ORDER BY date DESC LIMIT 5")
+    suspend fun getRecentDates(): List<Long>
+    
+    // RENOMBRADO: Obtener sesiones en un rango de fechas (usando columna 'date')
+    @Query("""
+        SELECT * FROM usage_sessions 
+        WHERE date >= :todayMidnight AND date < :tomorrowMidnight
+        ORDER BY startTime DESC
+    """)
+    suspend fun getSessionsInDateRange(todayMidnight: Long, tomorrowMidnight: Long): List<UsageSession>
+    
+    // 6. Obtener estadísticas por app para un rango de fechas - NUEVO
+    @Query("""
+        SELECT 
+            packageName,
+            COUNT(*) as sessionCount,
+            SUM(
+                CASE 
+                    WHEN endTime IS NOT NULL THEN 
+                        (endTime - startTime)
+                    ELSE 
+                        0
+                END
+            ) as totalTime
+        FROM usage_sessions 
+        WHERE date >= :startDate AND date <= :endDate
+        GROUP BY packageName
+        ORDER BY totalTime DESC
+    """)
+    suspend fun getStatsByAppInRange(startDate: Long, endDate: Long): List<DailyAppStats>
+}
+
+// Clase de datos para estadísticas diarias por app
+data class DailyAppStats(
+    val packageName: String,
+    val sessionCount: Int,
+    val totalTime: Long
+)package com.gnzalobnites.appsusagemonitor
+
+import android.content.Intent
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.WindowManager
+import androidx.appcompat.app.AppCompatActivity
+
+class SplashActivity : AppCompatActivity() {
+    
+    companion object {
+        private const val SPLASH_DELAY_MS = 1500L // 1.5 segundos
+    }
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Configurar pantalla completa (sin barra de estado)
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            WindowManager.LayoutParams.FLAG_FULLSCREEN
+        )
+        
+        setContentView(R.layout.activity_splash)
+        
+        // Ocultar action bar si existe
+        supportActionBar?.hide()
+                
+        Handler(Looper.getMainLooper()).postDelayed({
+            navigateToMainActivity()
+        }, SPLASH_DELAY_MS)
+    }
+    
+    private fun navigateToMainActivity() {
+        val intent = Intent(this, MainNavActivity::class.java)
+        startActivity(intent)
+        
+        // Finalizar esta actividad para que no se pueda volver atrás
+        finish()
+        
+        // Transición suave
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
+    
+    // Evitar que el usuario pueda presionar Back durante el splash
+    override fun onBackPressed() {
+        // No hacer nada durante el splash
+    }
+}
+package com.gnzalobnites.appsusagemonitor
+
+import android.content.Context
+import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
+class DailyTimeCalculator(private val context: Context) {
+    
+    companion object {
+        const val TAG = "DailyTimeCalculator"
+    }
+    
+    private val database = AppDatabase.getDatabase(context)
+    private val userPreferences = UserPreferences.getInstance(context)
+    
+    /**
+     * Calcular y mostrar el tiempo total de apps monitoreadas hoy
+     */
+    fun calculateAndLogDailyTime() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val now = System.currentTimeMillis()
+                val monitoredApps = userPreferences.monitoredApps.toList()
+                
+                if (monitoredApps.isEmpty()) {
+                    Log.d(TAG, "📊 No hay apps monitoreadas")
+                    return@launch
+                }
+                
+                // Calcular tiempo total
+                val totalTime = database.usageDao().getTotalMonitoredTimeToday(
+                    monitoredApps,
+                    now,
+                    now
+                )
+                
+                // Calcular por cada app para detalle
+                val appDetails = mutableListOf<String>()
+                monitoredApps.forEach { packageName ->
+                    val appTime = database.usageDao().getAppTimeToday(
+                        packageName,
+                        now,
+                        now
+                    )
+                    if (appTime > 0) {
+                        appDetails.add("$packageName: ${formatTimeSimple(appTime)}")
+                    }
+                }
+                
+                // Log detallado
+                Log.d(TAG, "=".repeat(60))
+                Log.d(TAG, "📅 RESUMEN DIARIO - Apps monitoreadas: ${monitoredApps.size}")
+                Log.d(TAG, "⏱️ TIEMPO TOTAL HOY: ${formatTimeSimple(totalTime)}")
+                Log.d(TAG, "")
+                Log.d(TAG, "📱 DESGLOSE POR APP:")
+                appDetails.forEach { detail ->
+                    Log.d(TAG, "  • $detail")
+                }
+                Log.d(TAG, "=".repeat(60))
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error calculando tiempo diario: ${e.message}")
+            }
+        }
+    }
+    
+    /**
+     * Obtener el tiempo total de hoy para mostrar en el banner
+     */
+    suspend fun getTotalTimeForBanner(): BannerTimeInfo {
+        return try {
+            val now = System.currentTimeMillis()
+            val monitoredApps = userPreferences.monitoredApps.toList()
+            
+            val totalTime = if (monitoredApps.isNotEmpty()) {
+                database.usageDao().getTotalMonitoredTimeToday(monitoredApps, now, now)
+            } else {
+                0L
+            }
+            
+            BannerTimeInfo(
+                totalTimeToday = totalTime,
+                monitoredAppCount = monitoredApps.size,
+                timestamp = now
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Error obteniendo tiempo para banner: ${e.message}")
+            BannerTimeInfo()
+        }
+    }
+    
+    private fun formatTimeSimple(milliseconds: Long): String {
+        val totalSeconds = milliseconds / 1000
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+        
+        return if (hours > 0) {
+            String.format("%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            String.format("%d:%02d", minutes, seconds)
+        }
+    }
+}
+
+data class BannerTimeInfo(
+    val totalTimeToday: Long = 0L,
+    val monitoredAppCount: Int = 0,
+    val timestamp: Long = System.currentTimeMillis()
+)package com.gnzalobnites.appsusagemonitor
+
+import android.app.Application
+import androidx.appcompat.app.AppCompatDelegate
+import android.util.Log
+
+class AppUsageMonitorApp : Application() {
+    
+    companion object {
+        lateinit var instance: AppUsageMonitorApp
+            private set
+    }
+    
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+        
+        // Inicializar tema ANTES de cualquier actividad
+        initializeTheme()
+    }
+    
+    fun applyTheme(isDarkMode: Boolean) {
+        Log.d("AppUsageMonitorApp", "🎨 Aplicando tema: ${if (isDarkMode) "oscuro" else "claro"}")
+        
+        try {
+            // Guardar preferencia
+            val prefs = UserPreferences.getInstance(this)
+            prefs.isDarkMode = isDarkMode
+            
+            // Aplicar tema GLOBAL
+            val mode = if (isDarkMode) {
+                AppCompatDelegate.MODE_NIGHT_YES
+            } else {
+                AppCompatDelegate.MODE_NIGHT_NO
+            }
+            
+            AppCompatDelegate.setDefaultNightMode(mode)
+            Log.d("AppUsageMonitorApp", "✅ Tema aplicado: ${if (isDarkMode) "MODE_NIGHT_YES" else "MODE_NIGHT_NO"}")
+        } catch (e: Exception) {
+            Log.e("AppUsageMonitorApp", "Error aplicando tema: ${e.message}")
+        }
+    }
+    
+    private fun initializeTheme() {
+        try {
+            val prefs = UserPreferences.getInstance(this)
+            val isDarkMode = prefs.isDarkMode
+            
+            val mode = if (isDarkMode) {
+                AppCompatDelegate.MODE_NIGHT_YES
+            } else {
+                AppCompatDelegate.MODE_NIGHT_NO
+            }
+            
+            // IMPORTANTE: Debe llamarse ANTES de que se cree cualquier actividad
+            AppCompatDelegate.setDefaultNightMode(mode)
+            Log.d("AppUsageMonitorApp", "Tema inicial: ${if (isDarkMode) "oscuro" else "claro"}")
+        } catch (e: Exception) {
+            Log.e("AppUsageMonitorApp", "Error inicializando tema: ${e.message}")
+            // Fallback a tema claro
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+        }
+    }
+}package com.gnzalobnites.appsusagemonitor
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import kotlinx.coroutines.*
+import java.util.*
+import android.util.Log
+
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+    
+    // Usar SupervisorJob para manejar errores en coroutines
+    private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    
+    // Agregar Repository
+    private val repository: UsageRepository
+    
+    // LiveData para la configuración
+    private val _showBanner = MutableLiveData<Boolean>()
+    val showBanner: LiveData<Boolean> = _showBanner
+    
+    private val _bannerInterval = MutableLiveData<Int>()
+    val bannerInterval: LiveData<Int> = _bannerInterval
+    
+    private val _bannerDuration = MutableLiveData<Int>()
+    val bannerDuration: LiveData<Int> = _bannerDuration
+    
+    private val _monitoredApps = MutableLiveData<List<String>>()
+    val monitoredApps: LiveData<List<String>> = _monitoredApps
+    
+    private val _isDarkMode = MutableLiveData<Boolean>()
+    val isDarkMode: LiveData<Boolean> = _isDarkMode
+    
+    // LiveData para el estado del servicio
+    private val _serviceStatus = MutableLiveData<ServiceStatus>()
+    val serviceStatus: LiveData<ServiceStatus> = _serviceStatus
+    
+    // LiveData para el resumen diario
+    private val _dailySummary = MutableLiveData<String>()
+    val dailySummary: LiveData<String> = _dailySummary
+    
+    // LiveData para el estado de permisos
+    private val _permissionsStatus = MutableLiveData<PermissionsStatus>()
+    val permissionsStatus: LiveData<PermissionsStatus> = _permissionsStatus
+    
+    private val prefs: UserPreferences
+    
+    init {
+        // Inicializar Repository
+        val database = AppDatabase.getDatabase(application)
+        repository = UsageRepository.getInstance(database)
+        
+        prefs = UserPreferences.getInstance(application)
+        
+        // Inicializar todos los LiveData
+        _showBanner.value = prefs.showBanner
+        _bannerInterval.value = prefs.bannerIntervalMinutes
+        _bannerDuration.value = prefs.bannerDurationSeconds
+        _monitoredApps.value = prefs.monitoredApps.toList()
+        _isDarkMode.value = prefs.isDarkMode
+        
+        _serviceStatus.value = ServiceStatus(
+            isRunning = false,
+            overlayPermission = false,
+            accessibilityPermission = false
+        )
+        
+        _dailySummary.value = ""
+        
+        _permissionsStatus.value = PermissionsStatus(
+            overlayPermission = false,
+            accessibilityPermission = false,
+            allPermissionsGranted = false
+        )
+        
+        Log.d("MainViewModel", "✅ TODOS los LiveData inicializados")
+    }
+    
+    // AGREGAR ESTOS MÉTODOS QUE FALTAN:
+    
+    fun saveAllSettings() {
+        prefs.showBanner = _showBanner.value ?: false
+        prefs.bannerIntervalMinutes = _bannerInterval.value ?: 1
+        prefs.bannerDurationSeconds = _bannerDuration.value ?: 5
+        prefs.isDarkMode = _isDarkMode.value ?: false
+        
+        val currentApps = _monitoredApps.value ?: emptyList()
+        prefs.clearMonitoredApps()
+        currentApps.forEach { packageName ->
+            prefs.addMonitoredApp(packageName)
+        }
+        
+        Log.d("MainViewModel", "✅ Configuración guardada")
+    }
+    
+    fun updateShowBanner(show: Boolean) {
+        prefs.showBanner = show
+        _showBanner.value = show
+        Log.d("MainViewModel", "• Mostrar banner actualizado: $show")
+    }
+    
+    // ✅ CORREGIDO: Permitir -1 (10 segundos) y 0 (1 segundo)
+    fun updateBannerInterval(interval: Int) {
+        // Ya no forzamos a 1, guardamos el valor exacto
+        prefs.bannerIntervalMinutes = interval
+        _bannerInterval.value = interval
+        Log.d("MainViewModel", "• Intervalo del banner actualizado: $interval (código)")
+    }
+    
+    fun updateBannerDuration(duration: Int) {
+        val safeDuration = if (duration < 5) 5 else duration
+        prefs.bannerDurationSeconds = safeDuration
+        _bannerDuration.value = safeDuration
+        Log.d("MainViewModel", "• Duración del banner actualizada: $safeDuration seg")
+    }
+    
+    fun addMonitoredApp(packageName: String) {
+        prefs.addMonitoredApp(packageName)
+        _monitoredApps.value = prefs.monitoredApps.toList()
+        Log.d("MainViewModel", "• App agregada: $packageName")
+    }
+    
+    fun removeMonitoredApp(packageName: String) {
+        prefs.removeMonitoredApp(packageName)
+        _monitoredApps.value = prefs.monitoredApps.toList()
+        Log.d("MainViewModel", "• App removida: $packageName")
+    }
+    
+    fun updateDarkMode(isDark: Boolean) {
+        prefs.isDarkMode = isDark
+        _isDarkMode.value = isDark
+        Log.d("MainViewModel", "• Modo oscuro actualizado: $isDark")
+    }
+    
+    fun clearAllSettings() {
+        prefs.clearAll()
+        _showBanner.value = false
+        _bannerInterval.value = 1
+        _bannerDuration.value = 5
+        _monitoredApps.value = emptyList()
+        _isDarkMode.value = false
+        
+        Log.d("MainViewModel", "✅ TODA la configuración fue limpiada")
+    }
+    
+    fun loadDailyTimeSummary() {
+        viewModelScope.launch {
+            try {
+                _dailySummary.value = "Cargando..."
+                
+                val summary = withContext(Dispatchers.IO) {
+                    getDailyTimeSummaryInternal()
+                }
+                
+                _dailySummary.value = summary
+                Log.d("MainViewModel", "✅ Resumen diario cargado")
+                
+            } catch (e: Exception) {
+                _dailySummary.value = "Error al cargar resumen: ${e.message}"
+                Log.e("MainViewModel", "❌ Error al cargar resumen diario", e)
+            }
+        }
+    }
+    
+    private suspend fun getDailyTimeSummaryInternal(): String {
+    return withContext(Dispatchers.IO) {
+        try {
+            // Obtener apps monitoreadas
+            val monitoredPackages = prefs.monitoredApps.toList()
+            
+            // Obtener sesiones monitoreadas hoy
+            val sessions = repository.getTodayMonitoredSessions(monitoredPackages)
+            Log.d("MainViewModel", "• Sesiones monitoreadas hoy: ${sessions.size}")
+            
+            // Obtener tiempo total monitoreado hoy
+            val totalMonitoredTime = repository.getTotalMonitoredTimeToday(monitoredPackages)
+            
+            // Obtener estadísticas por app
+            val dailyStats = try {
+                repository.getDailyStatsOptimized()
+            } catch (e: Exception) {
+                Log.w("MainViewModel", "Usando fallback para estadísticas diarias: ${e.message}")
+                repository.getDailyStats()
+            }
+            
+            // Filtrar solo apps monitoreadas
+            val monitoredStats = dailyStats.filter { it.key in monitoredPackages }
+            
+            buildString {
+                append("📊 RESUMEN DIARIO\n")
+                append("Fecha: ${Date()}\n")
+                append("─".repeat(30))
+                append("\n\n")
+                
+                append("📈 ESTADÍSTICAS GENERALES\n")
+                append("• Apps monitoreadas: ${monitoredPackages.size}\n")
+                append("• Sesiones registradas: ${sessions.size}\n")
+                append("• Tiempo total monitoreado: ${formatTimeForDisplay(totalMonitoredTime)}\n\n")
+                
+                if (sessions.isNotEmpty() && monitoredStats.isNotEmpty()) {
+                    append("⏱️ TIEMPO POR APLICACIÓN MONITOREADA\n")
+                    
+                    val sortedApps = monitoredStats.entries.sortedByDescending { it.value }
+                    
+                    sortedApps.forEachIndexed { index, (packageName, appTime) ->
+                        val sessionCount = sessions.count { it.packageName == packageName }
+                        
+                        val appName = try {
+                            val pm = getApplication<Application>().packageManager
+                            val appInfo = pm.getApplicationInfo(packageName, 0)
+                            pm.getApplicationLabel(appInfo).toString()
+                        } catch (e: Exception) {
+                            packageName
+                        }
+                        
+                        val percentage = if (totalMonitoredTime > 0) {
+                            String.format("%.1f", (appTime.toDouble() / totalMonitoredTime * 100))
+                        } else "0.0"
+                        
+                        append("${index + 1}. $appName\n")
+                        append("   ▸ Tiempo: ${formatTimeForDisplay(appTime)} ($percentage%)\n")
+                        append("   ▸ Sesiones: $sessionCount\n")
+                    }
+                } else {
+                    append("⚠️ No hay datos de uso para apps monitoreadas hoy.\n")
+                    
+                    // Mostrar las apps monitoreadas sin datos
+                    if (monitoredPackages.isNotEmpty()) {
+                        append("\n📱 Apps monitoreadas:\n")
+                        monitoredPackages.forEachIndexed { index, packageName ->
+                            val appName = try {
+                                val pm = getApplication<Application>().packageManager
+                                val appInfo = pm.getApplicationInfo(packageName, 0)
+                                pm.getApplicationLabel(appInfo).toString()
+                            } catch (e: Exception) {
+                                packageName
+                            }
+                            append("${index + 1}. $appName\n")
+                        }
+                    }
+                }
+            }
+            
+        } catch (e: Exception) {
+            Log.e("MainViewModel", "❌ Error interno al obtener resumen", e)
+            "Error al obtener resumen: ${e.message}"
+        }
+    }
+}
+    
+    suspend fun getDatabaseStats(): DatabaseStats {
+        return withContext(Dispatchers.IO) {
+            try {
+                repository.getDatabaseStats()
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Error al obtener estadísticas de BD", e)
+                DatabaseStats(0, null, null)
+            }
+        }
+    }
+    
+    fun cleanOldRecords() {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.deleteOldRecords()
+                    Log.d("MainViewModel", "✅ Registros antiguos limpiados")
+                }
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "❌ Error al limpiar registros antiguos", e)
+            }
+        }
+    }
+    
+    fun cleanIncompleteSessions() {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.deleteIncompleteSessions()
+                    Log.d("MainViewModel", "✅ Sesiones incompletas limpiadas")
+                }
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "❌ Error al limpiar sesiones incompletas", e)
+            }
+        }
+    }
+    
+    suspend fun getActiveSession(packageName: String): UsageSession? {
+        return withContext(Dispatchers.IO) {
+            try {
+                repository.getActiveSession(packageName)
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Error al obtener sesión activa", e)
+                null
+            }
+        }
+    }
+    
+    private fun formatTimeForDisplay(milliseconds: Long): String {
+        val totalSeconds = milliseconds / 1000
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+        
+        return if (hours > 0) {
+            String.format("%d h %02d m %02d s", hours, minutes, seconds)
+        } else if (minutes > 0) {
+            String.format("%d m %02d s", minutes, seconds)
+        } else {
+            String.format("%d s", seconds)
+        }
+    }
+    
+    override fun onCleared() {
+        super.onCleared()
+        viewModelScope.cancel()
+        saveAllSettings()
+        Log.d("MainViewModel", "🔄 ViewModel limpiado - configuración guardada")
+    }
+    
+    // Data classes para estados
+    data class ServiceStatus(
+        val isRunning: Boolean,
+        val overlayPermission: Boolean,
+        val accessibilityPermission: Boolean
+    )
+    
+    data class PermissionsStatus(
+        val overlayPermission: Boolean,
+        val accessibilityPermission: Boolean,
+        val allPermissionsGranted: Boolean
+    )
+}
+
+// Fuera de la clase MainViewModel
+data class DatabaseStats(
+    val totalRecords: Int,
+    val oldestRecord: Long?,
+    val newestRecord: Long?
+)package com.gnzalobnites.appsusagemonitor
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import kotlinx.coroutines.*
+import java.util.Calendar
+
+class ServiceViewModel(application: Application) : AndroidViewModel(application) {
+    
+    private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    
+    private val _currentApp = MutableLiveData<String>()
+    val currentApp: LiveData<String> = _currentApp
+    
+    private val _sessionDuration = MutableLiveData<Long>()
+    val sessionDuration: LiveData<Long> = _sessionDuration
+    
+    private val _todayUsage = MutableLiveData<Map<String, Long>>()
+    val todayUsage: LiveData<Map<String, Long>> = _todayUsage
+    
+    private val _bannerVisible = MutableLiveData<Boolean>()
+    val bannerVisible: LiveData<Boolean> = _bannerVisible
+    
+    private val _lastBannerTime = MutableLiveData<Long>()
+    val lastBannerTime: LiveData<Long> = _lastBannerTime
+    
+    private val _serviceStatus = MutableLiveData<String>()
+    val serviceStatus: LiveData<String> = _serviceStatus
+    
+    // Método para actualizar desde el servicio
+    fun updateFromService(
+        currentPackage: String? = null,
+        duration: Long? = null,
+        bannerVisible: Boolean? = null
+    ) {
+        currentPackage?.let { _currentApp.value = it }
+        duration?.let { _sessionDuration.value = it }
+        bannerVisible?.let { _bannerVisible.value = it }
+        
+        _lastBannerTime.value = System.currentTimeMillis()
+    }
+    
+    // Función para actualizar la app actual
+    fun updateCurrentApp(packageName: String) {
+        _currentApp.value = packageName
+    }
+    
+    // Función para actualizar duración de sesión
+    fun updateSessionDuration(duration: Long) {
+        _sessionDuration.value = duration
+    }
+    
+    // Función para mostrar/ocultar banner
+    fun setBannerVisible(visible: Boolean) {
+        _bannerVisible.value = visible
+        if (visible) {
+            _lastBannerTime.value = System.currentTimeMillis()
+        }
+    }
+    
+    // Método para cargar estadísticas del día
+    fun loadTodayUsageStats() {
+        viewModelScope.launch {
+            try {
+                val stats = withContext(Dispatchers.IO) {
+                    loadUsageStatsFromDatabase()
+                }
+                _todayUsage.value = stats
+                _serviceStatus.value = "Estadísticas cargadas: ${stats.size} apps"
+            } catch (e: Exception) {
+                _serviceStatus.value = "Error cargando estadísticas: ${e.message}"
+            }
+        }
+    }
+    
+    // Función para cargar uso diario (alias para mantener compatibilidad)
+    fun loadTodayUsage() {
+        loadTodayUsageStats()
+    }
+    
+    private suspend fun loadUsageStatsFromDatabase(): Map<String, Long> {
+        return withContext(Dispatchers.IO) {
+            val database = AppDatabase.getDatabase(getApplication())
+            val dao = database.usageDao()
+            
+            // Calcular inicio del día
+            val calendar = Calendar.getInstance().apply {
+                timeInMillis = System.currentTimeMillis()
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val startOfDay = calendar.timeInMillis
+            
+            // Obtener sesiones del día
+            val sessions = dao.getSessionsBetween(startOfDay, System.currentTimeMillis())
+            
+            // Agrupar por app y sumar tiempos
+            sessions.groupBy { it.packageName }
+                .mapValues { entry ->
+                    entry.value.sumOf { session ->
+                        val end = session.endTime ?: System.currentTimeMillis()
+                        end - session.startTime
+                    }
+                }
+        }
+    }
+    
+    // Función helper para compatibilidad con versiones anteriores de Kotlin
+    private fun <T> Iterable<T>.sumOf(selector: (T) -> Long): Long {
+        var sum = 0L
+        for (element in this) {
+            sum += selector(element)
+        }
+        return sum
+    }
+    
+    override fun onCleared() {
+        super.onCleared()
+        viewModelScope.cancel()
+    }
+}package com.gnzalobnites.appsusagemonitor
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+
+class ViewModelFactory(private val application: android.app.Application) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
+            return MainViewModel(application) as T
+        } else if (modelClass.isAssignableFrom(ServiceViewModel::class.java)) {
+            return ServiceViewModel(application) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}package com.gnzalobnites.appsusagemonitor
+
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.util.*
+
+class UsageRepository(private val database: AppDatabase) {
+    
+    companion object {
+        @Volatile
+        private var INSTANCE: UsageRepository? = null
+        
+        fun getInstance(database: AppDatabase): UsageRepository {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: UsageRepository(database).also { INSTANCE = it }
+            }
+        }
+    }
+    
+    // Obtener sesiones por rango de tiempo
+    suspend fun getSessionsBetween(startTime: Long, endTime: Long): List<UsageSession> {
+        return withContext(Dispatchers.IO) {
+            database.usageDao().getSessionsBetween(startTime, endTime)
+        }
+    }
+    
+    // Obtener estadísticas diarias
+    suspend fun getDailyStats(): Map<String, Long> {
+        return withContext(Dispatchers.IO) {
+            val calendar = Calendar.getInstance().apply {
+                timeInMillis = System.currentTimeMillis()
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val startOfDay = calendar.timeInMillis
+            
+            val sessions = database.usageDao().getSessionsBetween(startOfDay, System.currentTimeMillis())
+            
+            val stats = mutableMapOf<String, Long>()
+            sessions.groupBy { it.packageName }.forEach { (packageName, sessionList) ->
+                val totalDuration = sessionList.map { session ->
+                    val end = session.endTime ?: System.currentTimeMillis()
+                    end - session.startTime
+                }.sum()
+                stats[packageName] = totalDuration
+            }
+            stats
+        }
+    }
+    
+    // Método alternativo más eficiente - CORREGIDO
+    suspend fun getDailyStatsOptimized(): Map<String, Long> {
+        return withContext(Dispatchers.IO) {
+            val calendar = Calendar.getInstance().apply {
+                timeInMillis = System.currentTimeMillis()
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val todayDate = calendar.timeInMillis
+            val now = System.currentTimeMillis()  // ← AGREGADO
+            
+            val dailyStats = database.usageDao().getDailyStatsByApp(todayDate, now)  // ← AHORA CON 2 PARÁMETROS
+            
+            dailyStats.associate { it.packageName to it.totalTime }
+        }
+    }
+    
+    // Obtener total de registros
+    suspend fun getTotalRecords(): Int {
+        return withContext(Dispatchers.IO) {
+            database.usageDao().getTotalRecordsCount()
+        }
+    }
+    
+    // Insertar nueva sesión
+    suspend fun insertSession(session: UsageSession) {
+        withContext(Dispatchers.IO) {
+            database.usageDao().insert(session)
+        }
+    }
+    
+    // Actualizar sesión existente
+    suspend fun updateSession(session: UsageSession) {
+        withContext(Dispatchers.IO) {
+            database.usageDao().update(session)
+        }
+    }
+    
+    // Obtener sesión activa
+    suspend fun getActiveSession(packageName: String): UsageSession? {
+        return withContext(Dispatchers.IO) {
+            database.usageDao().getActiveSession(packageName)
+        }
+    }
+    
+    // Obtener sesiones activas
+    suspend fun getActiveSessions(): List<UsageSession> {
+        return withContext(Dispatchers.IO) {
+            database.usageDao().getActiveSessions()
+        }
+    }
+    
+    // Limpiar registros antiguos (más de 30 días)
+    suspend fun deleteOldRecords() {
+        withContext(Dispatchers.IO) {
+            val thirtyDaysAgo = System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000)
+            database.usageDao().deleteOldRecords(thirtyDaysAgo)
+        }
+    }
+    
+    // Limpiar sesiones incompletas
+    suspend fun deleteIncompleteSessions() {
+        withContext(Dispatchers.IO) {
+            database.usageDao().deleteIncompleteSessions()
+        }
+    }
+    
+    // Obtener sesiones de hoy - YA CORREGIDO (solo un parámetro)
+    suspend fun getTodaySessions(): List<UsageSession> {
+        return withContext(Dispatchers.IO) {
+            val calendar = Calendar.getInstance().apply {
+                timeInMillis = System.currentTimeMillis()
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val todayDate = calendar.timeInMillis
+            
+            database.usageDao().getTodaySessions(todayDate) // ← Correcto: solo un parámetro
+        }
+    }
+    
+    // Obtener estadísticas de BD para debugging
+    suspend fun getDatabaseStats(): DatabaseStats {
+        return withContext(Dispatchers.IO) {
+            val totalRecords = database.usageDao().getTotalRecordsCount()
+            val oldestRecord = database.usageDao().getOldestRecordDate()
+            val newestRecord = database.usageDao().getNewestRecordDate()
+            
+            DatabaseStats(totalRecords, oldestRecord, newestRecord)
+        }
+    }
+	
+	// En UsageRepository, agregar estos métodos:
+
+// 1. Método para tiempo total de apps monitoreadas hoy
+suspend fun getTotalMonitoredTimeToday(monitoredPackages: List<String>): Long {
+    return withContext(Dispatchers.IO) {
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = System.currentTimeMillis()
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val todayMidnight = calendar.timeInMillis
+        val currentTime = System.currentTimeMillis()
+        
+        database.usageDao().getTotalMonitoredTimeToday(monitoredPackages, todayMidnight, currentTime)
+    }
+}
+
+// 2. Método para tiempo de una app específica hoy
+suspend fun getAppTimeToday(packageName: String): Long {
+    return withContext(Dispatchers.IO) {
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = System.currentTimeMillis()
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val todayDate = calendar.timeInMillis
+        val now = System.currentTimeMillis()
+        
+        database.usageDao().getAppTimeToday(packageName, todayDate, now)
+    }
+}
+
+// 3. Método para sesiones monitoreadas hoy
+suspend fun getTodayMonitoredSessions(monitoredPackages: List<String>): List<UsageSession> {
+    return withContext(Dispatchers.IO) {
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = System.currentTimeMillis()
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val todayDate = calendar.timeInMillis
+        
+        database.usageDao().getTodayMonitoredSessions(monitoredPackages, todayDate)
+    }
+}
+	
+	
+}package com.gnzalobnites.appsusagemonitor
+
+import android.content.Intent
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import android.view.MenuItem
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.Toolbar
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import com.google.android.material.navigation.NavigationView
+import com.gnzalobnites.appsusagemonitor.fragments.DashboardFragment
+import com.gnzalobnites.appsusagemonitor.fragments.StatsFragment
+import com.gnzalobnites.appsusagemonitor.fragments.MonitorFragment
+import com.gnzalobnites.appsusagemonitor.fragments.SettingsFragment
+
+class MainNavActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
+
+    private val TAG = "MainNavActivity"
+    
+    // Hacer públicos para que los fragments puedan acceder
+    lateinit var navView: NavigationView
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var toolbar: Toolbar
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        Log.d(TAG, "onCreate - Iniciando MainNavActivity...")
+        
+        try {
+            setContentView(R.layout.activity_main_nav)
+            Log.d(TAG, "Layout cargado exitosamente")
+            
+            // ===========================================
+            // INICIALIZAR TOOLBAR Y HAMBURGUESA
+            // ===========================================
+            toolbar = findViewById(R.id.toolbar)
+            setSupportActionBar(toolbar)
+            
+            // Configurar botón de hamburguesa
+            supportActionBar?.apply {
+                setDisplayHomeAsUpEnabled(true)
+                setHomeButtonEnabled(true)
+                // El icono ya está definido en el layout con app:navigationIcon
+            }
+            
+            // ===========================================
+            // ESTABLECER TÍTULO INICIAL DE LA APP
+            // ===========================================
+            toolbar.title = getString(R.string.app_name)
+            
+            // ===========================================
+            
+            // Inicializar vistas con verificación
+            drawerLayout = findViewById(R.id.drawer_layout) 
+                ?: throw IllegalStateException("DrawerLayout no encontrado en el layout")
+            navView = findViewById(R.id.nav_view)
+                ?: throw IllegalStateException("NavigationView no encontrado en el layout")
+            
+            navView.setNavigationItemSelectedListener(this)
+            
+            // Cargar fragment inicial
+            if (savedInstanceState == null) {
+                loadDashboard()
+                navView.setCheckedItem(R.id.nav_dashboard)
+            }
+            
+            Log.d(TAG, "✅ MainNavActivity creada y configurada exitosamente")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ ERROR CRÍTICO en onCreate: ${e.message}", e)
+            showErrorAndRecover(
+                "Error al iniciar la aplicación: ${e.localizedMessage ?: "Error desconocido"}"
+            )
+        }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        // Manejar clic en el ícono de hamburguesa (home)
+        when (item.itemId) {
+            android.R.id.home -> {
+                if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                    drawerLayout.closeDrawer(GravityCompat.START)
+                } else {
+                    drawerLayout.openDrawer(GravityCompat.START)
+                }
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    override fun onNavigationItemSelected(item: MenuItem): Boolean {
+        Log.d(TAG, "Item seleccionado: ${item.title}")
+        
+        try {
+            // Cerrar drawer primero
+            drawerLayout.closeDrawer(GravityCompat.START)
+            
+            // Pequeño delay para que se cierre el drawer
+            Handler(Looper.getMainLooper()).postDelayed({
+                when (item.itemId) {
+                    R.id.nav_dashboard -> {
+                        loadDashboard()
+                        navView.setCheckedItem(R.id.nav_dashboard)
+                    }
+                    R.id.nav_stats -> {
+                        loadFragment(StatsFragment(), getString(R.string.stats_title))
+                        navView.setCheckedItem(R.id.nav_stats)
+                    }
+                    R.id.nav_monitor -> {
+                        loadFragment(MonitorFragment(), getString(R.string.monitor_title))
+                        navView.setCheckedItem(R.id.nav_monitor)
+                    }
+                    R.id.nav_settings -> {
+                        navigateToSettings()
+                    }
+                    R.id.nav_tools -> {
+                        loadSimpleFragment("Herramientas")
+                        navView.setCheckedItem(R.id.nav_tools)
+                    }
+                    R.id.nav_permissions -> {
+                        Toast.makeText(this, "Los permisos se configuran desde Dashboard", 
+                            Toast.LENGTH_SHORT).show()
+                        loadDashboard()
+                    }
+                    R.id.nav_test -> {
+                        Toast.makeText(this, "Test banner - en desarrollo", Toast.LENGTH_SHORT).show()
+                    }
+                    R.id.nav_about -> {
+                        Toast.makeText(this, "Apps Usage Monitor v1.0", Toast.LENGTH_SHORT).show()
+                    }
+                    else -> {
+                        Log.w(TAG, "Item de navegación no manejado: ${item.itemId}")
+                    }
+                }
+            }, 200)
+            
+            return true
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error en navegación: ${e.message}", e)
+            Toast.makeText(this, "Error al navegar", Toast.LENGTH_SHORT).show()
+            return false
+        }
+    }
+    
+    fun loadDashboard() {
+        try {
+            Log.d(TAG, "Cargando Dashboard simplificado...")
+            
+            // Limpiar back stack completamente
+            supportFragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
+            
+            // Cargar Dashboard sin añadir al back stack
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.nav_host_fragment, DashboardFragment())
+                .commitAllowingStateLoss()
+                
+            toolbar.title = getString(R.string.app_name)
+            navView.setCheckedItem(R.id.nav_dashboard)
+            Log.d(TAG, "✅ Dashboard simplificado cargado")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error cargando dashboard: ${e.message}", e)
+            Toast.makeText(this, "Error cargando dashboard", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    // Método principal que acepta String
+    fun loadSimpleFragment(title: String) {
+        try {
+            Log.d(TAG, "Cargando fragment simple: $title")
+            val fragment = SimpleFragment.newInstance(title)
+            
+            // Cargar fragment añadiendo al back stack
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.nav_host_fragment, fragment)
+                .addToBackStack("simple_$title")
+                .commitAllowingStateLoss()
+                
+            toolbar.title = title
+            Log.d(TAG, "✅ Fragment '$title' cargado")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error cargando fragment simple: ${e.message}", e)
+            Toast.makeText(this, "Error cargando contenido", Toast.LENGTH_SHORT).show()
+            showErrorAndRecover("No se pudo cargar el contenido solicitado")
+        }
+    }
+    
+    // Método sobrecargado que acepta resource ID
+    fun loadSimpleFragment(titleResId: Int) {
+        loadSimpleFragment(getString(titleResId))
+    }
+    
+    // Método para cambiar fragment desde cualquier lugar (String)
+    fun loadFragment(fragment: Fragment, title: String) {
+        try {
+            Log.d(TAG, "Cargando fragment personalizado: $title")
+            
+            // Verificar si ya hay fragments en el contenedor
+            val currentFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment)
+            
+            if (currentFragment != null && currentFragment::class.java == fragment::class.java) {
+                Log.d(TAG, "⚠️ Fragment ya está visible: $title")
+                return
+            }
+            
+            // Cargar fragment añadiendo al back stack
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.nav_host_fragment, fragment)
+                .addToBackStack("fragment_${title.replace(" ", "_")}")
+                .commitAllowingStateLoss()
+                
+            toolbar.title = title
+            Log.d(TAG, "✅ Fragment personalizado '$title' cargado")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error cargando fragment personalizado: ${e.message}", e)
+            Toast.makeText(this, "Error al cambiar de vista", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    // Método sobrecargado para resource ID
+    fun loadFragment(fragment: Fragment, titleResId: Int) {
+        loadFragment(fragment, getString(titleResId))
+    }
+    
+    private fun navigateToSettings() {
+        try {
+            // Cargar SettingsFragment añadiendo al back stack
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.nav_host_fragment, SettingsFragment())
+                .addToBackStack("settings")
+                .commitAllowingStateLoss()
+                
+            toolbar.title = getString(R.string.settings_title)
+            navView.setCheckedItem(R.id.nav_settings)
+            Log.d(TAG, "✅ SettingsFragment cargado")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error navegando a settings: ${e.message}", e)
+            Toast.makeText(this, "Error abriendo configuración", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    override fun onBackPressed() {
+        try {
+            if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                drawerLayout.closeDrawer(GravityCompat.START)
+                return
+            }
+            
+            // Verificar si estamos en el Dashboard
+            val currentFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment)
+            
+            if (currentFragment is DashboardFragment) {
+                // Si ya estamos en Dashboard, mostrar diálogo de salida
+                showExitConfirmationDialog()
+            } else {
+                // Si no estamos en Dashboard, volver al Dashboard
+                loadDashboard()
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error en onBackPressed: ${e.message}")
+            super.onBackPressed()
+        }
+    }
+
+    private fun showExitConfirmationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Salir")
+            .setMessage("¿Estás seguro de que quieres salir de la aplicación?")
+            .setPositiveButton("Sí", object : android.content.DialogInterface.OnClickListener {
+                override fun onClick(dialog: android.content.DialogInterface, which: Int) {
+                    // Cerrar la aplicación
+                    finishAffinity()
+                }
+            })
+            .setNegativeButton("No", null)
+            .show()
+    }
+    
+    fun clearBackStack() {
+        try {
+            // Limpiar todo el back stack
+            supportFragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
+            Log.d(TAG, "✅ Back stack limpiado")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error limpiando back stack: ${e.message}")
+        }
+    }
+    
+    private fun showErrorAndRecover(message: String) {
+        runOnUiThread {
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+            
+            try {
+                loadDashboard()
+                
+                // Opcional: mostrar diálogo informativo
+                AlertDialog.Builder(this)
+                    .setTitle("Información")
+                    .setMessage("Se ha recuperado de un error. Se ha cargado el Dashboard.")
+                    .setPositiveButton("OK", null)
+                    .show()
+                    
+            } catch (e: Exception) {
+                Log.e(TAG, "Error crítico - No se pudo recuperar: ${e.message}", e)
+                
+                // Último recurso: intentar reiniciar la activity
+                try {
+                    val intent = Intent(this, MainNavActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+                    startActivity(intent)
+                    finish()
+                } catch (e2: Exception) {
+                    Log.e(TAG, "Error fatal - No se pudo reiniciar la app", e2)
+                }
+            }
+        }
+    }
+}package com.gnzalobnites.appsusagemonitor.fragments
+
+// Agrega ESTE import
+import com.gnzalobnites.appsusagemonitor.banner.BannerManager
+
+// El resto del código permanece igual
+import android.content.Intent
+import android.net.Uri
+import android.os.Bundle
+import android.provider.Settings
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
+import android.widget.ImageButton
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import com.gnzalobnites.appsusagemonitor.*
+import com.gnzalobnites.appsusagemonitor.AppUsageMonitorApp
+
+class DashboardFragment : Fragment() {
+
+    private val TAG = "DASHBOARD_FRAGMENT"
+    
+    // UI Elements
+    private lateinit var viewModel: MainViewModel
+    private lateinit var tvServiceStatus: TextView
+    private lateinit var tvMonitoredAppsCount: TextView
+    private lateinit var btnToggleService: Button
+    private lateinit var btnCheckPermissions: Button
+    private lateinit var btnQuickSummary: Button
+    private lateinit var btnGoToMonitor: Button
+    private lateinit var btnGoToStats: Button
+    private lateinit var btnQuickMonitor: Button
+    private lateinit var btnQuickBannerSettings: Button
+    private lateinit var btnThemeToggle: ImageButton
+    private lateinit var tvEmail: TextView
+    private lateinit var btnBuyCoffee: TextView
+    
+    // BannerManager para pruebas de permisos
+    private lateinit var bannerManager: BannerManager
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        Log.d(TAG, "🔵 onCreateView - INICIO")
+        try {
+            val view = inflater.inflate(R.layout.fragment_dashboard_simplified, container, false)
+            Log.d(TAG, "✅ Layout inflado exitosamente")
+            return view
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 ERROR FATAL en onCreateView: ${e.message}", e)
+            throw e
+        }
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        Log.d(TAG, "🔵 onViewCreated - INICIO")
+        
+        try {
+            // Inicializar ViewModel
+            viewModel = ViewModelProvider(requireActivity()).get(MainViewModel::class.java)
+            
+            // Inicializar BannerManager para permisos
+            bannerManager = BannerManager(requireContext())
+            val userPrefs = UserPreferences.getInstance(requireContext())
+            val db = AppDatabase.getDatabase(requireContext())
+            bannerManager.initialize(userPrefs, db)
+            
+            // Inicializar vistas
+            initViews(view)
+            
+            // Configurar UI
+            setupUI()
+            
+            // Configurar listeners
+            setupListeners()
+            
+            // Configurar observadores
+            setupObservers()
+            
+            // Verificar estado inicial
+            checkServiceStatus()
+            
+            Log.d(TAG, "🎉 onViewCreated COMPLETADO EXITOSAMENTE")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 ERROR FATAL en onViewCreated: ${e.message}", e)
+        }
+    }
+    
+    private fun initViews(view: View) {
+        Log.d(TAG, "🔵 initViews - INICIO")
+        
+        try {
+            tvServiceStatus = view.findViewById(R.id.tvServiceStatus)
+            tvMonitoredAppsCount = view.findViewById(R.id.tvMonitoredAppsCount)
+            btnToggleService = view.findViewById(R.id.btnToggleService)
+            btnCheckPermissions = view.findViewById(R.id.btnCheckPermissions)
+            btnQuickSummary = view.findViewById(R.id.btnQuickSummary)
+            btnGoToMonitor = view.findViewById(R.id.btnGoToMonitor)
+            btnGoToStats = view.findViewById(R.id.btnGoToStats)
+            btnQuickMonitor = view.findViewById(R.id.btnQuickMonitor)
+            btnQuickBannerSettings = view.findViewById(R.id.btnQuickBannerSettings)
+            btnThemeToggle = view.findViewById(R.id.btnThemeToggle)
+            tvEmail = view.findViewById(R.id.tvEmail)
+            btnBuyCoffee = view.findViewById(R.id.btnBuyCoffee)
+            
+            Log.d(TAG, "✅ Todas las vistas encontradas")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 initViews ERROR: ${e.message}", e)
+            throw e
+        }
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        Log.d(TAG, "🟢 onResume - INICIO")
+        
+        try {
+            checkServiceStatus()
+            updateMonitoredAppsCount()
+            updateThemeButtonIcon()
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 onResume ERROR: ${e.message}", e)
+        }
+    }
+    
+    private fun setupUI() {
+        Log.d(TAG, "🔵 setupUI - INICIO")
+        
+        try {
+            updateServiceStatusUI(false)
+            updateMonitoredAppsCount()
+            updateThemeButtonIcon()
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 setupUI ERROR: ${e.message}", e)
+            throw e
+        }
+    }
+    
+    private fun setupListeners() {
+        Log.d(TAG, "🔵 setupListeners - INICIO")
+        
+        try {
+            btnToggleService.setOnClickListener { toggleService() }
+            btnCheckPermissions.setOnClickListener { showPermissionsDialog() }
+            btnQuickSummary.setOnClickListener { showQuickSummary() }
+            btnQuickMonitor.setOnClickListener { navigateToMonitor() }
+            btnQuickBannerSettings.setOnClickListener { navigateToSettings() }
+            btnThemeToggle.setOnClickListener { toggleTheme() }
+            btnGoToMonitor.setOnClickListener { navigateToMonitor() }
+            btnGoToStats.setOnClickListener { navigateToStats() }
+            tvEmail.setOnClickListener { sendEmail() }
+            btnBuyCoffee.setOnClickListener { openBuyMeACoffeeLink() }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 setupListeners ERROR: ${e.message}", e)
+            throw e
+        }
+    }
+    
+    private fun setupObservers() {
+        Log.d(TAG, "🔵 setupObservers - INICIO")
+        
+        try {
+            viewModel.monitoredApps.observe(viewLifecycleOwner, Observer { apps ->
+                apps?.let { updateMonitoredAppsCount() }
+            })
+            
+            viewModel.isDarkMode.observe(viewLifecycleOwner, Observer { isDark ->
+                isDark?.let { updateThemeButtonIcon() }
+            })
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 setupObservers ERROR: ${e.message}", e)
+            throw e
+        }
+    }
+    
+    private fun toggleTheme() {
+        Log.d(TAG, "🎨 toggleTheme - INICIO")
+        
+        try {
+            val currentIsDark = viewModel.isDarkMode.value ?: false
+            val newIsDark = !currentIsDark
+            
+            viewModel.updateDarkMode(newIsDark)
+            
+            val app = requireActivity().application as AppUsageMonitorApp
+            app.applyTheme(newIsDark)
+            
+            updateThemeButtonIcon()
+            
+            val themeMessage = if (newIsDark) "🌙 Tema oscuro activado" else "☀️ Tema claro activado"
+            Toast.makeText(requireContext(), themeMessage, Toast.LENGTH_SHORT).show()
+            
+            requireActivity().recreate()
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 toggleTheme ERROR: ${e.message}", e)
+            Toast.makeText(requireContext(), "Error al cambiar tema", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun updateThemeButtonIcon() {
+        try {
+            val isDarkMode = viewModel.isDarkMode.value ?: false
+            
+            if (isDarkMode) {
+                btnThemeToggle.setImageResource(R.drawable.ic_light_mode)
+                btnThemeToggle.contentDescription = "Cambiar a tema claro"
+            } else {
+                btnThemeToggle.setImageResource(R.drawable.ic_dark_mode)
+                btnThemeToggle.contentDescription = "Cambiar a tema oscuro"
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 updateThemeButtonIcon ERROR: ${e.message}", e)
+        }
+    }
+    
+    private fun toggleService() {
+        Log.d(TAG, "🔄 toggleService - INICIO")
+        
+        try {
+            val isServiceRunning = isServiceRunning()
+            
+            if (isServiceRunning) {
+                stopService()
+            } else {
+                if (checkBasicPermissions()) {
+                    startService()
+                } else {
+                    showPermissionsDialog()
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 toggleService ERROR: ${e.message}", e)
+        }
+    }
+    
+    private fun checkBasicPermissions(): Boolean {
+        Log.d(TAG, "🔐 checkBasicPermissions - INICIO")
+        
+        try {
+            val overlayPerm = Settings.canDrawOverlays(requireContext())
+            val accessibilityPerm = FocusAwareService.isServiceEnabled(requireContext())
+            
+            return overlayPerm && accessibilityPerm
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 checkBasicPermissions ERROR: ${e.message}", e)
+            return false
+        }
+    }
+    
+    private fun showPermissionsDialog() {
+        Log.d(TAG, "📋 showPermissionsDialog - INICIO")
+        
+        try {
+            val overlayPerm = Settings.canDrawOverlays(requireContext())
+            val accessibilityPerm = FocusAwareService.isServiceEnabled(requireContext())
+            val usageStatsPerm = bannerManager.hasUsageStatsPermission()
+            
+            val message = StringBuilder().apply {
+                append("📋 ESTADO DE PERMISOS:\n\n")
+                append("• Permiso Overlay: ")
+                append(if(overlayPerm) "✅ CONCEDIDO" else "❌ FALTA")
+                append("\n")
+                append("• Servicio Accesibilidad: ")
+                append(if(accessibilityPerm) "✅ ACTIVADO" else "❌ FALTA")
+                append("\n")
+                append("• Datos de Uso (precisión): ")
+                append(if(usageStatsPerm) "✅ CONCEDIDO" else "⚠️ RECOMENDADO")
+                append("\n\n")
+                
+                when {
+                    !overlayPerm && !accessibilityPerm -> 
+                        append("Necesitas ambos permisos básicos para que la app funcione.")
+                    !overlayPerm -> 
+                        append("Necesitas el permiso de overlay para mostrar banners.")
+                    !accessibilityPerm -> 
+                        append("Necesitas activar el servicio de accesibilidad.")
+                    else -> 
+                        append("✅ Todos los permisos básicos están concedidos.\n\nRecomendamos activar 'Datos de Uso' para mayor precisión.")
+                }
+            }
+            
+            AlertDialog.Builder(requireContext())
+                .setTitle("Configuración de Permisos")
+                .setMessage(message.toString())
+                .setPositiveButton("Configurar") { _, _ ->
+                    showPermissionOptionsDialog(overlayPerm, accessibilityPerm, usageStatsPerm)
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
+                
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 showPermissionsDialog ERROR: ${e.message}", e)
+        }
+    }
+    
+    private fun showPermissionOptionsDialog(
+        overlayPerm: Boolean, 
+        accessibilityPerm: Boolean,
+        usageStatsPerm: Boolean
+    ) {
+        val options = mutableListOf<String>()
+        val actions = mutableListOf<() -> Unit>()
+        
+        if (!overlayPerm) {
+            options.add("🔲 Permiso Overlay")
+            actions.add { requestOverlayPermission() }
+        }
+        
+        if (!accessibilityPerm) {
+            options.add("♿ Servicio Accesibilidad")
+            actions.add { requestAccessibilityPermission() }
+        }
+        
+        if (!usageStatsPerm) {
+            options.add("📊 Datos de Uso (recomendado)")
+            actions.add { requestUsageStatsPermission() }
+        }
+        
+        if (options.isEmpty()) {
+            Toast.makeText(requireContext(), "✅ Todos los permisos están configurados", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        val items = options.toTypedArray()
+        
+        AlertDialog.Builder(requireContext())
+            .setTitle("Selecciona permiso a configurar")
+            .setItems(items) { _, which ->
+                actions[which].invoke()
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+    
+    private fun requestOverlayPermission() {
+        Log.d(TAG, "🔐 Solicitando permiso overlay")
+        
+        try {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:${requireContext().packageName}")
+            )
+            startActivity(intent)
+            Toast.makeText(requireContext(), 
+                "Activa 'Mostrar sobre otras apps'", 
+                Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 requestOverlayPermission ERROR: ${e.message}", e)
+        }
+    }
+    
+    private fun requestAccessibilityPermission() {
+        Log.d(TAG, "🔐 Solicitando permiso accesibilidad")
+        
+        try {
+            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+            startActivity(intent)
+            Toast.makeText(requireContext(), 
+                "Busca 'Apps Usage Monitor' en Servicios instalados", 
+                Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 requestAccessibilityPermission ERROR: ${e.message}", e)
+        }
+    }
+    
+    private fun requestUsageStatsPermission() {
+        Log.d(TAG, "🔐 Solicitando permiso Datos de Uso")
+        
+        try {
+            bannerManager.requestUsageStatsPermission(requireActivity())
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 requestUsageStatsPermission ERROR: ${e.message}", e)
+        }
+    }
+    
+    private fun startService() {
+        Log.d(TAG, "▶️ startService - INICIO")
+        
+        try {
+            val intent = Intent(requireContext(), FocusAwareService::class.java)
+            requireContext().startService(intent)
+            
+            handler.postDelayed({
+                try {
+                    checkServiceStatus()
+                    Toast.makeText(requireContext(), "✅ Servicio iniciado", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Error en callback de inicio: ${e.message}")
+                }
+            }, 1000)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 startService ERROR: ${e.message}", e)
+            Toast.makeText(requireContext(), "❌ Error: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun stopService() {
+        Log.d(TAG, "⏹️ stopService - INICIO")
+        
+        try {
+            val intent = Intent(requireContext(), FocusAwareService::class.java)
+            requireContext().stopService(intent)
+            
+            updateServiceStatusUI(false)
+            Toast.makeText(requireContext(), "⏹️ Servicio detenido", Toast.LENGTH_SHORT).show()
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 stopService ERROR: ${e.message}", e)
+            Toast.makeText(requireContext(), "❌ Error: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun checkServiceStatus() {
+        Log.d(TAG, "🔍 checkServiceStatus - INICIO")
+        
+        try {
+            val isRunning = isServiceRunning()
+            updateServiceStatusUI(isRunning)
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 checkServiceStatus ERROR: ${e.message}", e)
+            updateServiceStatusUI(false)
+        }
+    }
+    
+    private fun updateServiceStatusUI(isRunning: Boolean) {
+        Log.d(TAG, "🖥️ updateServiceStatusUI - isRunning = $isRunning")
+        
+        try {
+            val context = requireContext()
+            val successGreen = context.resources.getColor(R.color.success_green, context.theme)
+            val errorRed = context.resources.getColor(R.color.error_red, context.theme)
+            
+            if (isRunning) {
+                tvServiceStatus.text = "✅ Servicio activo"
+                tvServiceStatus.setTextColor(successGreen)
+                btnToggleService.text = "⏹️ Detener Servicio"
+                btnToggleService.setBackgroundColor(errorRed)
+            } else {
+                tvServiceStatus.text = "⭕ Servicio detenido"
+                tvServiceStatus.setTextColor(errorRed)
+                btnToggleService.text = "▶️ Iniciar Servicio"
+                btnToggleService.setBackgroundColor(successGreen)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 updateServiceStatusUI ERROR: ${e.message}", e)
+        }
+    }
+    
+    private fun updateMonitoredAppsCount() {
+        try {
+            val count = viewModel.monitoredApps.value?.size ?: 0
+            tvMonitoredAppsCount.text = "$count apps monitoreadas"
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 updateMonitoredAppsCount ERROR: ${e.message}", e)
+        }
+    }
+    
+    private fun showQuickSummary() {
+        Log.d(TAG, "📊 showQuickSummary - INICIO")
+        
+        try {
+            val monitoredApps = viewModel.monitoredApps.value ?: emptyList()
+            val bannerEnabled = viewModel.showBanner.value ?: false
+            val usageStatsPerm = bannerManager.hasUsageStatsPermission()
+            
+            val summary = StringBuilder().apply {
+                append("📱 RESUMEN DEL SISTEMA\n\n")
+                append("• Apps monitoreadas: ${monitoredApps.size}\n")
+                append("• Banners: ")
+                append(if (bannerEnabled) "✅ ACTIVADOS" else "⭕ DESACTIVADOS")
+                append("\n")
+                append("• Servicio: ")
+                append(if (isServiceRunning()) "✅ ACTIVO" else "⭕ INACTIVO")
+                append("\n")
+                append("• Modo preciso (UsageStats): ")
+                append(if (usageStatsPerm) "✅ ACTIVADO" else "⚠️ NO (recomendado)")
+                append("\n\n")
+                
+                if (monitoredApps.isEmpty()) {
+                    append("⚠️ No hay apps monitoreadas\n")
+                    append("Ve a 'Monitor' para agregar apps")
+                } else {
+                    append("Apps monitoreadas:\n")
+                    var count = 0
+                    val iterator = monitoredApps.iterator()
+                    while (iterator.hasNext() && count < 5) {
+                        val app = iterator.next()
+                        val appName = getAppName(app)
+                        append("  • $appName\n")
+                        count++
+                    }
+                    if (monitoredApps.size > 5) {
+                        append("  ... y ${monitoredApps.size - 5} más")
+                    }
+                }
+            }
+            
+            AlertDialog.Builder(requireContext())
+                .setTitle("Resumen del Sistema")
+                .setMessage(summary.toString())
+                .setPositiveButton("OK", null)
+                .setNeutralButton("Ir a Monitor") { _, _ ->
+                    navigateToMonitor()
+                }
+                .show()
+                
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 showQuickSummary ERROR: ${e.message}", e)
+        }
+    }
+    
+    private fun getAppName(packageName: String): String {
+        return try {
+            val pm = requireContext().packageManager
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            pm.getApplicationLabel(appInfo).toString()
+        } catch (e: Exception) {
+            packageName
+        }
+    }
+    
+    private fun navigateToMonitor() {
+        try {
+            val activity = activity
+            if (activity is com.gnzalobnites.appsusagemonitor.MainNavActivity) {
+                activity.loadFragment(MonitorFragment(), "Monitoreo")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 navigateToMonitor ERROR: ${e.message}", e)
+        }
+    }
+    
+    private fun navigateToSettings() {
+        try {
+            val activity = activity
+            if (activity is com.gnzalobnites.appsusagemonitor.MainNavActivity) {
+                activity.loadFragment(SettingsFragment(), "Configuración")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 navigateToSettings ERROR: ${e.message}", e)
+        }
+    }
+    
+    private fun navigateToStats() {
+        try {
+            val activity = activity
+            if (activity is com.gnzalobnites.appsusagemonitor.MainNavActivity) {
+                activity.loadFragment(StatsFragment(), "Estadísticas")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 navigateToStats ERROR: ${e.message}", e)
+        }
+    }
+    
+    @Suppress("DEPRECATION")
+    private fun isServiceRunning(): Boolean {
+        try {
+            val activityManager = requireContext().getSystemService(android.app.ActivityManager::class.java)
+            val services = activityManager.getRunningServices(Integer.MAX_VALUE)
+            
+            val targetClassName = FocusAwareService::class.java.name
+            
+            for (service in services) {
+                if (service.service.className == targetClassName) {
+                    return true
+                }
+            }
+            return false
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 isServiceRunning ERROR: ${e.message}", e)
+            return false
+        }
+    }
+    
+    private fun sendEmail() {
+        try {
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("mailto:benitesgonzalogaston@gmail.com")
+                putExtra(Intent.EXTRA_SUBJECT, "Sugerencia para Apps Usage Monitor")
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error enviando email: ${e.message}")
+            Toast.makeText(requireContext(), "No hay app de correo instalada", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun openBuyMeACoffeeLink() {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, 
+                Uri.parse("https://www.buymeacoffee.com/gnzbenitesh"))
+            startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error abriendo enlace: ${e.message}")
+            Toast.makeText(requireContext(), "No se puede abrir el enlace", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    companion object {
+        private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    }
+}package com.gnzalobnites.appsusagemonitor
+
+import android.content.pm.PackageManager
+import android.content.pm.ApplicationInfo
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.CheckBox
+import android.widget.ImageView
+import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
+
+class MonitoredAppsAdapter(
+    private val apps: List<ApplicationInfo>,
+    private val packageManager: PackageManager,
+    private val onAppChecked: (String, Boolean) -> Unit,
+    initialSelectedApps: Set<String> = emptySet()
+) : RecyclerView.Adapter<MonitoredAppsAdapter.AppViewHolder>() {
+
+    private val selectedApps = mutableSetOf<String>()
+    // ✅ ELIMINADA: private var isDarkMode = false
+    // ✅ ELIMINADO: setThemeColors()
+    // ✅ ELIMINADO: applyThemeColors()
+
+    init {
+        selectedApps.addAll(initialSelectedApps)
+    }
+
+    inner class AppViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val appIcon: ImageView = itemView.findViewById(R.id.appIcon)
+        val appName: TextView = itemView.findViewById(R.id.appName)
+        val appPackage: TextView = itemView.findViewById(R.id.appPackage)
+        val checkBox: CheckBox = itemView.findViewById(R.id.appCheckBox)
+        
+        init {
+            // ✅ Configuración adicional si es necesaria
+            // El tema ya se aplica automáticamente por el XML
+        }
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AppViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_app_selection, parent, false)
+        return AppViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: AppViewHolder, position: Int) {
+        val app = apps[position]
+        val packageName = app.packageName
+        
+        try {
+            holder.appIcon.setImageDrawable(app.loadIcon(packageManager))
+            holder.appName.text = app.loadLabel(packageManager).toString()
+            holder.appPackage.text = packageName
+            holder.checkBox.isChecked = selectedApps.contains(packageName)
+            
+            // ✅ NO LLAMAR applyThemeColors() - Android lo maneja automáticamente
+            
+            // Remover listener anterior para evitar duplicados
+            holder.checkBox.setOnCheckedChangeListener(null)
+            
+            holder.checkBox.setOnCheckedChangeListener { _, isChecked ->
+                onAppChecked(packageName, isChecked)
+                if (isChecked) {
+                    selectedApps.add(packageName)
+                } else {
+                    selectedApps.remove(packageName)
+                }
+            }
+            
+            holder.itemView.setOnClickListener {
+                holder.checkBox.isChecked = !holder.checkBox.isChecked
+            }
+            
+        } catch (e: Exception) {
+            holder.appName.text = "Error"
+            holder.appPackage.text = packageName
+        }
+    }
+
+    override fun getItemCount(): Int = apps.size
+    
+    fun updateSelectedApps(newSelectedApps: Set<String>) {
+        selectedApps.clear()
+        selectedApps.addAll(newSelectedApps)
+        notifyDataSetChanged()
+    }
+    
+    fun getSelectedApps(): Set<String> = selectedApps.toSet()
+}package com.gnzalobnites.appsusagemonitor.fragments
+
+import android.graphics.Color
+import android.os.Bundle
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
+import com.gnzalobnites.appsusagemonitor.MainViewModel
+import com.gnzalobnites.appsusagemonitor.R
+import com.gnzalobnites.appsusagemonitor.UsageRepository
+import com.gnzalobnites.appsusagemonitor.AppDatabase
+import com.github.mikephil.charting.charts.PieChart
+import com.github.mikephil.charting.data.PieData
+import com.github.mikephil.charting.data.PieDataSet
+import com.github.mikephil.charting.data.PieEntry
+import com.github.mikephil.charting.formatter.PercentFormatter
+import com.github.mikephil.charting.utils.ColorTemplate
+import kotlinx.coroutines.*
+
+class StatsFragment : Fragment() {
+
+    private val TAG = "StatsFragment"
+    private lateinit var viewModel: MainViewModel
+    private lateinit var repository: UsageRepository
+    private lateinit var database: AppDatabase
+
+    // UI Elements
+    private lateinit var tvTotalTime: TextView
+    private lateinit var tvMonitoredAppCount: TextView
+    private lateinit var tvTimeRangeTitle: TextView
+    private lateinit var btnRefreshStats: Button
+    private lateinit var btnExportStats: Button
+    private lateinit var btnViewDetails: Button
+    private lateinit var progressBar: ProgressBar
+    private lateinit var pieChart: PieChart
+    private lateinit var layoutAppLegend: LinearLayout
+    
+    // Job para corrutinas
+    private var loadJob: Job? = null
+    
+    // Data class para uso de apps
+    data class AppUsageData(
+        val packageName: String,
+        val appName: String,
+        val totalTime: Long,
+        var percentage: Float = 0f,
+        val sessionCount: Int = 0
+    )
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_stats_enhanced, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        Log.d(TAG, "📊 StatsFragment - Inicializando")
+        
+        try {
+            // Inicializar ViewModel
+            viewModel = ViewModelProvider(requireActivity()).get(MainViewModel::class.java)
+            
+            // Inicializar Database y Repository
+            database = AppDatabase.getDatabase(requireContext())
+            repository = UsageRepository.getInstance(database)
+
+            // Inicializar vistas
+            initViews(view)
+            
+            // Configurar gráfico
+            setupPieChart()
+            
+            // Configurar listeners
+            setupListeners()
+            
+            // Cargar datos iniciales
+            loadStats()
+            
+            Log.d(TAG, "✅ StatsFragment configurado correctamente")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error en onViewCreated: ${e.message}", e)
+            Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun initViews(view: View) {
+        tvTotalTime = view.findViewById(R.id.tvTotalTime)
+        tvMonitoredAppCount = view.findViewById(R.id.tvMonitoredAppCount)
+        tvTimeRangeTitle = view.findViewById(R.id.tvTimeRangeTitle)
+        btnRefreshStats = view.findViewById(R.id.btnRefreshStats)
+        btnExportStats = view.findViewById(R.id.btnExportStats)
+        btnViewDetails = view.findViewById(R.id.btnViewDetails)
+        progressBar = view.findViewById(R.id.progressBar)
+        pieChart = view.findViewById(R.id.pieChart)
+        layoutAppLegend = view.findViewById(R.id.layoutAppLegend)
+        
+        // Configurar texto inicial
+        tvTimeRangeTitle.text = "📅 Estadísticas - Hoy"
+        tvTotalTime.text = "0m"
+        tvMonitoredAppCount.text = "0"
+        progressBar.visibility = View.GONE
+    }
+    
+    private fun setupPieChart() {
+        try {
+            pieChart.setUsePercentValues(true)
+            pieChart.description.isEnabled = false
+            pieChart.legend.isEnabled = false
+            pieChart.isDrawHoleEnabled = true
+            pieChart.setHoleColor(Color.TRANSPARENT)
+            pieChart.setTransparentCircleColor(Color.WHITE)
+            pieChart.setTransparentCircleAlpha(110)
+            pieChart.holeRadius = 58f
+            pieChart.transparentCircleRadius = 61f
+            pieChart.setDrawCenterText(true)
+            pieChart.setCenterTextSize(14f)
+            pieChart.setEntryLabelColor(Color.BLACK)
+            pieChart.setEntryLabelTextSize(12f)
+            pieChart.setCenterText("Sin datos")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error configurando pieChart: ${e.message}")
+        }
+    }
+    
+    private fun setupListeners() {
+        btnRefreshStats.setOnClickListener { loadStats() }
+        
+        btnExportStats.setOnClickListener { 
+            showExportDialog()
+        }
+        
+        btnViewDetails.setOnClickListener {
+            showDetailsDialog()
+        }
+    }
+    
+    private fun loadStats() {
+        Log.d(TAG, "loadStats - Cargando estadísticas...")
+        
+        // Cancelar job anterior
+        loadJob?.cancel()
+        
+        // Mostrar loading
+        progressBar.visibility = View.VISIBLE
+        progressBar.progress = 0
+        tvTotalTime.text = "Calculando..."
+        pieChart.clear()
+        pieChart.setCenterText("Cargando...")
+        layoutAppLegend.removeAllViews()
+        layoutAppLegend.visibility = View.GONE
+
+        val monitoredPackages = viewModel.monitoredApps.value ?: emptyList()
+        Log.d(TAG, "Apps monitoreadas: ${monitoredPackages.size}")
+        
+        if (monitoredPackages.isEmpty()) {
+            showNoDataMessage("No hay apps monitoreadas")
+            return
+        }
+
+        tvMonitoredAppCount.text = monitoredPackages.size.toString()
+
+        // Iniciar carga en segundo plano
+        loadJob = CoroutineScope(Dispatchers.Main).launch {
+            try {
+                // Actualizar barra de progreso
+                progressBar.progress = 30
+                
+                // Cargar datos en segundo plano
+                val (usageData, totalTime) = withContext(Dispatchers.IO) {
+                    loadStatsFromDatabase(monitoredPackages)
+                }
+                
+                progressBar.progress = 80
+                
+                // Actualizar UI en hilo principal
+                if (usageData.isEmpty()) {
+                    showNoDataMessage("No hay datos de uso hoy")
+                } else {
+                    tvTotalTime.text = formatTime(totalTime)
+                    showPieChart(usageData, totalTime)
+                    showLegend(usageData)
+                }
+                
+                progressBar.progress = 100
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error en loadStats: ${e.message}", e)
+                showNoDataMessage("Error al cargar datos")
+            } finally {
+                // Ocultar progreso después de un momento
+                delay(500)
+                progressBar.visibility = View.GONE
+            }
+        }
+    }
+    
+    private suspend fun loadStatsFromDatabase(monitoredPackages: List<String>): Pair<List<AppUsageData>, Long> {
+        val usageData = mutableListOf<AppUsageData>()
+        var totalTime = 0L
+        
+        Log.d(TAG, "Cargando estadísticas para ${monitoredPackages.size} apps")
+        
+        for (packageName in monitoredPackages) {
+            try {
+                // Obtener tiempo total de hoy para esta app
+                val time = repository.getAppTimeToday(packageName)
+                
+                // Obtener conteo de sesiones (opcional)
+                val sessions = repository.getTodaySessions()
+                val sessionCount = sessions.count { it.packageName == packageName }
+                
+                if (time > 0) {
+                    totalTime += time
+                    val appName = getAppName(packageName)
+                    usageData.add(AppUsageData(
+                        packageName = packageName,
+                        appName = appName,
+                        totalTime = time,
+                        sessionCount = sessionCount
+                    ))
+                    Log.d(TAG, "  • $appName: ${formatTime(time)}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error con $packageName: ${e.message}")
+            }
+        }
+        
+        // Ordenar por tiempo (mayor a menor)
+        usageData.sortByDescending { it.totalTime }
+        
+        // Calcular porcentajes
+        if (totalTime > 0) {
+            usageData.forEach { data ->
+                data.percentage = (data.totalTime.toFloat() / totalTime) * 100
+            }
+        }
+        
+        Log.d(TAG, "Total tiempo hoy: ${formatTime(totalTime)}")
+        
+        return Pair(usageData, totalTime)
+    }
+    
+    private fun getAppName(packageName: String): String {
+        return try {
+            val pm = requireContext().packageManager
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            pm.getApplicationLabel(appInfo).toString()
+        } catch (e: Exception) {
+            // Si no se puede obtener el nombre, usar el packageName formateado
+            packageName.substringAfterLast('.').capitalize()
+        }
+    }
+    
+    private fun showPieChart(data: List<AppUsageData>, totalTime: Long) {
+        try {
+            if (data.isEmpty()) {
+                pieChart.setCenterText("Sin datos")
+                pieChart.invalidate()
+                return
+            }
+            
+            // Crear entradas para el gráfico
+            val entries = data.mapIndexed { index, appData ->
+                PieEntry(appData.percentage, index)
+            }
+            
+            // Colores para el gráfico
+            val colors = getChartColors(data.size)
+            
+            // Configurar dataset
+            val dataSet = PieDataSet(entries, "").apply {
+                this.colors = colors
+                valueTextSize = 12f
+                valueFormatter = PercentFormatter(pieChart)
+                setValueTextColor(ContextCompat.getColor(requireContext(), R.color.text_primary_light))
+                sliceSpace = 2f
+                selectionShift = 5f
+            }
+            
+            // Configurar datos
+            val pieData = PieData(dataSet).apply {
+                setValueFormatter(PercentFormatter(pieChart))
+            }
+            
+            // Texto central
+            val totalTimeFormatted = formatTimeShort(totalTime)
+            pieChart.setCenterText("$totalTimeFormatted\nTotal")
+            
+            // Aplicar y actualizar
+            pieChart.data = pieData
+            pieChart.invalidate() // Refrescar gráfico
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error en showPieChart: ${e.message}")
+        }
+    }
+    
+    private fun showLegend(data: List<AppUsageData>) {
+        try {
+            layoutAppLegend.removeAllViews()
+            layoutAppLegend.visibility = View.VISIBLE
+            
+            val colors = getChartColors(data.size)
+            
+            data.forEachIndexed { index, appData ->
+                val itemView = LayoutInflater.from(requireContext())
+                    .inflate(R.layout.item_stat_legend, layoutAppLegend, false)
+                
+                val colorView = itemView.findViewById<View>(R.id.viewColor)
+                val tvAppName = itemView.findViewById<TextView>(R.id.tvLegendAppName)
+                val tvAppTime = itemView.findViewById<TextView>(R.id.tvLegendAppTime)
+                val tvAppPercentage = itemView.findViewById<TextView>(R.id.tvLegendAppPercentage)
+                
+                // Limitar nombre de app a 20 caracteres
+                val displayName = if (appData.appName.length > 20) {
+                    appData.appName.take(18) + "..."
+                } else {
+                    appData.appName
+                }
+                
+                colorView.setBackgroundColor(colors[index % colors.size])
+                tvAppName.text = displayName
+                tvAppTime.text = formatTimeShort(appData.totalTime)
+                tvAppPercentage.text = String.format("%.1f%%", appData.percentage)
+                
+                layoutAppLegend.addView(itemView)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error en showLegend: ${e.message}")
+        }
+    }
+    
+    private fun getChartColors(count: Int): List<Int> {
+        val baseColors = ColorTemplate.MATERIAL_COLORS.toList() + 
+                         ColorTemplate.VORDIPLOM_COLORS.toList() +
+                         listOf(
+                            Color.rgb(193, 37, 82),
+                            Color.rgb(255, 102, 0),
+                            Color.rgb(245, 199, 0),
+                            Color.rgb(106, 150, 31),
+                            Color.rgb(179, 100, 53)
+                         )
+        
+        return (0 until count).map { index ->
+            baseColors[index % baseColors.size]
+        }
+    }
+    
+    private fun showNoDataMessage(message: String) {
+        tvTotalTime.text = "0m"
+        tvMonitoredAppCount.text = (viewModel.monitoredApps.value?.size ?: 0).toString()
+        
+        pieChart.clear()
+        pieChart.setCenterText(message)
+        pieChart.invalidate()
+        
+        layoutAppLegend.removeAllViews()
+        layoutAppLegend.visibility = View.GONE
+        progressBar.visibility = View.GONE
+    }
+    
+    private fun formatTime(milliseconds: Long): String {
+        if (milliseconds <= 0) return "0m"
+        
+        val totalSeconds = milliseconds / 1000
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+        
+        return when {
+            hours > 0 -> String.format("%dh %02dm", hours, minutes)
+            minutes > 0 -> String.format("%dm", minutes)
+            else -> String.format("%ds", seconds)
+        }
+    }
+    
+    private fun formatTimeShort(milliseconds: Long): String {
+        if (milliseconds <= 0) return "0m"
+        
+        val totalSeconds = milliseconds / 1000
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        
+        return when {
+            hours > 0 -> String.format("%dh %02dm", hours, minutes)
+            minutes > 0 -> String.format("%dm", minutes)
+            else -> "< 1m"
+        }
+    }
+    
+    private fun showExportDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("📤 Exportar Estadísticas")
+            .setMessage("¿Qué formato deseas exportar?")
+            .setPositiveButton("CSV") { _, _ ->
+                Toast.makeText(requireContext(), "Exportando a CSV...", Toast.LENGTH_SHORT).show()
+                // Aquí iría la lógica real de exportación
+            }
+            .setNeutralButton("JSON") { _, _ ->
+                Toast.makeText(requireContext(), "Exportando a JSON...", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+    
+    private fun showDetailsDialog() {
+        val monitoredApps = viewModel.monitoredApps.value ?: emptyList()
+        
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val stats = withContext(Dispatchers.IO) {
+                    loadStatsFromDatabase(monitoredApps)
+                }
+                
+                val (usageData, totalTime) = stats
+                
+                if (usageData.isEmpty()) {
+                    Toast.makeText(requireContext(), "No hay datos para mostrar", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+                
+                val message = StringBuilder().apply {
+                    append("📊 DETALLE POR APP\n\n")
+                    append("Total: ${formatTime(totalTime)}\n")
+                    append("Apps activas: ${usageData.size}\n")
+                    append("─".repeat(30) + "\n\n")
+                    
+                    usageData.take(10).forEachIndexed { index, data ->
+                        append("${index + 1}. ${data.appName}\n")
+                        append("   ⏱️ ${formatTime(data.totalTime)} (${String.format("%.1f", data.percentage)}%)\n")
+                        append("   📊 Sesiones: ${data.sessionCount}\n\n")
+                    }
+                    
+                    if (usageData.size > 10) {
+                        append("... y ${usageData.size - 10} apps más")
+                    }
+                }
+                
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Detalles de Uso")
+                    .setMessage(message.toString())
+                    .setPositiveButton("OK", null)
+                    .setNeutralButton("Recargar") { _, _ ->
+                        loadStats()
+                    }
+                    .show()
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error mostrando detalles: ${e.message}")
+                Toast.makeText(requireContext(), "Error cargando detalles", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        // Recargar datos al volver al fragment
+        loadStats()
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        loadJob?.cancel()
+    }
+}package com.gnzalobnites.appsusagemonitor.fragments
+
+// Agrega ESTE import
+import com.gnzalobnites.appsusagemonitor.banner.BannerManager
+
+// El resto del código permanece igual
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.net.Uri
+import android.os.Bundle
+import android.provider.Settings
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.*
+import androidx.appcompat.app.AlertDialog
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.gnzalobnites.appsusagemonitor.*
+import java.util.*
+
+class MonitorFragment : Fragment() {
+
+    private val TAG = "MonitorFragment"
+    private lateinit var viewModel: MainViewModel
+    private lateinit var bannerManager: BannerManager
+    
+    // UI Elements
+    private lateinit var swEnableBanners: Switch
+    private lateinit var tvBannerStatus: TextView
+    private lateinit var btnTestBanner: Button
+    private lateinit var btnSelectApps: Button
+    private lateinit var tvSelectedAppsCount: TextView
+    private lateinit var recyclerViewApps: RecyclerView
+    private lateinit var btnCheckPermissions: Button
+    private lateinit var tvUsageStatsStatus: TextView  // ← AGREGADO
+    
+    // Para selección de apps
+    private var apps: List<ApplicationInfo> = emptyList()
+    private lateinit var appsAdapter: SimpleAppsAdapter
+    
+    // Para el diálogo de selección
+    private var dialogAdapter: SimpleAppsAdapter? = null
+    private var selectionDialog: AlertDialog? = null
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_monitor_enhanced, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        
+        Log.d(TAG, "onViewCreated - MonitorFragment")
+        
+        try {
+            // Inicializar ViewModel
+            viewModel = ViewModelProvider(requireActivity()).get(MainViewModel::class.java)
+            
+            // Inicializar BannerManager
+            bannerManager = BannerManager(requireContext())
+            val userPrefs = UserPreferences.getInstance(requireContext())
+            val db = AppDatabase.getDatabase(requireContext())
+            bannerManager.initialize(userPrefs, db)
+            
+            // Inicializar vistas
+            initViews(view)
+            
+            // Configurar UI inicial
+            setupUI()
+            
+            // Configurar listeners
+            setupListeners()
+            
+            // Configurar observadores
+            setupObservers()
+            
+            // Cargar apps instaladas
+            loadInstalledApps()
+            
+            Log.d(TAG, "✅ MonitorFragment configurado")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error en onViewCreated: ${e.message}", e)
+            Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun initViews(view: View) {
+        swEnableBanners = view.findViewById(R.id.swEnableBanners)
+        tvBannerStatus = view.findViewById(R.id.tvBannerStatus)
+        btnTestBanner = view.findViewById(R.id.btnTestBanner)
+        btnSelectApps = view.findViewById(R.id.btnSelectApps)
+        tvSelectedAppsCount = view.findViewById(R.id.tvSelectedAppsCount)
+        recyclerViewApps = view.findViewById(R.id.recyclerViewApps)
+        btnCheckPermissions = view.findViewById(R.id.btnCheckPermissions)
+        tvUsageStatsStatus = view.findViewById(R.id.tvUsageStatsStatus)  // ← AGREGADO
+    }
+    
+    private fun setupUI() {
+        // Cargar configuraciones actuales
+        loadCurrentSettings()
+        
+        // Configurar RecyclerView
+        setupRecyclerView()
+        
+        // Actualizar contador
+        updateSelectedAppsCount()
+        
+        // Actualizar estado de UsageStats
+        updateUsageStatsStatus()
+    }
+    
+    private fun loadCurrentSettings() {
+        val showBanner = viewModel.showBanner.value ?: false
+        swEnableBanners.isChecked = showBanner
+        tvBannerStatus.text = if (showBanner) "✅ Banners activados" else "⭕ Banners desactivados"
+    }
+    
+    private fun setupRecyclerView() {
+        recyclerViewApps.layoutManager = LinearLayoutManager(requireContext())
+        val selectedApps = viewModel.monitoredApps.value?.toSet() ?: emptySet()
+        appsAdapter = SimpleAppsAdapter(requireContext(), apps, selectedApps) { packageName, isChecked ->
+            onAppChecked(packageName, isChecked)
+        }
+        recyclerViewApps.adapter = appsAdapter
+    }
+    
+    private fun setupListeners() {
+        swEnableBanners.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.updateShowBanner(isChecked)
+            tvBannerStatus.text = if (isChecked) "✅ Banners activados" else "⭕ Banners desactivados"
+            Log.d(TAG, "Banners ${if (isChecked) "activados" else "desactivados"}")
+        }
+        
+        btnTestBanner.setOnClickListener {
+            testBannerNow()
+        }
+        
+        btnSelectApps.setOnClickListener {
+            showAppSelectionDialog()
+        }
+        
+        btnCheckPermissions.setOnClickListener {
+            showPermissionsDialog()
+        }
+    }
+    
+    private fun setupObservers() {
+        viewModel.monitoredApps.observe(viewLifecycleOwner, Observer { appsList ->
+            appsList?.let {
+                updateSelectedAppsCount()
+                if (::appsAdapter.isInitialized) {
+                    appsAdapter.updateSelectedApps(it.toSet())
+                }
+            }
+        })
+    }
+    
+    private fun updateUsageStatsStatus() {
+        val hasPermission = bannerManager.hasUsageStatsPermission()
+        tvUsageStatsStatus.text = if (hasPermission) {
+            "✅ Modo preciso activado (recomendado)"
+        } else {
+            "⚠️ Modo preciso desactivado - Actívalo para mayor precisión"
+        }
+        
+        // Cambiar color según estado
+        if (hasPermission) {
+            tvUsageStatsStatus.setTextColor(
+                resources.getColor(android.R.color.holo_green_dark, requireContext().theme)
+            )
+        } else {
+            tvUsageStatsStatus.setTextColor(
+                resources.getColor(android.R.color.holo_orange_dark, requireContext().theme)
+            )
+        }
+    }
+    
+    private fun showPermissionsDialog() {
+        val overlayPerm = Settings.canDrawOverlays(requireContext())
+        val accessibilityPerm = FocusAwareService.isServiceEnabled(requireContext())
+        val usageStatsPerm = bannerManager.hasUsageStatsPermission()
+        
+        val message = StringBuilder().apply {
+            append("📋 ESTADO DE PERMISOS:\n\n")
+            append("• Overlay: ${if(overlayPerm) "✅" else "❌"}\n")
+            append("• Accesibilidad: ${if(accessibilityPerm) "✅" else "❌"}\n")
+            append("• Datos de Uso: ${if(usageStatsPerm) "✅" else "⚠️"}\n\n")
+            
+            if (!usageStatsPerm) {
+                append("RECOMENDACIÓN: Activa 'Datos de Uso' para:\n")
+                append("✓ Detectar con precisión cuándo sales de las apps\n")
+                append("✓ Mayor eficiencia energética\n")
+                append("✓ Estadísticas más exactas\n\n")
+                append("Sin este permiso, usaremos el método estándar (menos preciso).")
+            } else {
+                append("✓ Todos los permisos recomendados están activados.")
+            }
+        }
+        
+        AlertDialog.Builder(requireContext())
+            .setTitle("Permisos del Sistema")
+            .setMessage(message.toString())
+            .setPositiveButton("Configurar Datos de Uso") { _, _ ->
+                bannerManager.requestUsageStatsPermission(requireActivity())
+            }
+            .setNeutralButton("Verificar Accesibilidad") { _, _ ->
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }
+            .setNegativeButton("Cerrar", null)
+            .show()
+    }
+    
+    private fun loadInstalledApps() {
+        val packageManager = requireContext().packageManager
+        apps = packageManager.getInstalledApplications(0)
+            .filter { 
+                val launchIntent = packageManager.getLaunchIntentForPackage(it.packageName)
+                launchIntent != null 
+            }
+            .sortedBy { app ->
+                try {
+                    packageManager.getApplicationLabel(app).toString()
+                        .toLowerCase(Locale.getDefault())
+                } catch (e: Exception) {
+                    app.packageName
+                }
+            }
+
+        val selectedApps = viewModel.monitoredApps.value?.toSet() ?: emptySet()
+        appsAdapter = SimpleAppsAdapter(requireContext(), apps, selectedApps) { packageName, isChecked ->
+            onAppChecked(packageName, isChecked)
+        }
+        recyclerViewApps.adapter = appsAdapter
+        
+        Log.d(TAG, "Cargadas ${apps.size} apps con launcher")
+    }
+    
+    private fun onAppChecked(packageName: String, isChecked: Boolean) {
+        val appName = try {
+            val pm = requireContext().packageManager
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            pm.getApplicationLabel(appInfo).toString()
+        } catch (e: Exception) {
+            packageName
+        }
+        
+        if (isChecked) {
+            viewModel.addMonitoredApp(packageName)
+            Toast.makeText(requireContext(), "✓ $appName monitoreada", Toast.LENGTH_SHORT).show()
+        } else {
+            viewModel.removeMonitoredApp(packageName)
+            Toast.makeText(requireContext(), "✗ $appName removida", Toast.LENGTH_SHORT).show()
+        }
+        updateSelectedAppsCount()
+    }
+    
+    private fun updateSelectedAppsCount() {
+        val count = viewModel.monitoredApps.value?.size ?: 0
+        val total = apps.size
+        tvSelectedAppsCount.text = "$count/$total apps seleccionadas"
+    }
+    
+    private fun showAppSelectionDialog() {
+        val dialogView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialog_app_selection, null)
+        
+        val recyclerView = dialogView.findViewById<RecyclerView>(R.id.recyclerViewDialogApps)
+        val btnSelectAll = dialogView.findViewById<Button>(R.id.btnSelectAll)
+        val btnDeselectAll = dialogView.findViewById<Button>(R.id.btnDeselectAll)
+        val btnConfirm = dialogView.findViewById<Button>(R.id.btnConfirmSelection)
+        val btnCancel = dialogView.findViewById<Button>(R.id.btnCancelSelection)
+        val tvSelectedCount = dialogView.findViewById<TextView>(R.id.tvSelectedCount)
+        
+        val currentMonitoredApps = viewModel.monitoredApps.value?.toSet() ?: emptySet()
+        
+        // Usar variable de clase en lugar de local
+        dialogAdapter = SimpleAppsAdapter(
+            requireContext(),
+            apps,
+            currentMonitoredApps
+        ) { _, _ ->
+            dialogAdapter?.let { adapter ->
+                updateSelectedCountDialog(tvSelectedCount, adapter)
+            }
+        }
+        
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
+        recyclerView.adapter = dialogAdapter
+        
+        dialogAdapter?.let { adapter ->
+            updateSelectedCountDialog(tvSelectedCount, adapter)
+        }
+        
+        btnSelectAll.setOnClickListener {
+            val allPackages = apps.map { it.packageName }.toSet()
+            allPackages.forEach { packageName ->
+                viewModel.addMonitoredApp(packageName)
+            }
+            dialogAdapter?.updateSelectedApps(allPackages)
+            dialogAdapter?.let { adapter ->
+                updateSelectedCountDialog(tvSelectedCount, adapter)
+            }
+        }
+        
+        btnDeselectAll.setOnClickListener {
+            currentMonitoredApps.forEach { packageName ->
+                viewModel.removeMonitoredApp(packageName)
+            }
+            dialogAdapter?.updateSelectedApps(emptySet())
+            dialogAdapter?.let { adapter ->
+                updateSelectedCountDialog(tvSelectedCount, adapter)
+            }
+        }
+        
+        btnConfirm.setOnClickListener {
+            selectionDialog?.dismiss()
+            selectionDialog = null
+            dialogAdapter = null
+            updateSelectedAppsCount()
+            Toast.makeText(requireContext(), "✅ Selección guardada", Toast.LENGTH_SHORT).show()
+        }
+        
+        btnCancel.setOnClickListener {
+            selectionDialog?.dismiss()
+            selectionDialog = null
+            dialogAdapter = null
+        }
+        
+        // Usar variable de clase
+        selectionDialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+        
+        selectionDialog?.show()
+    }
+
+    private fun updateSelectedCountDialog(textView: TextView, adapter: SimpleAppsAdapter) {
+        val count = adapter.getSelectedCount()
+        textView.text = "$count apps seleccionadas"
+    }
+    
+    private fun testBannerNow() {
+    Log.d(TAG, "=== PRUEBA DE BANNER ===")
+    
+    if (!Settings.canDrawOverlays(requireContext())) {
+        Toast.makeText(requireContext(), 
+            "❌ Necesitas permiso de overlay", 
+            Toast.LENGTH_SHORT).show()
+        requestOverlayPermission()
+        return
+    }
+    
+    // Mensaje más claro
+    val testMessage = "🧪 BANNER DE PRUEBA\n\n" +
+            "• Temporal: 15 segundos\n" +
+            "• Toca para cerrar antes\n" +
+            "• No afecta monitoreo real"
+    
+    bannerManager.showTestBanner(testMessage)
+    
+    Toast.makeText(requireContext(), 
+        "✅ Banner mostrado (15s)", 
+        Toast.LENGTH_SHORT).show()
+}
+    
+    private fun requestOverlayPermission() {
+        val intent = Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:${requireContext().packageName}")
+        )
+        startActivity(intent)
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        // Limpiar referencias
+        selectionDialog?.dismiss()
+        selectionDialog = null
+        dialogAdapter = null
+    }
+}
+
+// SimpleAppsAdapter (sin cambios)
+class SimpleAppsAdapter(
+    private val context: Context,
+    private val apps: List<ApplicationInfo>,
+    initialSelectedApps: Set<String>,
+    private val onAppChecked: (String, Boolean) -> Unit
+) : RecyclerView.Adapter<SimpleAppsAdapter.ViewHolder>() {
+    
+    private val packageManager = context.packageManager
+    private val selectedApps = initialSelectedApps.toMutableSet()
+    
+    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val checkBox: CheckBox = itemView.findViewById(R.id.checkBoxApp)
+        val appName: TextView = itemView.findViewById(R.id.textAppName)
+        val appIcon: ImageView = itemView.findViewById(R.id.imageAppIcon)
+    }
+    
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_simple_app, parent, false)
+        return ViewHolder(view)
+    }
+    
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val app = apps[position]
+        val packageName = app.packageName
+        
+        try {
+            holder.appIcon.setImageDrawable(app.loadIcon(packageManager))
+            holder.appName.text = app.loadLabel(packageManager).toString()
+            holder.checkBox.isChecked = selectedApps.contains(packageName)
+            
+            holder.checkBox.setOnCheckedChangeListener(null)
+            
+            holder.checkBox.setOnCheckedChangeListener { _, isChecked ->
+                if (isChecked) {
+                    selectedApps.add(packageName)
+                } else {
+                    selectedApps.remove(packageName)
+                }
+                onAppChecked(packageName, isChecked)
+            }
+            
+            holder.itemView.setOnClickListener {
+                holder.checkBox.isChecked = !holder.checkBox.isChecked
+            }
+            
+        } catch (e: Exception) {
+            holder.appName.text = packageName
+        }
+    }
+    
+    override fun getItemCount(): Int = apps.size
+    
+    fun updateSelectedApps(newSelectedApps: Set<String>) {
+        selectedApps.clear()
+        selectedApps.addAll(newSelectedApps)
+        notifyDataSetChanged()
+    }
+    
+    fun getSelectedCount(): Int = selectedApps.size
+}package com.gnzalobnites.appsusagemonitor
+
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.fragment.app.Fragment
+
+class SimpleFragment : Fragment() {
+
+    companion object {
+        private const val ARG_TITLE = "title"
+        
+        fun newInstance(title: String): SimpleFragment {
+            val fragment = SimpleFragment()
+            val args = Bundle()
+            args.putString(ARG_TITLE, title)
+            fragment.arguments = args
+            return fragment
+        }
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_simple, container, false)
+    }
+    
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        
+        val title = arguments?.getString(ARG_TITLE) ?: "Fragment"
+        view.findViewById<TextView>(R.id.textView).text = "$title\n\n(En desarrollo - Próximamente)"
+    }
+}package com.gnzalobnites.appsusagemonitor.fragments
+
+import android.app.AlertDialog
+import android.os.Bundle
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.*
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import com.gnzalobnites.appsusagemonitor.AppUsageMonitorApp
+import com.gnzalobnites.appsusagemonitor.MainViewModel
+import com.gnzalobnites.appsusagemonitor.R
+import com.gnzalobnites.appsusagemonitor.UserPreferences
+import java.text.SimpleDateFormat
+import java.util.*
+
+class SettingsFragment : Fragment() {
+
+    private val TAG = "SettingsFragment"
+    private lateinit var viewModel: MainViewModel
+    
+    // UI Elements
+    private lateinit var swDarkMode: Switch
+    private lateinit var swAutoStart: Switch
+    private lateinit var swBatteryOptimization: Switch
+    private lateinit var swVibrateNotification: Switch
+    private lateinit var swSoundNotification: Switch
+    private lateinit var swExportDailyReports: Switch
+    
+    private lateinit var tvThemeStatus: TextView
+    private lateinit var tvAutoStartStatus: TextView
+    private lateinit var tvBatteryStatus: TextView
+    private lateinit var tvVibrateStatus: TextView
+    private lateinit var tvSoundStatus: TextView
+    private lateinit var tvExportStatus: TextView
+    private lateinit var tvSettingsStatus: TextView
+    
+    // SOLO spinner de intervalo (ELIMINADO el de duración)
+    private lateinit var spBannersPerDay: Spinner
+    private lateinit var tvBannersPerDayValue: TextView
+    
+    private lateinit var btnSaveSettings: Button
+    private lateinit var btnResetSettings: Button
+    
+    // Valores de configuración (SOLO intervalo)
+    private val bannerIntervalValues = arrayOf(-1, 0, 1, 2, 3, 5, 10, 15, 20, 30, 45, 60)
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_settings_enhanced, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        
+        Log.d(TAG, "onViewCreated - SettingsFragment")
+        
+        try {
+            viewModel = ViewModelProvider(requireActivity()).get(MainViewModel::class.java)
+            
+            initViews(view)
+            setupSpinners()
+            loadCurrentSettings()
+            setupListeners()
+            updateAllStatusTexts()
+            updateSettingsStatus()
+            
+            observeDarkModeChanges()
+            
+            Log.d(TAG, "✅ SettingsFragment configurado")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error en onViewCreated: ${e.message}", e)
+            Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun initViews(view: View) {
+        swDarkMode = view.findViewById(R.id.swDarkMode)
+        swAutoStart = view.findViewById(R.id.swAutoStart)
+        swBatteryOptimization = view.findViewById(R.id.swBatteryOptimization)
+        swVibrateNotification = view.findViewById(R.id.swVibrateNotification)
+        swSoundNotification = view.findViewById(R.id.swSoundNotification)
+        swExportDailyReports = view.findViewById(R.id.swExportDailyReports)
+        
+        tvThemeStatus = view.findViewById(R.id.tvThemeStatus)
+        tvAutoStartStatus = view.findViewById(R.id.tvAutoStartStatus)
+        tvBatteryStatus = view.findViewById(R.id.tvBatteryStatus)
+        tvVibrateStatus = view.findViewById(R.id.tvVibrateStatus)
+        tvSoundStatus = view.findViewById(R.id.tvSoundStatus)
+        tvExportStatus = view.findViewById(R.id.tvExportStatus)
+        tvSettingsStatus = view.findViewById(R.id.tvSettingsStatus)
+        
+        // SOLO spinner de intervalo
+        spBannersPerDay = view.findViewById(R.id.spBannersPerDay)
+        tvBannersPerDayValue = view.findViewById(R.id.tvBannersPerDayValue)
+        
+        btnSaveSettings = view.findViewById(R.id.btnSaveSettings)
+        btnResetSettings = view.findViewById(R.id.btnResetSettings)
+    }
+    
+    private fun setupSpinners() {
+        try {
+            // SOLO spinner para intervalo de banners
+            val intervalLabels = bannerIntervalValues.map { value ->
+                when (value) {
+                    -1 -> "10 segundos"
+                    0  -> "1 segundo (PRUEBAS)"
+                    else -> "$value minutos"
+                }
+            }.toTypedArray()
+            
+            val intervalAdapter = ArrayAdapter(
+                requireContext(), 
+                android.R.layout.simple_spinner_item, 
+                intervalLabels
+            )
+            intervalAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            spBannersPerDay.adapter = intervalAdapter
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error configurando spinner: ${e.message}")
+        }
+    }
+    
+    private fun loadCurrentSettings() {
+        // Remover listener temporalmente
+        swDarkMode.setOnCheckedChangeListener(null)
+        
+        try {
+            // Tema
+            val isDarkMode = viewModel.isDarkMode.value ?: false
+            swDarkMode.isChecked = isDarkMode
+            tvThemeStatus.text = if (isDarkMode) "🌙 Tema oscuro" else "☀️ Tema claro"
+            
+            // Intervalo (única opción)
+            val interval = viewModel.bannerInterval.value ?: 5
+            val intervalIndex = bannerIntervalValues.indexOf(interval).takeIf { it >= 0 } ?: 4
+            spBannersPerDay.setSelection(intervalIndex)
+            
+            val prefs = UserPreferences.getInstance(requireContext())
+            tvBannersPerDayValue.text = prefs.getBannerIntervalDisplayText()
+            
+            // Valores por defecto para otras opciones
+            swAutoStart.isChecked = false
+            swBatteryOptimization.isChecked = true
+            swVibrateNotification.isChecked = true
+            swSoundNotification.isChecked = false
+            swExportDailyReports.isChecked = false
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error cargando configuración: ${e.message}")
+        }
+    }
+    
+    private fun setupListeners() {
+        swDarkMode.setOnCheckedChangeListener { _, isChecked ->
+            tvThemeStatus.text = if (isChecked) "🌙 Tema oscuro" else "☀️ Tema claro"
+            viewModel.updateDarkMode(isChecked)
+            applyThemeChange(isChecked)
+        }
+        
+        spBannersPerDay.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val value = bannerIntervalValues[position]
+                viewModel.updateBannerInterval(value)
+                
+                val prefs = UserPreferences.getInstance(requireContext())
+                tvBannersPerDayValue.text = prefs.getBannerIntervalDisplayText()
+            }
+            
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+        
+        swAutoStart.setOnCheckedChangeListener { _, isChecked ->
+            tvAutoStartStatus.text = if (isChecked) "✅ Inicio automático" else "⭕ Inicio manual"
+        }
+        
+        swBatteryOptimization.setOnCheckedChangeListener { _, isChecked ->
+            tvBatteryStatus.text = if (isChecked) "✅ Optimización activa" else "⚠️ Sin optimización"
+        }
+        
+        swVibrateNotification.setOnCheckedChangeListener { _, isChecked ->
+            tvVibrateStatus.text = if (isChecked) "✅ Vibración activa" else "🔇 Sin vibración"
+        }
+        
+        swSoundNotification.setOnCheckedChangeListener { _, isChecked ->
+            tvSoundStatus.text = if (isChecked) "🔔 Sonido activo" else "🔇 Silencio"
+        }
+        
+        swExportDailyReports.setOnCheckedChangeListener { _, isChecked ->
+            tvExportStatus.text = if (isChecked) "✅ Exportación automática" else "⭕ Exportación manual"
+        }
+        
+        btnSaveSettings.setOnClickListener { saveSettings() }
+        btnResetSettings.setOnClickListener { resetSettings() }
+    }
+    
+    private fun observeDarkModeChanges() {
+        viewModel.isDarkMode.observe(viewLifecycleOwner, Observer<Boolean> { isDarkMode ->
+            swDarkMode.setOnCheckedChangeListener(null)
+            if (swDarkMode.isChecked != isDarkMode) {
+                swDarkMode.isChecked = isDarkMode
+            }
+            tvThemeStatus.text = if (isDarkMode) "🌙 Tema oscuro" else "☀️ Tema claro"
+            
+            swDarkMode.setOnCheckedChangeListener { _, checked ->
+                tvThemeStatus.text = if (checked) "🌙 Tema oscuro" else "☀️ Tema claro"
+                viewModel.updateDarkMode(checked)
+                applyThemeChange(checked)
+            }
+        })
+    }
+    
+    private fun updateAllStatusTexts() {
+        tvThemeStatus.text = if (swDarkMode.isChecked) "🌙 Tema oscuro" else "☀️ Tema claro"
+        tvAutoStartStatus.text = if (swAutoStart.isChecked) "✅ Inicio automático" else "⭕ Inicio manual"
+        tvBatteryStatus.text = if (swBatteryOptimization.isChecked) "✅ Optimización activa" else "⚠️ Sin optimización"
+        tvVibrateStatus.text = if (swVibrateNotification.isChecked) "✅ Vibración activa" else "🔇 Sin vibración"
+        tvSoundStatus.text = if (swSoundNotification.isChecked) "🔔 Sonido activo" else "🔇 Silencio"
+        tvExportStatus.text = if (swExportDailyReports.isChecked) "✅ Exportación automática" else "⭕ Exportación manual"
+    }
+    
+    private fun updateSettingsStatus() {
+        val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+        val currentTime = dateFormat.format(Date())
+        tvSettingsStatus.text = "Última actualización: $currentTime"
+    }
+    
+    private fun applyThemeChange(isDarkMode: Boolean) {
+        try {
+            viewModel.updateDarkMode(isDarkMode)
+            
+            val app = requireActivity().application as AppUsageMonitorApp
+            app.applyTheme(isDarkMode)
+            
+            requireActivity().recreate()
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error aplicando tema: ${e.message}")
+            Toast.makeText(requireContext(), "Error al cambiar tema", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun saveSettings() {
+        viewModel.saveAllSettings()
+        updateSettingsStatus()
+        Toast.makeText(requireContext(), "✅ Configuraciones guardadas", Toast.LENGTH_SHORT).show()
+        showSaveConfirmation()
+    }
+    
+    private fun showSaveConfirmation() {
+        val interval = bannerIntervalValues[spBannersPerDay.selectedItemPosition]
+        val prefs = UserPreferences.getInstance(requireContext())
+        
+        val summary = StringBuilder().apply {
+            append("⚙️ CONFIGURACIONES GUARDADAS:\n\n")
+            append("• Tema: ${if (swDarkMode.isChecked) "Oscuro" else "Claro"}\n")
+            append("• Intervalo: ${prefs.getBannerIntervalDisplayText()}\n")
+            append("• Inicio automático: ${if (swAutoStart.isChecked) "Sí" else "No"}\n")
+            append("• Optimización batería: ${if (swBatteryOptimization.isChecked) "Sí" else "No"}\n")
+            append("• Vibración: ${if (swVibrateNotification.isChecked) "Sí" else "No"}\n")
+            append("• Sonido: ${if (swSoundNotification.isChecked) "Sí" else "No"}\n")
+            append("• Exportación automática: ${if (swExportDailyReports.isChecked) "Sí" else "No"}\n\n")
+            append("✅ El banner permanece visible hasta que lo cierres manualmente")
+        }
+        
+        AlertDialog.Builder(requireContext())
+            .setTitle("Configuraciones Guardadas")
+            .setMessage(summary.toString())
+            .setPositiveButton("OK", null)
+            .show()
+    }
+    
+    private fun resetSettings() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Restablecer Configuraciones")
+            .setMessage("¿Estás seguro de querer restablecer todas las configuraciones?")
+            .setPositiveButton("Sí, restablecer") { _, _ ->
+                performReset()
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+    
+    private fun performReset() {
+        swDarkMode.setOnCheckedChangeListener(null)
+        
+        swDarkMode.isChecked = false
+        swAutoStart.isChecked = false
+        swBatteryOptimization.isChecked = true
+        swVibrateNotification.isChecked = true
+        swSoundNotification.isChecked = false
+        swExportDailyReports.isChecked = false
+        
+        spBannersPerDay.setSelection(4) // 5 minutos por defecto
+        
+        updateAllStatusTexts()
+        
+        val prefs = UserPreferences.getInstance(requireContext())
+        tvBannersPerDayValue.text = prefs.getBannerIntervalDisplayText()
+        
+        viewModel.clearAllSettings()
+        
+        swDarkMode.setOnCheckedChangeListener { _, isChecked ->
+            tvThemeStatus.text = if (isChecked) "🌙 Tema oscuro" else "☀️ Tema claro"
+            viewModel.updateDarkMode(isChecked)
+            applyThemeChange(isChecked)
+        }
+        
+        applyThemeChange(false)
+        
+        Toast.makeText(requireContext(), "✅ Configuraciones restablecidas", Toast.LENGTH_SHORT).show()
+        tvSettingsStatus.text = "Configuraciones restablecidas"
+    }
+}package com.gnzalobnites.appsusagemonitor.banner
+
+import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.provider.Settings
+import android.util.Log
+import android.view.Gravity
+import android.view.WindowManager
+import android.widget.Toast
+import androidx.core.content.ContextCompat
+import com.gnzalobnites.appsusagemonitor.R
+import com.gnzalobnites.appsusagemonitor.UserPreferences
+import com.gnzalobnites.appsusagemonitor.AppDatabase
+import kotlinx.coroutines.*
+import java.util.*
+
+class BannerManager(private val context: Context) {
+
+    // Componentes
+    private lateinit var uiController: BannerUIController
+    private lateinit var scheduler: BannerScheduler
+    private lateinit var foregroundMonitor: BannerForegroundMonitor
+    private lateinit var testUtils: BannerTestUtils
+    
+    // Dependencias
+    private lateinit var userPreferences: UserPreferences
+    private lateinit var database: AppDatabase
+    
+    // Estado
+    private var bannerState = BannerState.HIDDEN
+    private var currentSession: SessionInfo? = null
+    private var isBannerShowing = false
+    
+    // Corrutinas
+    private var updateJob: Job? = null
+    private val managerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    
+    // Broadcast receiver
+    private val appExitReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "FORCE_HIDE_BANNER") {
+                handleAppExit()
+            }
+        }
+    }
+
+    // ======================================================
+    // INICIALIZACIÓN
+    // ======================================================
+
+    fun initialize(userPrefs: UserPreferences, db: AppDatabase) {
+        this.userPreferences = userPrefs
+        this.database = db
+        
+        val windowManager = ContextCompat.getSystemService(context, WindowManager::class.java)!!
+        
+        // Inicializar componentes
+        uiController = BannerUIController(context)
+        scheduler = BannerScheduler(userPreferences) { showBannerWaiting() }
+        foregroundMonitor = BannerForegroundMonitor(context) { handleAppExit() }
+        testUtils = BannerTestUtils(context).apply { initialize(windowManager) }
+        
+        foregroundMonitor.initialize()
+        
+        // Registrar receiver
+        context.registerReceiver(appExitReceiver, IntentFilter("FORCE_HIDE_BANNER"))
+        
+        Log.d("BannerManager", "✅ Inicializado con componentes separados")
+    }
+
+    // ======================================================
+    // GESTIÓN DE SESIÓN
+    // ======================================================
+
+    fun startSession(packageName: String) {
+        Log.d("BannerManager", "🚀 INICIANDO SESIÓN para: $packageName")
+        
+        val appName = getAppName(packageName)
+        currentSession = SessionInfo(packageName, System.currentTimeMillis(), appName)
+        
+        bannerState = BannerState.HIDDEN
+        foregroundMonitor.startMonitoring(packageName)
+        
+        if (userPreferences.showBanner) {
+            scheduler.scheduleNextBanner(bannerState, true)
+        }
+    }
+
+    fun endSession() {
+        Log.d("BannerManager", "⏹️ FINALIZANDO SESIÓN")
+        
+        foregroundMonitor.stopMonitoring()
+        scheduler.cancelAll()
+        hideBannerImmediately()
+        
+        currentSession = null
+        bannerState = BannerState.HIDDEN
+    }
+
+    // ======================================================
+    // MOSTRAR/OCULTAR BANNER
+    // ======================================================
+
+    private fun showBannerWaiting() {
+        val session = currentSession ?: return
+        
+        if (!foregroundMonitor.isAppInForeground(session.packageName)) {
+            Log.d("BannerManager", "⏭️ App no en foreground")
+            return
+        }
+        
+        if (bannerState != BannerState.HIDDEN) return
+        
+        try {
+            uiController.createBannerView()
+            uiController.setupWaitingUI(session) { onBannerClicked() }
+            
+            val windowManager = ContextCompat.getSystemService(context, WindowManager::class.java)
+            val params = createWindowParams()
+            windowManager?.addView(uiController.bannerView, params)
+            
+            bannerState = BannerState.VISIBLE_WAITING
+            isBannerShowing = true
+            scheduler.bannerShown()
+            
+            startLiveUpdates()
+            
+        } catch (e: Exception) {
+            Log.e("BannerManager", "Error: ${e.message}")
+            bannerState = BannerState.HIDDEN
+        }
+    }
+
+    private fun onBannerClicked() {
+        when (bannerState) {
+            BannerState.VISIBLE_WAITING -> expandBanner()
+            BannerState.VISIBLE_EXPANDED -> closeBannerAndScheduleNext()
+            else -> {}
+        }
+    }
+
+    private fun expandBanner() {
+        managerScope.launch {
+            val session = currentSession ?: return@launch
+            val timeStats = getCurrentTimeStats()
+            
+            uiController.expandBanner(timeStats, session.appName)
+            bannerState = BannerState.VISIBLE_EXPANDED
+        }
+    }
+
+    private fun closeBannerAndScheduleNext() {
+        uiController.hideWithAnimation {
+            isBannerShowing = false
+            bannerState = BannerState.HIDDEN
+            scheduler.scheduleNextBanner(bannerState, currentSession != null)
+        }
+        
+        stopLiveUpdates()
+    }
+
+    private fun hideBannerImmediately() {
+        stopLiveUpdates()
+        foregroundMonitor.stopMonitoring()
+        
+        uiController.bannerView?.let { view ->
+            try {
+                ContextCompat.getSystemService(context, WindowManager::class.java)?.removeView(view)
+            } catch (e: Exception) {}
+        }
+        
+        isBannerShowing = false
+        bannerState = BannerState.HIDDEN
+    }
+
+    private fun handleAppExit() {
+        Log.d("BannerManager", "👋 Usuario salió de la app")
+        hideBannerImmediately()
+        endSession()
+    }
+
+    // ======================================================
+    // ACTUALIZACIONES EN VIVO (CORREGIDO CON CORRUTINAS)
+    // ======================================================
+
+    private val UPDATE_INTERVAL_MS = 1000L
+
+    private fun startLiveUpdates() {
+        stopLiveUpdates()
+        
+        updateJob = managerScope.launch {
+            while (bannerState != BannerState.HIDDEN) {
+                try {
+                    val session = currentSession
+                    if (session != null) {
+                        val timeStats = getCurrentTimeStats() // ¡Ahora es suspend!
+                        
+                        if (bannerState == BannerState.VISIBLE_EXPANDED) {
+                            uiController.updateExpandedContent(timeStats, session.appName)
+                        } else {
+                            uiController.updateMinimizedContent(timeStats, session.appName)
+                        }
+                    }
+                    delay(UPDATE_INTERVAL_MS)
+                } catch (e: Exception) {
+                    Log.e("BannerManager", "Error en live updates: ${e.message}")
+                    break
+                }
+            }
+        }
+    }
+
+    private fun stopLiveUpdates() {
+        updateJob?.cancel()
+        updateJob = null
+    }
+
+    // ======================================================
+    // UTILIDADES (CORREGIDAS)
+    // ======================================================
+
+    private suspend fun getCurrentTimeStats(): TimeStats {
+        val session = currentSession ?: return TimeStats(0, 0)
+        val todayTotal = getTodayTotal(session.packageName)
+        return TimeStats(session.getDuration(), todayTotal)
+    }
+
+    private suspend fun getTodayTotal(packageName: String): Long {
+        return try {
+            val now = System.currentTimeMillis()
+            val calendar = Calendar.getInstance().apply {
+                timeInMillis = now
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val todayMidnight = calendar.timeInMillis
+            
+            withContext(Dispatchers.IO) {
+                database.usageDao().getAppTimeToday(
+                    packageName,
+                    todayMidnight,
+                    now
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("BannerManager", "Error obteniendo tiempo total: ${e.message}")
+            0L
+        }
+    }
+
+    private fun getAppName(packageName: String): String {
+        return try {
+            val pm = context.packageManager
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            pm.getApplicationLabel(appInfo).toString()
+        } catch (e: Exception) {
+            packageName
+        }
+    }
+
+    private fun createWindowParams(): WindowManager.LayoutParams {
+        return WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                WindowManager.LayoutParams.TYPE_PHONE
+            },
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            android.graphics.PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.END
+            y = 100
+        }
+    }
+
+    // ======================================================
+    // PERMISOS (DELEGADOS)
+    // ======================================================
+
+    fun hasUsageStatsPermission(): Boolean = foregroundMonitor.hasUsageStatsPermission()
+
+    fun requestUsageStatsPermission(activity: Activity) {
+        try {
+            val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            activity.startActivity(intent)
+            Toast.makeText(context, 
+                "🔍 Busca '${activity.getString(R.string.app_name)}' en la lista", 
+                Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            try {
+                activity.startActivity(Intent(Settings.ACTION_SETTINGS))
+            } catch (e2: Exception) {
+                Toast.makeText(context, "No se pudo abrir configuración", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // ======================================================
+    // MÉTODOS DE PRUEBA
+    // ======================================================
+
+    fun showTestBanner(testMessage: String = "🧪 BANNER DE PRUEBA") {
+        testUtils.showTestBanner(testMessage) {
+            // Banner cerrado
+        }
+    }
+
+    fun showTikTokBanner(message: String, durationSeconds: Int) {
+        showTestBanner(message)
+    }
+
+    fun forceStopTestBanner() {
+        testUtils.hideTestBanner()
+    }
+
+    // ======================================================
+    // LIMPIEZA
+    // ======================================================
+
+    fun cleanup() {
+        try {
+            context.unregisterReceiver(appExitReceiver)
+        } catch (e: Exception) {}
+        
+        foregroundMonitor.stopMonitoring()
+        scheduler.cancelAll()
+        stopLiveUpdates()
+        hideBannerImmediately()
+        testUtils.hideTestBanner()
+        managerScope.cancel()
+    }
+
+    fun setNinjaMode(enabled: Boolean) {
+        Log.d("BannerManager", "🎨 Modo premium ${if (enabled) "activado" else "desactivado"}")
+    }
+}package com.gnzalobnites.appsusagemonitor.banner
+
+/**
+ * Estados posibles del banner
+ */
+enum class BannerState {
+    HIDDEN,           // Oculto, esperando próximo intervalo
+    VISIBLE_WAITING,  // Visible, esperando que usuario interactúe
+    VISIBLE_EXPANDED  // Expandido por el usuario
+}
+
+/**
+ * Configuración visual del banner
+ */
+data class BannerVisualConfig(
+    val accentColor: Int,
+    val backgroundColor: Int,
+    val textColorPrimary: Int,
+    val textColorSecondary: Int
+)
+
+/**
+ * Mensajes motivacionales predefinidos
+ */
+object MotivationalMessages {
+    val messages = listOf(
+        "⏳ El tiempo es tu recurso más valioso",
+        "👀 Sé consciente de dónde inviertes tu tiempo",
+        "💡 ¿Estás usando este tiempo como realmente quieres?",
+        "🎯 Cada minuto cuenta hacia tus objetivos",
+        "🔄 Considera si necesitas un cambio de actividad",
+        "📱 ¿Esta app te acerca a tus metas?",
+        "🌟 Tu atención vale oro - ¿Dónde la pones?",
+        "⚡ Este momento es una elección - ¿La estás haciendo consciente?",
+        "🔔 Recordatorio: tú controlas tu tiempo",
+        "🌱 Pequeños cambios en el uso diario crean grandes resultados"
+    )
+}package com.gnzalobnites.appsusagemonitor.banner
+
+/**
+ * Información de la sesión actual
+ */
+data class SessionInfo(
+    val packageName: String,
+    val startTime: Long,
+    val appName: String = ""
+) {
+    fun getDuration(): Long = System.currentTimeMillis() - startTime
+}
+
+/**
+ * Estadísticas de tiempo
+ */
+data class TimeStats(
+    val sessionTime: Long,
+    val todayTotal: Long,
+    val formattedSessionTime: String = formatTime(sessionTime),
+    val formattedTodayTotal: String = formatTime(todayTotal)
+) {
+    companion object {
+        fun formatTime(milliseconds: Long): String {
+            val totalSeconds = milliseconds / 1000
+            val hours = totalSeconds / 3600
+            val minutes = (totalSeconds % 3600) / 60
+            val seconds = totalSeconds % 60
+            
+            return if (hours > 0) {
+                String.format("%d:%02d:%02d", hours, minutes, seconds)
+            } else {
+                String.format("%02d:%02d", minutes, seconds)
+            }
+        }
+    }
+}package com.gnzalobnites.appsusagemonitor.banner
+
+import android.content.Context
+import android.view.LayoutInflater
+import android.view.View
+import android.view.animation.OvershootInterpolator
+import android.widget.ImageView
+import android.widget.TextView
+import androidx.cardview.widget.CardView
+import com.gnzalobnites.appsusagemonitor.R
+import java.util.*
+
+class BannerUIController(private val context: Context) {
+    
+    var bannerView: View? = null
+    private var messageIndex = 0
+    
+    /**
+     * Crear vista del banner
+     */
+    fun createBannerView(): View {
+        val inflater = LayoutInflater.from(context)
+        bannerView = inflater.inflate(R.layout.banner_overlay, null)
+        return bannerView!!
+    }
+    
+    /**
+     * Configurar UI para modo minimizado
+     */
+    fun setupWaitingUI(sessionInfo: SessionInfo, onBannerClick: () -> Unit) {
+        bannerView?.apply {
+            // Tiempo de sesión
+            findViewById<TextView>(R.id.sessionTimeText)?.let {
+                it.text = TimeStats.formatTime(sessionInfo.getDuration())
+                it.visibility = View.VISIBLE
+            }
+            
+            // Nombre de app
+            findViewById<TextView>(R.id.appNameLabel)?.let {
+                it.text = " ${sessionInfo.appName}"
+                it.visibility = View.VISIBLE
+            }
+            
+            // Icono
+            findViewById<ImageView>(R.id.ninjaIcon)?.let {
+                it.visibility = View.VISIBLE
+                applyIconColor(it, sessionInfo.getDuration())
+            }
+            
+            // Ocultar elementos expandidos
+            findViewById<View>(R.id.expandedContent)?.visibility = View.GONE
+            findViewById<TextView>(R.id.todayTotalText)?.visibility = View.GONE
+            findViewById<TextView>(R.id.motivationalMessage)?.visibility = View.GONE
+            
+            // Click listener
+            setOnClickListener { onBannerClick() }
+            
+            // Estilo base
+            applyBaseStyling()
+            applyMinimizedColorScheme(sessionInfo.getDuration())
+        }
+    }
+    
+    /**
+     * Expandir banner con animación
+     */
+    fun expandBanner(timeStats: TimeStats, appName: String) {
+        bannerView?.apply {
+            val expandedContent = findViewById<View>(R.id.expandedContent)
+            
+            expandedContent.visibility = View.VISIBLE
+            expandedContent.alpha = 0f
+            expandedContent.scaleY = 0.8f
+            
+            expandedContent.animate()
+                ?.alpha(1f)
+                ?.scaleY(1f)
+                ?.setDuration(300)
+                ?.setInterpolator(OvershootInterpolator(1.2f))
+                ?.start()
+            
+            findViewById<TextView>(R.id.todayTotalText)?.visibility = View.VISIBLE
+            findViewById<TextView>(R.id.motivationalMessage)?.visibility = View.VISIBLE
+            
+            updateExpandedContent(timeStats, appName)
+        }
+    }
+    
+    /**
+     * Actualizar contenido expandido
+     */
+    fun updateExpandedContent(timeStats: TimeStats, appName: String) {
+        bannerView?.apply {
+            findViewById<TextView>(R.id.sessionTimeText)?.text = timeStats.formattedSessionTime
+            findViewById<TextView>(R.id.appNameLabel)?.text = " $appName"
+            findViewById<TextView>(R.id.todayTotalText)?.text = "Hoy: ${timeStats.formattedTodayTotal}"
+            
+            // Mensaje motivacional aleatorio
+            if (java.util.Random().nextInt(10) == 0) {
+                findViewById<TextView>(R.id.motivationalMessage)?.text = 
+                    getRandomMotivationalMessage()
+            }
+            
+            applyColorSchemeBasedOnTime(timeStats.sessionTime)
+        }
+    }
+    
+    /**
+     * Actualizar solo elementos minimizados
+     */
+    fun updateMinimizedContent(timeStats: TimeStats, appName: String) {
+        bannerView?.apply {
+            findViewById<TextView>(R.id.sessionTimeText)?.text = timeStats.formattedSessionTime
+            findViewById<TextView>(R.id.appNameLabel)?.text = " $appName"
+            findViewById<ImageView>(R.id.ninjaIcon)?.let { 
+                applyIconColor(it, timeStats.sessionTime)
+            }
+            applyMinimizedColorScheme(timeStats.sessionTime)
+        }
+    }
+    
+    /**
+     * Ocultar banner con animación
+     */
+    fun hideWithAnimation(onComplete: () -> Unit) {
+        bannerView?.animate()
+            ?.alpha(0f)
+            ?.scaleX(0.8f)
+            ?.scaleY(0.8f)
+            ?.setDuration(300)
+            ?.withEndAction {
+                onComplete()
+                bannerView = null
+            }
+            ?.start()
+    }
+    
+    // ========== MÉTODOS DE ESTILO ==========
+    
+    private fun applyIconColor(imageView: ImageView, duration: Long) {
+        val minutes = duration / 60000
+        val color = when {
+            minutes > 30 -> 0xFFFF8B94.toInt()
+            minutes > 15 -> 0xFFFFD3B6.toInt()
+            else -> 0xFFA8E6CF.toInt()
+        }
+        imageView.setColorFilter(color)
+    }
+    
+    private fun applyMinimizedColorScheme(duration: Long) {
+        val minutes = duration / 60000
+        bannerView?.apply {
+            val sessionTimeText = findViewById<TextView>(R.id.sessionTimeText)
+            val appNameLabel = findViewById<TextView>(R.id.appNameLabel)
+            val ninjaIcon = findViewById<ImageView>(R.id.ninjaIcon)
+            
+            val accentColor = when {
+                minutes > 30 -> 0xFFFF8B94.toInt()
+                minutes > 15 -> 0xFFFFD3B6.toInt()
+                else -> 0xFFA8E6CF.toInt()
+            }
+            
+            sessionTimeText?.setTextColor(accentColor)
+            appNameLabel?.setTextColor(accentColor)
+            ninjaIcon?.setColorFilter(accentColor)
+        }
+    }
+    
+    private fun applyColorSchemeBasedOnTime(duration: Long) {
+        val minutes = duration / 60000
+        bannerView?.apply {
+            val sessionTimeText = findViewById<TextView>(R.id.sessionTimeText)
+            val todayTotalText = findViewById<TextView>(R.id.todayTotalText)
+            val ninjaIcon = findViewById<ImageView>(R.id.ninjaIcon)
+            val appNameLabel = findViewById<TextView>(R.id.appNameLabel)
+            val motivationalMessage = findViewById<TextView>(R.id.motivationalMessage)
+            
+            when {
+                minutes > 30 -> {
+                    val accentColor = 0xFFFF8B94.toInt()
+                    sessionTimeText?.setTextColor(accentColor)
+                    ninjaIcon?.setColorFilter(accentColor)
+                    appNameLabel?.setTextColor(accentColor)
+                    todayTotalText?.setTextColor(0xFFD4A5A5.toInt())
+                    motivationalMessage?.setTextColor(0xFFE8D6D6.toInt())
+                    findViewById<CardView>(R.id.bannerRootCard)?.setCardBackgroundColor(0xCC1A1A1A.toInt())
+                }
+                minutes > 15 -> {
+                    val accentColor = 0xFFFFD3B6.toInt()
+                    sessionTimeText?.setTextColor(accentColor)
+                    ninjaIcon?.setColorFilter(accentColor)
+                    appNameLabel?.setTextColor(accentColor)
+                    todayTotalText?.setTextColor(0xFFE6C4A8.toInt())
+                    motivationalMessage?.setTextColor(0xFFF5E6D6.toInt())
+                }
+                else -> {
+                    val accentColor = 0xFFA8E6CF.toInt()
+                    sessionTimeText?.setTextColor(accentColor)
+                    ninjaIcon?.setColorFilter(accentColor)
+                    appNameLabel?.setTextColor(accentColor)
+                    todayTotalText?.setTextColor(0xFFC6E6D6.toInt())
+                    motivationalMessage?.setTextColor(0xFFE6F5EF.toInt())
+                }
+            }
+        }
+    }
+    
+    private fun applyBaseStyling() {
+        bannerView?.findViewById<CardView>(R.id.bannerRootCard)?.apply {
+            cardElevation = 8f
+            radius = 24f
+            alpha = 0.95f
+        }
+    }
+    
+    private fun getRandomMotivationalMessage(): String {
+        messageIndex = (messageIndex + 1) % MotivationalMessages.messages.size
+        return MotivationalMessages.messages[messageIndex]
+    }
+}package com.gnzalobnites.appsusagemonitor.banner
+
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import com.gnzalobnites.appsusagemonitor.UserPreferences
+
+class BannerScheduler(
+    private val userPreferences: UserPreferences,
+    private val onShowBanner: () -> Unit
+) {
+    private val handler = Handler(Looper.getMainLooper())
+    private var showBannerRunnable: Runnable? = null
+    private var nextBannerScheduled = false
+    
+    fun scheduleNextBanner(currentState: BannerState, hasActiveSession: Boolean): Boolean {
+        if (!userPreferences.showBanner) {
+            Log.d("BannerScheduler", "❌ Banner desactivado")
+            return false
+        }
+        
+        if (!hasActiveSession) {
+            Log.d("BannerScheduler", "❌ No hay sesión activa")
+            return false
+        }
+        
+        if (currentState != BannerState.HIDDEN) {
+            Log.d("BannerScheduler", "⚠️ Estado actual: $currentState, no se programa")
+            return false
+        }
+        
+        if (nextBannerScheduled) {
+            Log.d("BannerScheduler", "⚠️ Ya hay banner programado")
+            return false
+        }
+        
+        val intervalMs = userPreferences.getBannerIntervalMs()
+        val safeIntervalMs = if (intervalMs < 1000) 5000L else intervalMs
+        
+        Log.d("BannerScheduler", "📅 Programando banner en ${safeIntervalMs/1000} seg")
+        
+        showBannerRunnable?.let { handler.removeCallbacks(it) }
+        showBannerRunnable = Runnable {
+            Log.d("BannerScheduler", "🔔 EJECUTANDO banner")
+            onShowBanner()
+        }
+        
+        handler.postDelayed(showBannerRunnable!!, safeIntervalMs)
+        nextBannerScheduled = true
+        return true
+    }
+    
+    fun bannerShown() {
+        nextBannerScheduled = false
+    }
+    
+    fun cancelAll() {
+        showBannerRunnable?.let { handler.removeCallbacks(it) }
+        showBannerRunnable = null
+        nextBannerScheduled = false
+    }
+}package com.gnzalobnites.appsusagemonitor.banner
+
+import android.app.AppOpsManager
+import android.app.usage.UsageStatsManager
+import android.content.Context
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+
+class BannerForegroundMonitor(
+    private val context: Context,
+    private val onAppExit: () -> Unit
+) {
+    private val handler = Handler(Looper.getMainLooper())
+    private var checkRunnable: Runnable? = null
+    private val CHECK_INTERVAL_MS = 1000L
+    
+    private lateinit var usageStatsManager: UsageStatsManager
+    private var currentPackageName: String? = null
+    
+    fun initialize() {
+        this.usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+    }
+    
+    fun startMonitoring(packageName: String) {
+        stopMonitoring()
+        currentPackageName = packageName
+        
+        checkRunnable = object : Runnable {
+            override fun run() {
+                checkIfInForeground()
+                handler.postDelayed(this, CHECK_INTERVAL_MS)
+            }
+        }
+        
+        handler.post(checkRunnable!!)
+        Log.d("ForegroundMonitor", "👁️ Monitoreo iniciado para: $packageName")
+    }
+    
+    fun stopMonitoring() {
+        checkRunnable?.let { handler.removeCallbacks(it) }
+        checkRunnable = null
+        currentPackageName = null
+    }
+    
+    private fun checkIfInForeground() {
+        val pkg = currentPackageName ?: return
+        
+        if (!isAppInForeground(pkg)) {
+            Log.d("ForegroundMonitor", "🚪 Usuario salió de: $pkg")
+            onAppExit()
+        }
+    }
+    
+    fun isAppInForeground(packageName: String): Boolean {
+        if (!hasUsageStatsPermission()) return true
+        
+        return try {
+            val currentTime = System.currentTimeMillis()
+            val stats = usageStatsManager.queryUsageStats(
+                UsageStatsManager.INTERVAL_BEST,
+                currentTime - 2000,
+                currentTime
+            )
+            
+            if (stats.isNullOrEmpty()) return true
+            
+            val topApp = stats.sortedByDescending { it.lastTimeUsed }.firstOrNull()
+            topApp?.packageName == packageName
+            
+        } catch (e: Exception) {
+            Log.e("ForegroundMonitor", "Error: ${e.message}")
+            true
+        }
+    }
+    
+    fun hasUsageStatsPermission(): Boolean {
+        return try {
+            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                appOps.checkOpNoThrow(
+                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    android.os.Process.myUid(),
+                    context.packageName
+                )
+            } else {
+                AppOpsManager.MODE_DEFAULT
+            }
+            mode == AppOpsManager.MODE_ALLOWED
+        } catch (e: Exception) {
+            false
+        }
+    }
+}package com.gnzalobnites.appsusagemonitor.banner
+
+import android.content.Context
+import android.graphics.PixelFormat
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
+import android.util.Log
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
+import android.view.WindowManager
+import android.widget.ImageView
+import android.widget.TextView
+import android.widget.Toast
+import com.gnzalobnites.appsusagemonitor.R
+
+class BannerTestUtils(private val context: Context) {
+    
+    private var windowManager: WindowManager? = null
+    private var testBannerView: View? = null
+    private val handler = Handler(Looper.getMainLooper())
+    
+    fun initialize(windowManager: WindowManager) {
+        this.windowManager = windowManager
+    }
+    
+    fun showTestBanner(
+        testMessage: String,
+        onBannerClosed: () -> Unit
+    ) {
+        if (!Settings.canDrawOverlays(context)) {
+            Toast.makeText(context, "Sin permiso de overlay", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        Log.d("BannerTest", "🧪 Mostrando banner de prueba")
+        
+        try {
+            hideTestBanner()
+            
+            val inflater = LayoutInflater.from(context)
+            testBannerView = inflater.inflate(R.layout.banner_overlay, null)
+            
+            testBannerView?.apply {
+                findViewById<TextView>(R.id.sessionTimeText)?.text = "🧪 MODO PRUEBA"
+                findViewById<TextView>(R.id.todayTotalText)?.visibility = View.GONE
+                findViewById<TextView>(R.id.motivationalMessage)?.visibility = View.VISIBLE
+                findViewById<TextView>(R.id.motivationalMessage)?.text = testMessage
+                findViewById<TextView>(R.id.appNameLabel)?.visibility = View.GONE
+                findViewById<ImageView>(R.id.ninjaIcon)?.visibility = View.VISIBLE
+                
+                setOnClickListener {
+                    Log.d("BannerTest", "🖱️ Banner cerrado por usuario")
+                    hideTestBanner()
+                    onBannerClosed()
+                }
+            }
+            
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                } else {
+                    WindowManager.LayoutParams.TYPE_PHONE
+                },
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                y = 300
+            }
+            
+            windowManager?.addView(testBannerView, params)
+            
+            // Auto-ocultar después de 15 segundos
+            handler.postDelayed({
+                if (testBannerView != null) {
+                    Log.d("BannerTest", "⏱️ Auto-ocultando")
+                    hideTestBanner()
+                    onBannerClosed()
+                }
+            }, 15000)
+            
+        } catch (e: Exception) {
+            Log.e("BannerTest", "Error: ${e.message}")
+        }
+    }
+    
+    fun hideTestBanner() {
+        try {
+            testBannerView?.let { view ->
+                windowManager?.removeView(view)
+                testBannerView = null
+            }
+        } catch (e: Exception) {
+            // Ignorar
+        }
+    }
+}package com.gnzalobnites.appsusagemonitor
+
+import org.junit.Test
+
+import org.junit.Assert.*
+
+/**
+ * Example local unit test, which will execute on the development machine (host).
+ *
+ * See [testing documentation](http://d.android.com/tools/testing).
+ */
+class ExampleUnitTest {
+    @Test
+    fun addition_isCorrect() {
+        assertEquals(4, 2 + 2)
+    }
+}package com.gnzalobnites.appsusagemonitor
+
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.ext.junit.runners.AndroidJUnit4
+
+import org.junit.Test
+import org.junit.runner.RunWith
+
+import org.junit.Assert.*
+
+/**
+ * Instrumented test, which will execute on an Android device.
+ *
+ * See [testing documentation](http://d.android.com/tools/testing).
+ */
+@RunWith(AndroidJUnit4::class)
+class ExampleInstrumentedTest {
+    @Test
+    fun useAppContext() {
+        // Context of the app under test.
+        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
+        assertEquals("com.gnzalobnites.appsusagemonitor", appContext.packageName)
+    }
+}

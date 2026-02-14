@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App name -->
+    <string name="app_name">Apps Usage Monitor</string>
+    
+    <!-- Accessibility service -->
+    <string name="accessibility_service_description">Monitoriza el uso de aplicaciones para mostrar recordatorios de tiempo</string>
+    
+    <!-- Main Activity -->
+    <string name="settings_title">Configuración</string>
+    <string name="monitored_apps_title">Apps a Monitorear</string>
+    <string name="show_banner_label">Mostrar Banner de Tiempo</string>
+    <string name="banner_interval_label">Mostrar cada (minutos)</string>
+    <string name="banner_duration_label">Duración del banner (segundos)</string>
+    
+    <!-- Banner text -->
+    <string name="banner_session_time">Sesión: %s</string>
+    <string name="banner_today_total">Hoy: %s</string>
+    
+    <!-- Toasts and messages -->
+    <string name="service_started">Servicio de monitoreo iniciado</string>
+    <string name="permission_required">Permisos requeridos</string>
+    <string name="select_apps">Seleccionar apps a monitorear</string>
+    <string name="no_apps_selected">No hay apps seleccionadas para monitorear</string>
+    
+    <!-- Navegación -->
+    <string name="navigation_drawer_open">Abrir navegación</string>
+    <string name="navigation_drawer_close">Cerrar navegación</string>
+    
+    <!-- Dashboard -->
+    <string name="dashboard_title">Dashboard</string>
+    <string name="quick_access">Acceso Rápido</string>
+    <string name="today_summary">Resumen de Hoy</string>
+    <string name="view_details">Ver detalles completos</string>
+    
+    <!-- Navegación fragments -->
+    <string name="stats_title">Estadísticas</string>
+    <string name="monitor_title">Monitoreo</string>
+    <string name="tools_title">Herramientas</string>
+    
+    <!-- Otros items del menú -->
+    <string name="permissions_title">Permisos</string>
+    <string name="test_banners_title">Test Banners</string>
+    <string name="about_title">Acerca de</string>
+    
+    <!-- Textos adicionales útiles -->
+    <string name="start">Iniciar</string>
+    <string name="stop">Detener</string>
+    <string name="pause">Pausar</string>
+    <string name="resume">Continuar</string>
+    <string name="save">Guardar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="delete">Eliminar</string>
+    <string name="refresh">Actualizar</string>
+    <string name="export">Exportar</string>
+    <string name="import_data">Importar</string>  <!-- ¡CORREGIDO! -->
+    <string name="clear">Limpiar</string>
+    <string name="reset">Reiniciar</string>
+    
+    <!-- Estados del servicio -->
+    <string name="service_active">Servicio activo</string>
+    <string name="service_inactive">Servicio inactivo</string>
+    <string name="service_paused">Servicio pausado</string>
+    
+    <!-- Mensajes informativos -->
+    <string name="no_data_available">No hay datos disponibles</string>
+    <string name="loading">Cargando…</string>
+    <string name="error_occurred">Ocurrió un error</string>
+    <string name="success">Éxito</string>
+    
+    <!-- Configuración -->
+    <string name="enable_dark_mode">Modo oscuro</string>
+    <string name="enable_notifications">Notificaciones</string>
+    <string name="enable_vibration">Vibración</string>
+    <string name="enable_sound">Sonido</string>
+    <string name="auto_start">Inicio automático</string>
+    
+    <!-- Acerca de -->
+    <string name="app_version">Versión %s</string>
+    <string name="app_description">Monitor de uso de aplicaciones para controlar tu tiempo en cada app</string>
+    <string name="developer">Desarrollador: Gonzalo Benites</string>
+    <string name="privacy_policy">Política de privacidad</string>
+</resources>

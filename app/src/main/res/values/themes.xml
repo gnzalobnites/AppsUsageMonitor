@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    
+    <!-- TEMA BASE - CONFIGURADO CORRECTAMENTE -->
+    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Primary brand color (#2D1B4D) - SE MANTIENE IGUAL EN AMBOS TEMAS -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryVariant">@color/colorPrimaryDark</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        
+        <!-- Secondary brand color (dorado) - SE MANTIENE IGUAL -->
+        <item name="colorSecondary">@color/colorAccent</item>
+        <item name="colorSecondaryVariant">@color/colorAccentDark</item>
+        <item name="colorOnSecondary">@android:color/black</item>
+        
+        <!-- ✅ CORREGIDO: Usa ATRIBUTOS que Android cambia automáticamente -->
+        <item name="android:colorBackground">?attr/colorSurface</item>
+        <item name="colorSurface">@color/card_light</item>  <!-- Valor para tema CLARO -->
+        <item name="colorOnSurface">@color/text_primary_light</item>  <!-- Valor para tema CLARO -->
+        
+        <!-- ✅ CORREGIDO: Status bar con atributo que cambia en values-night -->
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        <item name="android:windowLightStatusBar">?attr/isLightTheme</item>
+        
+        <!-- ✅ CORREGIDO: Navigation bar -->
+        <item name="android:navigationBarColor">?attr/colorPrimaryVariant</item>
+        
+        <!-- Color de acento - SE MANTIENE IGUAL -->
+        <item name="colorAccent">@color/colorAccent</item>
+        
+        <!-- Formas redondeadas -->
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.App.SmallComponent</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.App.MediumComponent</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.App.LargeComponent</item>
+    </style>
+    
+    <!-- Splash Theme - CORREGIDO -->
+    <style name="SplashTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        <item name="android:navigationBarColor">?attr/colorPrimaryVariant</item>
+    </style>
+    
+    <!-- Formas redondeadas (sin cambios) -->
+    <style name="ShapeAppearance.App.SmallComponent" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">8dp</item>
+    </style>
+    
+    <style name="ShapeAppearance.App.MediumComponent" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+    
+    <style name="ShapeAppearance.App.LargeComponent" parent="ShapeAppearance.MaterialComponents.LargeComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+    
+    <!-- Toolbar - CORREGIDO -->
+    <style name="Widget.App.Toolbar" parent="Widget.MaterialComponents.Toolbar">
+        <item name="background">?attr/colorPrimary</item>
+        <item name="titleTextColor">?android:attr/textColorPrimaryInverse</item>
+        <item name="android:elevation">4dp</item>
+    </style>
+    
+    <!-- Botón primario - CORREGIDO -->
+    <style name="Widget.App.Button.Primary" parent="Widget.MaterialComponents.Button">
+        <item name="backgroundTint">?attr/colorPrimary</item>
+        <item name="android:textColor">?android:attr/textColorPrimaryInverse</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+    
+</resources>

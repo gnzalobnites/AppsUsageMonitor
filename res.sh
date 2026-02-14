@@ -1,0 +1,1 @@
+find /storage/internal_new/project/AppsUsageMonitor/app/src/main/res -name "*.xml" -type f -exec sh -c 'echo "\n===== {} =====\n" && cat "{}"' \; > res.txt

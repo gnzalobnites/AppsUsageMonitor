@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- =========================================== -->
+    <!-- PALETA PRINCIPAL - MANTENER CONSISTENCIA    -->
+    <!-- =========================================== -->
+    
+    <!-- COLOR PRINCIPAL (Púrpura Profundo) -->
+    <color name="colorPrimary">#2D1B4D</color>
+    <color name="colorPrimaryDark">#1A1030</color>    <!-- 20% más oscuro -->
+    <color name="colorPrimaryLight">#4D2E7A</color>   <!-- 20% más claro -->
+    
+    <!-- COLOR DE ACENTO (Dorado) -->
+    <color name="colorAccent">#FFD700</color>         <!-- Dorado brillante -->
+    <color name="colorAccentDark">#B39700</color>     <!-- Dorado oscuro -->
+    <color name="colorAccentLight">#FFE44D</color>    <!-- Dorado claro -->
+    
+    <!-- ✅ CORREGIDO: colorSecondary AHORA USA DORADO (no púrpura) -->
+    <color name="colorSecondary">#FFD700</color>      <!-- = colorAccent -->
+    
+    <!-- =========================================== -->
+    <!-- COLORES PARA MODO NOCHE (MÁS OSCUROS/SUAVES) -->
+    <!-- =========================================== -->
+    
+    <!-- ✅ CORREGIDO: colorPrimaryDark_night - MÁS OSCURO -->
+    <color name="colorPrimaryDark_night">#0F0A1E</color>    <!-- #1A1030 + más oscuro -->
+    
+    <!-- ✅ CORREGIDO: colorAccent_night - DORADO MÁS SUAVE -->
+    <color name="colorAccent_night">#FFC107</color>         <!-- Ámbar/dorado suave -->
+    
+    <!-- ✅ NUEVO: Variantes para noche -->
+    <color name="colorPrimaryVariant_night">#0F0A1E</color>
+    <color name="colorSecondaryVariant_night">#B39700</color>
+    
+    <!-- =========================================== -->
+    <!-- COLORES MATERIAL DESIGN (sin cambios)       -->
+    <!-- =========================================== -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_400">#FF26A69A</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="teal_900">#FF004D40</color>
+    
+    <!-- COLORES BÁSICOS -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="transparent">#00000000</color>
+    
+    <!-- =========================================== -->
+    <!-- COLORES PARA MODO CLARO (sin cambios)       -->
+    <!-- =========================================== -->
+    <color name="background_light">#FFF5F5F5</color>
+    <color name="card_light">#FFFFFFFF</color>
+    <color name="surface_light">#FFFFFFFF</color>
+    <color name="text_primary_light">#DE000000</color>
+    <color name="text_secondary_light">#8A000000</color>
+    <color name="text_hint_light">#61000000</color>
+    
+    <!-- Alias para compatibilidad -->
+    <color name="light_background">@color/background_light</color>
+    <color name="light_text_primary">@color/text_primary_light</color>
+    <color name="light_text_secondary">@color/text_secondary_light</color>
+    
+    <!-- =========================================== -->
+    <!-- COLORES PARA MODO OSCURO (sin cambios)      -->
+    <!-- =========================================== -->
+    <color name="background_dark">#FF121212</color>
+    <color name="card_dark">#FF1E1E1E</color>
+    <color name="surface_dark">#FF1E1E1E</color>
+    <color name="text_primary_dark">#FFFFFFFF</color>
+    <color name="text_secondary_dark">#B3FFFFFF</color>
+    <color name="text_hint_dark">#80FFFFFF</color>
+    
+    <!-- Alias para compatibilidad -->
+    <color name="dark_background">@color/background_dark</color>
+    <color name="dark_text_primary">@color/text_primary_dark</color>
+    <color name="dark_text_secondary">@color/text_secondary_dark</color>
+    
+    <!-- =========================================== -->
+    <!-- COLORES ESPECÍFICOS DE LA APP (optimizados) -->
+    <!-- =========================================== -->
+    
+    <!-- Colores para banners -->
+    <color name="banner_background">#CC2D1B4D</color>
+    <color name="banner_text">#FFFFFFFF</color>
+    <color name="banner_accent">#FFFFD700</color>
+    
+    <!-- ✅ NUEVO: Versión oscura para banners -->
+    <color name="banner_background_night">#CC0F0A1E</color>
+    <color name="banner_accent_night">#FFFFC107</color>
+    
+    <!-- Colores para estadísticas -->
+    <color name="chart_primary">#FF2D1B4D</color>
+    <color name="chart_secondary">#FF4D2E7A</color>
+    <color name="chart_accent">#FFFFD700</color>
+    
+    <!-- ✅ NUEVO: Versión oscura para gráficas -->
+    <color name="chart_primary_night">#FF0F0A1E</color>
+    <color name="chart_accent_night">#FFFFC107</color>
+    
+    <!-- Colores para estados (sin cambios) -->
+    <color name="success_green">#FF4CAF50</color>
+    <color name="warning_orange">#FFFF9800</color>
+    <color name="error_red">#FFF44336</color>
+    <color name="info_blue">#FF2196F3</color>
+    
+    <!-- Colores para Navigation Drawer (optimizados) -->
+    <color name="nav_header_background">@color/colorPrimary</color>
+    <color name="nav_item_selected">@color/colorAccent</color>
+    <color name="nav_item_normal">#FFFFFFFF</color>
+    
+    <!-- ✅ NUEVO: Versión oscura para navigation -->
+    <color name="nav_header_background_night">@color/colorPrimaryDark_night</color>
+    <color name="nav_item_selected_night">@color/colorAccent_night</color>
+    
+    <!-- Colores para botones (optimizados) -->
+    <color name="button_primary">@color/colorPrimary</color>
+    <color name="button_accent">@color/colorAccent</color>
+    <color name="button_text">#FFFFFFFF</color>
+    
+    <!-- Gradientes y efectos -->
+    <color name="gradient_start">#2D1B4D</color>
+    <color name="gradient_end">#4D2E7A</color>
+    <color name="shadow_color">#40000000</color>
+    
+    <!-- ✅ NUEVO: Gradiente para modo oscuro -->
+    <color name="gradient_start_night">#0F0A1E</color>
+    <color name="gradient_end_night">#2D1B4D</color>
+    
+</resources>

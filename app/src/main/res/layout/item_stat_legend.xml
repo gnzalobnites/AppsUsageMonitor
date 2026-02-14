@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingVertical="8dp"
+    android:gravity="center_vertical">
+
+    <!-- Color indicator -->
+    <View
+        android:id="@+id/viewColor"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/circle_shape"/>
+
+    <!-- App name -->
+    <TextView
+        android:id="@+id/tvLegendAppName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="App Name"
+        android:textSize="14sp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:maxLines="1"
+        android:ellipsize="end"/>
+
+    <!-- Time -->
+    <TextView
+        android:id="@+id/tvLegendAppTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0m"
+        android:textSize="14sp"
+        android:textColor="?android:attr/textColorSecondary"
+        android:layout_marginEnd="12dp"/>
+
+    <!-- Percentage -->
+    <TextView
+        android:id="@+id/tvLegendAppPercentage"
+        android:layout_width="48dp"
+        android:layout_height="wrap_content"
+        android:text="0%"
+        android:textSize="14sp"
+        android:textColor="?attr/colorAccent"
+        android:gravity="end"/>
+
+</LinearLayout>

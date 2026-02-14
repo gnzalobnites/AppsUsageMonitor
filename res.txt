@@ -1,0 +1,2960 @@
+
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/values/strings.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App name -->
+    <string name="app_name">Apps Usage Monitor</string>
+    
+    <!-- Accessibility service -->
+    <string name="accessibility_service_description">Monitoriza el uso de aplicaciones para mostrar recordatorios de tiempo</string>
+    
+    <!-- Main Activity -->
+    <string name="settings_title">Configuración</string>
+    <string name="monitored_apps_title">Apps a Monitorear</string>
+    <string name="show_banner_label">Mostrar Banner de Tiempo</string>
+    <string name="banner_interval_label">Mostrar cada (minutos)</string>
+    <string name="banner_duration_label">Duración del banner (segundos)</string>
+    
+    <!-- Banner text -->
+    <string name="banner_session_time">Sesión: %s</string>
+    <string name="banner_today_total">Hoy: %s</string>
+    
+    <!-- Toasts and messages -->
+    <string name="service_started">Servicio de monitoreo iniciado</string>
+    <string name="permission_required">Permisos requeridos</string>
+    <string name="select_apps">Seleccionar apps a monitorear</string>
+    <string name="no_apps_selected">No hay apps seleccionadas para monitorear</string>
+    
+    <!-- Navegación -->
+    <string name="navigation_drawer_open">Abrir navegación</string>
+    <string name="navigation_drawer_close">Cerrar navegación</string>
+    
+    <!-- Dashboard -->
+    <string name="dashboard_title">Dashboard</string>
+    <string name="quick_access">Acceso Rápido</string>
+    <string name="today_summary">Resumen de Hoy</string>
+    <string name="view_details">Ver detalles completos</string>
+    
+    <!-- Navegación fragments -->
+    <string name="stats_title">Estadísticas</string>
+    <string name="monitor_title">Monitoreo</string>
+    <string name="tools_title">Herramientas</string>
+    
+    <!-- Otros items del menú -->
+    <string name="permissions_title">Permisos</string>
+    <string name="test_banners_title">Test Banners</string>
+    <string name="about_title">Acerca de</string>
+    
+    <!-- Textos adicionales útiles -->
+    <string name="start">Iniciar</string>
+    <string name="stop">Detener</string>
+    <string name="pause">Pausar</string>
+    <string name="resume">Continuar</string>
+    <string name="save">Guardar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="delete">Eliminar</string>
+    <string name="refresh">Actualizar</string>
+    <string name="export">Exportar</string>
+    <string name="import_data">Importar</string>  <!-- ¡CORREGIDO! -->
+    <string name="clear">Limpiar</string>
+    <string name="reset">Reiniciar</string>
+    
+    <!-- Estados del servicio -->
+    <string name="service_active">Servicio activo</string>
+    <string name="service_inactive">Servicio inactivo</string>
+    <string name="service_paused">Servicio pausado</string>
+    
+    <!-- Mensajes informativos -->
+    <string name="no_data_available">No hay datos disponibles</string>
+    <string name="loading">Cargando…</string>
+    <string name="error_occurred">Ocurrió un error</string>
+    <string name="success">Éxito</string>
+    
+    <!-- Configuración -->
+    <string name="enable_dark_mode">Modo oscuro</string>
+    <string name="enable_notifications">Notificaciones</string>
+    <string name="enable_vibration">Vibración</string>
+    <string name="enable_sound">Sonido</string>
+    <string name="auto_start">Inicio automático</string>
+    
+    <!-- Acerca de -->
+    <string name="app_version">Versión %s</string>
+    <string name="app_description">Monitor de uso de aplicaciones para controlar tu tiempo en cada app</string>
+    <string name="developer">Desarrollador: Gonzalo Benites</string>
+    <string name="privacy_policy">Política de privacidad</string>
+</resources>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/values/colors.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- =========================================== -->
+    <!-- PALETA PRINCIPAL - MANTENER CONSISTENCIA    -->
+    <!-- =========================================== -->
+    
+    <!-- COLOR PRINCIPAL (Púrpura Profundo) -->
+    <color name="colorPrimary">#2D1B4D</color>
+    <color name="colorPrimaryDark">#1A1030</color>    <!-- 20% más oscuro -->
+    <color name="colorPrimaryLight">#4D2E7A</color>   <!-- 20% más claro -->
+    
+    <!-- COLOR DE ACENTO (Dorado) -->
+    <color name="colorAccent">#FFD700</color>         <!-- Dorado brillante -->
+    <color name="colorAccentDark">#B39700</color>     <!-- Dorado oscuro -->
+    <color name="colorAccentLight">#FFE44D</color>    <!-- Dorado claro -->
+    
+    <!-- ✅ CORREGIDO: colorSecondary AHORA USA DORADO (no púrpura) -->
+    <color name="colorSecondary">#FFD700</color>      <!-- = colorAccent -->
+    
+    <!-- =========================================== -->
+    <!-- COLORES PARA MODO NOCHE (MÁS OSCUROS/SUAVES) -->
+    <!-- =========================================== -->
+    
+    <!-- ✅ CORREGIDO: colorPrimaryDark_night - MÁS OSCURO -->
+    <color name="colorPrimaryDark_night">#0F0A1E</color>    <!-- #1A1030 + más oscuro -->
+    
+    <!-- ✅ CORREGIDO: colorAccent_night - DORADO MÁS SUAVE -->
+    <color name="colorAccent_night">#FFC107</color>         <!-- Ámbar/dorado suave -->
+    
+    <!-- ✅ NUEVO: Variantes para noche -->
+    <color name="colorPrimaryVariant_night">#0F0A1E</color>
+    <color name="colorSecondaryVariant_night">#B39700</color>
+    
+    <!-- =========================================== -->
+    <!-- COLORES MATERIAL DESIGN (sin cambios)       -->
+    <!-- =========================================== -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_400">#FF26A69A</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="teal_900">#FF004D40</color>
+    
+    <!-- COLORES BÁSICOS -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="transparent">#00000000</color>
+    
+    <!-- =========================================== -->
+    <!-- COLORES PARA MODO CLARO (sin cambios)       -->
+    <!-- =========================================== -->
+    <color name="background_light">#FFF5F5F5</color>
+    <color name="card_light">#FFFFFFFF</color>
+    <color name="surface_light">#FFFFFFFF</color>
+    <color name="text_primary_light">#DE000000</color>
+    <color name="text_secondary_light">#8A000000</color>
+    <color name="text_hint_light">#61000000</color>
+    
+    <!-- Alias para compatibilidad -->
+    <color name="light_background">@color/background_light</color>
+    <color name="light_text_primary">@color/text_primary_light</color>
+    <color name="light_text_secondary">@color/text_secondary_light</color>
+    
+    <!-- =========================================== -->
+    <!-- COLORES PARA MODO OSCURO (sin cambios)      -->
+    <!-- =========================================== -->
+    <color name="background_dark">#FF121212</color>
+    <color name="card_dark">#FF1E1E1E</color>
+    <color name="surface_dark">#FF1E1E1E</color>
+    <color name="text_primary_dark">#FFFFFFFF</color>
+    <color name="text_secondary_dark">#B3FFFFFF</color>
+    <color name="text_hint_dark">#80FFFFFF</color>
+    
+    <!-- Alias para compatibilidad -->
+    <color name="dark_background">@color/background_dark</color>
+    <color name="dark_text_primary">@color/text_primary_dark</color>
+    <color name="dark_text_secondary">@color/text_secondary_dark</color>
+    
+    <!-- =========================================== -->
+    <!-- COLORES ESPECÍFICOS DE LA APP (optimizados) -->
+    <!-- =========================================== -->
+    
+    <!-- Colores para banners -->
+    <color name="banner_background">#CC2D1B4D</color>
+    <color name="banner_text">#FFFFFFFF</color>
+    <color name="banner_accent">#FFFFD700</color>
+    
+    <!-- ✅ NUEVO: Versión oscura para banners -->
+    <color name="banner_background_night">#CC0F0A1E</color>
+    <color name="banner_accent_night">#FFFFC107</color>
+    
+    <!-- Colores para estadísticas -->
+    <color name="chart_primary">#FF2D1B4D</color>
+    <color name="chart_secondary">#FF4D2E7A</color>
+    <color name="chart_accent">#FFFFD700</color>
+    
+    <!-- ✅ NUEVO: Versión oscura para gráficas -->
+    <color name="chart_primary_night">#FF0F0A1E</color>
+    <color name="chart_accent_night">#FFFFC107</color>
+    
+    <!-- Colores para estados (sin cambios) -->
+    <color name="success_green">#FF4CAF50</color>
+    <color name="warning_orange">#FFFF9800</color>
+    <color name="error_red">#FFF44336</color>
+    <color name="info_blue">#FF2196F3</color>
+    
+    <!-- Colores para Navigation Drawer (optimizados) -->
+    <color name="nav_header_background">@color/colorPrimary</color>
+    <color name="nav_item_selected">@color/colorAccent</color>
+    <color name="nav_item_normal">#FFFFFFFF</color>
+    
+    <!-- ✅ NUEVO: Versión oscura para navigation -->
+    <color name="nav_header_background_night">@color/colorPrimaryDark_night</color>
+    <color name="nav_item_selected_night">@color/colorAccent_night</color>
+    
+    <!-- Colores para botones (optimizados) -->
+    <color name="button_primary">@color/colorPrimary</color>
+    <color name="button_accent">@color/colorAccent</color>
+    <color name="button_text">#FFFFFFFF</color>
+    
+    <!-- Gradientes y efectos -->
+    <color name="gradient_start">#2D1B4D</color>
+    <color name="gradient_end">#4D2E7A</color>
+    <color name="shadow_color">#40000000</color>
+    
+    <!-- ✅ NUEVO: Gradiente para modo oscuro -->
+    <color name="gradient_start_night">#0F0A1E</color>
+    <color name="gradient_end_night">#2D1B4D</color>
+    
+</resources>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/values/arrays.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="interval_options">
+        <item>10 segundos (demo)</item>
+        <item>1 minuto</item>
+        <item>2 minutos</item>
+        <item>3 minutos</item>
+        <item>5 minutos</item>
+        <item>10 minutos</item>
+        <item>15 minutos</item>
+        <item>20 minutos</item>
+        <item>30 minutos</item>
+        <item>45 minutos</item>
+        <item>60 minutos</item>
+    </string-array>
+
+    <array name="interval_values">
+        <item>0.1667</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>5</item>
+        <item>10</item>
+        <item>15</item>
+        <item>20</item>
+        <item>30</item>
+        <item>45</item>
+        <item>60</item>
+    </array>
+	
+    <string-array name="time_range_options">
+        <item>Hoy</item>
+        <item>Esta semana</item>
+        <item>Este mes</item>
+    </string-array>
+	
+</resources>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/values/themes.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    
+    <!-- TEMA BASE - CONFIGURADO CORRECTAMENTE -->
+    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Primary brand color (#2D1B4D) - SE MANTIENE IGUAL EN AMBOS TEMAS -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryVariant">@color/colorPrimaryDark</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        
+        <!-- Secondary brand color (dorado) - SE MANTIENE IGUAL -->
+        <item name="colorSecondary">@color/colorAccent</item>
+        <item name="colorSecondaryVariant">@color/colorAccentDark</item>
+        <item name="colorOnSecondary">@android:color/black</item>
+        
+        <!-- ✅ CORREGIDO: Usa ATRIBUTOS que Android cambia automáticamente -->
+        <item name="android:colorBackground">?attr/colorSurface</item>
+        <item name="colorSurface">@color/card_light</item>  <!-- Valor para tema CLARO -->
+        <item name="colorOnSurface">@color/text_primary_light</item>  <!-- Valor para tema CLARO -->
+        
+        <!-- ✅ CORREGIDO: Status bar con atributo que cambia en values-night -->
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        <item name="android:windowLightStatusBar">?attr/isLightTheme</item>
+        
+        <!-- ✅ CORREGIDO: Navigation bar -->
+        <item name="android:navigationBarColor">?attr/colorPrimaryVariant</item>
+        
+        <!-- Color de acento - SE MANTIENE IGUAL -->
+        <item name="colorAccent">@color/colorAccent</item>
+        
+        <!-- Formas redondeadas -->
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.App.SmallComponent</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.App.MediumComponent</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.App.LargeComponent</item>
+    </style>
+    
+    <!-- Splash Theme - CORREGIDO -->
+    <style name="SplashTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        <item name="android:navigationBarColor">?attr/colorPrimaryVariant</item>
+    </style>
+    
+    <!-- Formas redondeadas (sin cambios) -->
+    <style name="ShapeAppearance.App.SmallComponent" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">8dp</item>
+    </style>
+    
+    <style name="ShapeAppearance.App.MediumComponent" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+    
+    <style name="ShapeAppearance.App.LargeComponent" parent="ShapeAppearance.MaterialComponents.LargeComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+    
+    <!-- Toolbar - CORREGIDO -->
+    <style name="Widget.App.Toolbar" parent="Widget.MaterialComponents.Toolbar">
+        <item name="background">?attr/colorPrimary</item>
+        <item name="titleTextColor">?android:attr/textColorPrimaryInverse</item>
+        <item name="android:elevation">4dp</item>
+    </style>
+    
+    <!-- Botón primario - CORREGIDO -->
+    <style name="Widget.App.Button.Primary" parent="Widget.MaterialComponents.Button">
+        <item name="backgroundTint">?attr/colorPrimary</item>
+        <item name="android:textColor">?android:attr/textColorPrimaryInverse</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+    
+</resources>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_launcher_background.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#2D1B4D"
+        android:pathData="M0,0h108v108h-108z" />
+</vector>
+
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/card_background.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@android:color/white" />
+    <corners android:radius="8dp" />
+    <stroke 
+        android:width="1dp" 
+        android:color="@android:color/darker_gray" />
+    <padding 
+        android:left="8dp" 
+        android:top="8dp" 
+        android:right="8dp" 
+        android:bottom="8dp" />
+</shape>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/rounded_bg.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@color/teal_700" />
+    <corners android:radius="12dp" />
+    <padding 
+        android:left="8dp"
+        android:top="4dp"
+        android:right="8dp"
+        android:bottom="4dp" />
+</shape>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_logo.xml =====
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+        android:fillColor="#6200EE"
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/rounded_bg_accent.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@color/teal_700" />
+    <corners android:radius="20dp" />
+    <padding 
+        android:left="8dp"
+        android:top="4dp"
+        android:right="8dp"
+        android:bottom="4dp" />
+</shape>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_dark_mode.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Luna simple -->
+    <path
+        android:fillColor="#BB86FC"
+        android:pathData="M12,3c-4.97,0-9,4.03-9,9s4.03,9 9,9 9-4.03 9-9c0-0.46-0.04-0.92-0.1-1.36-0.98,1.37-2.58,2.26-4.4,2.26-2.98,0-5.4-2.42-5.4-5.4 0-1.81,0.89-3.42,2.26-4.4-0.44-0.06-0.9-0.1-1.36-0.1z" />
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_light_mode.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Sol/círculo con rayos -->
+    <path
+        android:fillColor="#6200EE"
+        android:pathData="M12,7c-2.76,0-5,2.24-5,5s2.24,5 5,5 5-2.24 5-5-2.24-5-5-5zM2,13h2c0.55,0 1-0.45 1-1s-0.45-1-1-1H2c-0.55,0-1,0.45-1,1s0.45,1 1,1zM20,11h-2c-0.55,0-1,0.45-1,1s0.45,1 1,1h2c0.55,0 1-0.45 1-1s-0.45-1-1-1zM11,2v2c0,0.55 0.45,1 1,1s1-0.45 1-1V2c0-0.55-0.45-1-1-1s-1,0.45-1,1zM11,20v2c0,0.55 0.45,1 1,1s1-0.45 1-1v-2c0-0.55-0.45-1-1-1s-1,0.45-1,1zM5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 -0.39,0.39-0.39,1.03 0,1.41l1.06,1.06c0.39,0.39 1.03,0.39 1.41,0s0.39-1.03 0-1.41L5.99,4.58zM18.36,16.95c-0.39-0.39-1.03-0.39-1.41,0 -0.39,0.39-0.39,1.03 0,1.41l1.06,1.06c0.39,0.39 1.03,0.39 1.41,0 0.39-0.39 0.39-1.03 0-1.41l-1.06-1.06zM19.42,5.99c0.39-0.39 0.39-1.03 0-1.41 -0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03 0,1.41s1.03,0.39 1.41,0l1.06-1.06zM7.05,18.36c0.39-0.39 0.39-1.03 0-1.41 -0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03 0,1.41s1.03,0.39 1.41,0l1.06-1.06z" />
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_service_active.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="#4CAF50" android:pathData="M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z"/>
+</vector>
+
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_service_warning.xml =====
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M1,21h22L12,2 1,21zM13,18h-2v-2h2v2zM13,14h-2v-4h2v4z" />
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_test.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    
+    <!-- Círculo simple -->
+    <path
+        android:fillColor="#6200EE"
+        android:pathData="M12,2 a10,10 0 1,1 0,20 a10,10 0 1,1 0,-20" />
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_permission.xml =====
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Candado simple -->
+    <path
+        android:fillColor="#018786"
+        android:pathData="M8,6 h8 v10 h-8 v-10 z"
+        android:strokeWidth="0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M10,8 h4 v4 h-4 v-4 z"
+        android:strokeWidth="0" />
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_debug.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="#6200EE" android:pathData="M12,2C6.48,2 2,6.48 2,12S6.48,22 12,22 22,17.52 22,12 17.52,2 12,2ZM13,17H11V15H13V17ZM13,13H11V7H13V13Z"/>
+</vector>
+
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_restart.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    
+    <!-- Flecha circular de reinicio -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#6200EE"
+        android:strokeWidth="2"
+        android:pathData="M17.65,6.35C16.2,4.9 14.21,4 12,4c-4.42,0 -7.99,3.58 -7.99,8s3.57,8 7.99,8c3.73,0 6.84,-2.55 7.73,-6h-2.08c-0.82,2.33 -3.04,4 -5.65,4 -3.31,0 -6,-2.69 -6,-6s2.69,-6 6,-6c1.66,0 3.14,0.69 4.22,1.78L13,11h7V4l-2.35,2.35z" />
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_clear.xml =====
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    
+    <!-- Cuerpo de la papelera (rectángulo) -->
+    <path
+        android:fillColor="#6200EE"
+        android:pathData="M6,6 h12 v12 h-12 z" />
+    
+    <!-- Tapa de la papelera (rectángulo horizontal) -->
+    <path
+        android:fillColor="#6200EE"
+        android:pathData="M4,4 h16 v2 h-16 z" />
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_timing.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="#6200EE" android:pathData="M11,17V7H13V17H11ZM17,17V7H19V17H17ZM5,17V7H7V17H5Z"/>
+</vector>
+
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_timer.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="#6200EE" android:pathData="M15,1H9V3H15V1ZM11,14H13V8H11V14ZM19.03,7.39L20.45,5.97C20.02,5.46 19.55,4.98 19.04,4.56L17.62,5.98C16.07,4.74 14.12,4 12,4C7.03,4 3,8.03 3,13S7.03,22 12,22C16.97,22 21,17.97 21,13C21,10.88 20.26,8.93 19.03,7.39Z"/>
+</vector>
+
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/banner_background.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#80000000" />
+    <corners android:radius="12dp" />
+</shape>
+
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_info.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    
+    <path
+        android:fillColor="#2196F3"
+        android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zm1,15h-2v-6h2v6zm0,-8h-2V7h2v2z" />
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_settings.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#6200EE">
+    
+    <!-- Engranaje simple usando pathData correctamente -->
+    <path
+        android:pathData="M12,15.5A3.5,3.5 0,1 0,8.5 12,3.5 3.5,0 0,0 12,15.5Z"
+        android:fillColor="#6200EE"/>
+    
+    <!-- Tres líneas usando rect con dimensiones correctas (en dp) -->
+    <path
+        android:pathData="M6,7h12v2h-12z"
+        android:fillColor="#FFFFFF"/>
+    <path
+        android:pathData="M6,11h12v2h-12z"
+        android:fillColor="#FFFFFF"/>
+    <path
+        android:pathData="M6,15h12v2h-12z"
+        android:fillColor="#FFFFFF"/>
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_refresh.xml =====
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+        android:fillColor="#FF6200EE"
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_service_stopped.xml =====
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#D81B60"
+        android:pathData="M19,6.41L17.59,5 12,10.59 6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 12,13.41 17.59,19 19,17.59 13.41,12z" />
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/banner_pulse_background.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<animated-selector xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <item android:id="@+id/normal_state">
+        <shape android:shape="rectangle">
+            <!-- Gradiente llamativo que cambia -->
+            <gradient
+                android:startColor="#FF416C"
+                android:endColor="#FF4B2B"
+                android:angle="135"
+                android:type="sweep" />
+            
+            <corners android:radius="16dp" />
+            
+            <stroke
+                android:width="3dp"
+                android:color="#FFFFFF"
+                android:dashWidth="8dp"
+                android:dashGap="4dp" />
+            
+            <!-- Sombra externa intensa -->
+            <padding
+                android:left="4dp"
+                android:top="4dp"
+                android:right="4dp"
+                android:bottom="4dp" />
+        </shape>
+    </item>
+
+    <!-- Para efecto de pulso -->
+    <item android:id="@+id/pulse_state">
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#FF0000"
+                android:endColor="#FF9500"
+                android:angle="45" />
+            
+            <corners android:radius="16dp" />
+            
+            <stroke
+                android:width="4dp"
+                android:color="#FFFFFF" />
+        </shape>
+    </item>
+
+    <!-- Transición para efecto de pulso -->
+    <transition
+        android:fromId="@+id/normal_state"
+        android:toId="@+id/pulse_state">
+        <animation-list>
+            <item android:duration="500">
+                <shape android:shape="rectangle">
+                    <gradient
+                        android:startColor="#FF416C"
+                        android:endColor="#FF0000"
+                        android:angle="135" />
+                    <corners android:radius="16dp" />
+                </shape>
+            </item>
+        </animation-list>
+    </transition>
+
+</animated-selector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/time_highlight_bg.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    
+    <gradient
+        android:startColor="#8B0000"
+        android:endColor="#4B0082"
+        android:angle="45"
+        android:centerColor="#8A2BE2" />
+    
+    <corners android:radius="12dp" />
+    
+    <stroke
+        android:width="2dp"
+        android:color="#FFD700" />
+
+</shape>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_time_alert.xml =====
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M12,2C6.5,2 2,6.5 2,12s4.5,10 10,10 10,-4.5 10,-10S17.5,2 12,2zM12,20c-4.4,0 -8,-3.6 -8,-8s3.6,-8 8,-8 8,3.6 8,8 -3.6,8 -8,8zM12.5,7v5.2l4.5,2.7 -0.8,1.3 -5.2,-3.1V7h1.5z"/>
+    <path
+        android:fillColor="#FF4500"
+        android:pathData="M12,4c-4.4,0 -8,3.6 -8,8s3.6,8 8,8 8,-3.6 8,-8 -3.6,-8 -8,-8zM13,13h-2V8h2v5z"/>
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_launcher_foreground.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M54,35 L34,70 M54,35 L74,70 M34,70 L74,70" />
+    
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,35m-6,0a6,6 0,1 1,12 0a6,6 0,1 1,-12 0" />
+    
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,70m-6,0a6,6 0,1 1,12 0a6,6 0,1 1,-12 0" />
+    
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M74,70m-6,0a6,6 0,1 1,12 0a6,6 0,1 1,-12 0" />
+</vector>
+
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/splash_background.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#2D1B4D" />
+        </shape>
+    </item>
+    
+    <item
+        android:width="120dp"
+        android:height="120dp"
+        android:drawable="@drawable/ic_launcher_foreground"
+        android:gravity="center" />
+</layer-list>
+
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/badge_background.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@color/teal_700"/>
+    <corners android:radius="12dp"/>
+</shape>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_stats.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+    
+    <!-- Gráfico de barras -->
+    <path
+        android:fillColor="#FF4081"
+        android:pathData="M4,9h3v10H4z" />
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="M9,13h3v6H9z" />
+    <path
+        android:fillColor="#2196F3"
+        android:pathData="M14,6h3v13h-3z" />
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M19,10h3v9h-3z" />
+    
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/circular_progress.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Fondo del círculo -->
+    <item>
+        <shape
+            android:innerRadius="70dp"
+            android:shape="ring"
+            android:thickness="10dp"
+            android:useLevel="false">
+            <solid android:color="#E0E0E0" />
+        </shape>
+    </item>
+    
+    <!-- Progreso -->
+    <item>
+        <rotate
+            android:fromDegrees="270"
+            android:toDegrees="270">
+            <shape
+                android:innerRadius="70dp"
+                android:shape="ring"
+                android:thickness="10dp"
+                android:useLevel="true">
+                <gradient
+                    android:angle="0"
+                    android:endColor="@color/teal_700"
+                    android:startColor="@color/teal_200"
+                    android:type="sweep" />
+            </shape>
+        </rotate>
+    </item>
+</layer-list>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_menu_white_24dp.xml =====
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24.0"
+    android:viewportHeight="24.0">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M3,18h18v-2H3v2zM3,13h18v-2H3v2zM3,6v2h18V6H3z"/>
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/nav_header_gradient.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:startColor="#2D1B4D"
+        android:endColor="#4D2E7A"
+        android:angle="135" />
+</shape>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_person.xml =====
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M12,12c2.21,0 4,-1.79 4,-4s-1.79,-4 -4,-4 -4,1.79 -4,4 1.79,4 4,4zM12,14c-2.67,0 -8,1.34 -8,4v2h16v-2c0,-2.66 -5.33,-4 -8,-4z"/>
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/ic_default_app.xml =====
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@color/colorPrimary"
+        android:pathData="M19,3H5C3.9,3 3,3.9 3,5V19C3,20.1 3.9,21 5,21H19C20.1,21 21,20.1 21,19V5C21,3.9 20.1,3 19,3ZM19,19H5V5H19V19Z" />
+</vector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/edittext_background.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@color/card_light"/>
+    <corners android:radius="8dp"/>
+    <stroke 
+        android:width="1dp"
+        android:color="@color/colorPrimary"/>
+</shape>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable/circle_shape.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="#FF0000" />
+    <size android:width="16dp" android:height="16dp" />
+</shape>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/layout/fragment_monitor_enhanced.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Sección: Configuración de Banners -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🔔 Configuración de Banners"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:layout_marginBottom="12dp"/>
+
+                <!-- Activar banners -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <Switch
+                        android:id="@+id/swEnableBanners"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Activar banners"
+                        android:textSize="16sp"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:thumbTint="?attr/colorAccent"
+                        app:trackTint="?attr/colorAccent"/>
+
+                    <TextView
+                        android:id="@+id/tvBannerStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="⭕ Desactivado"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorSecondary"/>
+
+                </LinearLayout>
+
+                <!-- Estado de modo preciso (UsageStats) -->
+                <TextView
+                    android:id="@+id/tvUsageStatsStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="⚠️ Modo preciso desactivado"
+                    android:textSize="14sp"
+                    android:padding="8dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center"
+                    android:background="?attr/selectableItemBackground"
+                    android:textColor="@android:color/darker_gray"/>
+
+                <!-- Demo TikTok -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <Switch
+                        android:id="@+id/swShowTikTokDemo"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Demo TikTok"
+                        android:textSize="16sp"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:thumbTint="?attr/colorAccent"
+                        app:trackTint="?attr/colorAccent"/>
+
+                    <TextView
+                        android:id="@+id/tvTikTokDemoStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="⭕ Demo desactivada"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorSecondary"/>
+
+                </LinearLayout>
+
+                <!-- Botones de acción -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
+
+                    <Button
+                        android:id="@+id/btnTestBanner"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="🧪 Probar Banner"
+                        android:backgroundTint="?attr/colorAccent"
+                        android:textColor="?android:attr/textColorPrimaryInverse"
+                        android:layout_marginEnd="4dp"/>
+
+                    <Button
+                        android:id="@+id/btnCheckPermissions"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="🔐 Permisos"
+                        android:backgroundTint="?attr/colorPrimary"
+                        android:textColor="?android:attr/textColorPrimaryInverse"
+                        android:layout_marginStart="4dp"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Sección: Selección de Apps -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📱 Apps Monitoreadas"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:layout_marginBottom="12dp"/>
+
+                <!-- Contador y botón -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp">
+
+                    <TextView
+                        android:id="@+id/tvSelectedAppsCount"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="0/0 apps seleccionadas"
+                        android:textSize="16sp"
+                        android:textColor="?android:attr/textColorPrimary"/>
+
+                    <Button
+                        android:id="@+id/btnSelectApps"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📝 Seleccionar"
+                        android:backgroundTint="?attr/colorPrimary"
+                        android:textColor="?android:attr/textColorPrimaryInverse"/>
+
+                </LinearLayout>
+
+                <!-- Lista de apps seleccionadas -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Apps seleccionadas:"
+                    android:textSize="14sp"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:layout_marginBottom="8dp"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recyclerViewApps"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:background="?attr/colorSurface"/>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+    </LinearLayout>
+</ScrollView>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/layout/banner_overlay.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/bannerRootCard"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    app:cardCornerRadius="24dp"
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="#CC1A1A1A" 
+    android:layout_margin="12dp">
+    
+    <LinearLayout
+        android:id="@+id/clickableArea"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="14dp"
+        android:gravity="center">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/ninjaIcon"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_time_alert"
+                android:alpha="0.9"
+                android:tint="@android:color/white" />
+
+            <TextView
+                android:id="@+id/appNameLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=" App"
+                android:textColor="#E0E0E0"
+                android:textSize="11sp"
+                android:alpha="0.7"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/expandedContent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginTop="10dp"
+            android:gravity="center">
+
+            <View
+                android:layout_width="36dp"
+                android:layout_height="1dp"
+                android:background="#30FFFFFF"
+                android:layout_marginBottom="10dp"/>
+
+            <TextView
+                android:id="@+id/sessionTimeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="00:00"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/todayTotalText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hoy: 00:00"
+                android:textColor="#B0B0B0"
+                android:textSize="12sp"
+                android:layout_marginTop="4dp" />
+
+            <TextView
+                android:id="@+id/motivationalMessage"
+                android:layout_width="150dp"
+                android:layout_height="wrap_content"
+                android:textColor="#A0A0A0"
+                android:textSize="10sp"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:lineSpacingExtra="2dp"
+                android:paddingHorizontal="4dp" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/layout/activity_splash.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#2D1B4D"
+    tools:context=".SplashActivity">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/logo"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:src="@drawable/ic_launcher_foreground"
+            android:contentDescription="App Logo" />
+
+        <TextView
+            android:id="@+id/app_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Apps Usage Monitor"
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:fontFamily="sans-serif-medium" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/author"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="40dp"
+        android:text="by Gonzalo Benites"
+        android:textColor="#B3FFFFFF"
+        android:textSize="14sp"
+        android:letterSpacing="0.1"
+        android:textAllCaps="true" />
+
+</RelativeLayout>
+
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/layout/activity_main_nav.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.drawerlayout.widget.DrawerLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/drawer_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    tools:context=".MainNavActivity">
+
+    <!-- Contenido principal -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Toolbar con icono de hamburguesa -->
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="?attr/colorPrimary"
+            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+            app:navigationIcon="@drawable/ic_menu_white_24dp"
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+
+        <!-- Contenedor para fragments -->
+        <FrameLayout
+            android:id="@+id/nav_host_fragment"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+    </LinearLayout>
+
+    <!-- Menú lateral (Navigation Drawer) -->
+    <com.google.android.material.navigation.NavigationView
+        android:id="@+id/nav_view"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:fitsSystemWindows="true"
+        app:headerLayout="@layout/nav_header"
+        app:menu="@menu/nav_menu" />
+
+</androidx.drawerlayout.widget.DrawerLayout>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/layout/nav_header.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content" 
+    android:minHeight="180dp"
+    android:background="@drawable/nav_header_gradient"
+    android:padding="20dp"
+    android:theme="@style/ThemeOverlay.AppCompat.Dark">
+
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginTop="8dp"
+        android:contentDescription="@string/app_name"
+        android:src="@drawable/ic_time_alert"
+        android:tint="@android:color/white"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/tvAppName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:text="@string/app_name"
+        android:textColor="@android:color/white"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-medium"
+        android:maxLines="2"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/imageView"
+        app:layout_constraintTop_toTopOf="@id/imageView" />
+
+    <TextView
+        android:id="@+id/tvSubtitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="Monitorea tu tiempo conscientemente"
+        android:textColor="#DDFFFFFF"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@id/tvAppName"
+        app:layout_constraintTop_toBottomOf="@id/tvAppName" />
+
+    <View
+        android:id="@+id/divider"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginTop="16dp"
+        android:background="#40FFFFFF"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvSubtitle" />
+
+    <LinearLayout
+        android:id="@+id/llAuthor"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/divider"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:src="@drawable/ic_person"
+            android:tint="?attr/colorAccent" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text="by Gonzalo Benites"
+            android:textColor="?attr/colorAccent"
+            android:textSize="12sp"
+            android:textStyle="italic" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvAppVersion"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="v1.0.0"
+        android:textColor="#A0FFFFFF"
+        android:textSize="11sp"
+        app:layout_constraintBottom_toBottomOf="@id/llAuthor"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/llAuthor" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/layout/item_stat_legend.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingVertical="8dp"
+    android:gravity="center_vertical">
+
+    <!-- Color indicator -->
+    <View
+        android:id="@+id/viewColor"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/circle_shape"/>
+
+    <!-- App name -->
+    <TextView
+        android:id="@+id/tvLegendAppName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="App Name"
+        android:textSize="14sp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:maxLines="1"
+        android:ellipsize="end"/>
+
+    <!-- Time -->
+    <TextView
+        android:id="@+id/tvLegendAppTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0m"
+        android:textSize="14sp"
+        android:textColor="?android:attr/textColorSecondary"
+        android:layout_marginEnd="12dp"/>
+
+    <!-- Percentage -->
+    <TextView
+        android:id="@+id/tvLegendAppPercentage"
+        android:layout_width="48dp"
+        android:layout_height="wrap_content"
+        android:text="0%"
+        android:textSize="14sp"
+        android:textColor="?attr/colorAccent"
+        android:gravity="end"/>
+
+</LinearLayout>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/layout/fragment_simple.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="32dp">
+    
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="Contenido en desarrollo"
+        android:textSize="18sp"
+        android:textColor="#424242" />
+        
+</LinearLayout>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/layout/fragment_dashboard_simplified.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="?attr/colorSurface">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:id="@+id/tvDashboardTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🏠 Dashboard"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:layout_centerVertical="true"
+                        android:layout_alignParentStart="true"/>
+
+                    <ImageButton
+                        android:id="@+id/btnThemeToggle"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@android:drawable/ic_menu_compass"
+                        android:contentDescription="Cambiar tema"
+                        android:padding="12dp"
+                        android:tint="?attr/colorAccent"/>
+                </RelativeLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@android:drawable/ic_dialog_info"
+                        android:layout_marginEnd="12dp"
+                        android:tint="?attr/colorAccent"/>
+                    <TextView
+                        android:id="@+id/tvServiceStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Estado del servicio"
+                        android:textSize="16sp"
+                        android:textColor="?android:attr/textColorPrimary"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="16dp">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@android:drawable/ic_menu_view"
+                        android:layout_marginEnd="12dp"
+                        android:tint="?attr/colorAccent"/>
+                    <TextView
+                        android:id="@+id/tvMonitoredAppsCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0 apps monitoreadas"
+                        android:textSize="16sp"
+                        android:textColor="?android:attr/textColorPrimary"/>
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnToggleService"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="▶️ Iniciar Servicio"
+                    android:textSize="16sp"
+                    android:padding="12dp"
+                    android:backgroundTint="?attr/colorPrimary"
+                    android:textColor="?attr/colorOnPrimary"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⚙️ Acceso Rápido a Configuración"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:layout_marginBottom="16dp"/>
+
+                <Button
+                    android:id="@+id/btnQuickMonitor"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="📱 Elegir Apps"
+                    android:layout_marginBottom="12dp"
+                    android:backgroundTint="?attr/colorPrimary"/>
+
+                <Button
+                    android:id="@+id/btnQuickBannerSettings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🔔 Configurar Banners"
+                    android:backgroundTint="?attr/colorAccent"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⚡ Acciones Rápidas"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <Button
+                        android:id="@+id/btnCheckPermissions"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:text="🔧 Permisos"/>
+                    <Button
+                        android:id="@+id/btnQuickSummary"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="🛡️ Estado"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
+                    <Button
+                        android:id="@+id/btnGoToMonitor"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:text="⚙️ Ajustes"/>
+                    <Button
+                        android:id="@+id/btnGoToStats"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="📊 Tiempos"/>
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:paddingTop="24dp"
+    android:paddingBottom="16dp">
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:background="#33AAAAAA"
+        android:layout_marginBottom="12dp"
+        android:layout_marginHorizontal="20dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="¿Tienes sugerencias? Escríbeme a"
+        android:textSize="13sp"
+        android:textColor="?android:attr/textColorSecondary" />
+
+    <TextView
+        android:id="@+id/tvEmail"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="benitesgonzalogaston@gmail.com"
+        android:textSize="13sp"
+        android:textColor="#E57373"
+        android:paddingTop="2dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"/>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="¿Te sirve esta herramienta? "
+            android:textSize="13sp"
+            android:textColor="?android:attr/textColorSecondary" />
+
+        <TextView
+            android:id="@+id/btnBuyCoffee"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Invítame un café ☕"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="#E57373"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"/>
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="v1.0.0"
+        android:textSize="10sp"
+        android:alpha="0.5"
+        android:layout_marginTop="12dp"
+        android:textColor="?android:attr/textColorSecondary" />
+
+</LinearLayout>
+
+    </LinearLayout>
+</ScrollView>
+
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/layout/fragment_stats_enhanced.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Resumen general -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/tvTimeRangeTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Estadísticas - Hoy"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:layout_marginBottom="16dp"/>
+
+                <!-- Fila de estadísticas principales -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp">
+
+                    <!-- Tiempo total -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⏱️ Total"
+                            android:textSize="14sp"
+                            android:textColor="?android:attr/textColorSecondary"/>
+
+                        <TextView
+                            android:id="@+id/tvTotalTime"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0h 00m"
+                            android:textSize="24sp"
+                            android:textStyle="bold"
+                            android:textColor="?attr/colorAccent"/>
+
+                    </LinearLayout>
+
+                    <!-- Apps monitoreadas -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="📊 Apps"
+                            android:textSize="14sp"
+                            android:textColor="?android:attr/textColorSecondary"/>
+
+                        <TextView
+                            android:id="@+id/tvMonitoredAppCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textSize="24sp"
+                            android:textStyle="bold"
+                            android:textColor="?attr/colorAccent"/>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Progress bar -->
+                <ProgressBar
+                    android:id="@+id/progressBar"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:layout_marginTop="8dp"
+                    android:max="100"
+                    android:progress="0"
+                    android:progressTint="?attr/colorAccent"/>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Botones de acción -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+
+            <Button
+                android:id="@+id/btnRefreshStats"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="↻ Recargar"
+                android:backgroundTint="?attr/colorPrimary"
+                android:textColor="?attr/colorOnPrimary"/>
+
+            <Button
+                android:id="@+id/btnExportStats"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="📤 Exportar"
+                android:backgroundTint="?attr/colorPrimary"
+                android:textColor="?attr/colorOnPrimary"/>
+
+            <Button
+                android:id="@+id/btnViewDetails"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="📋 Detalles"
+                android:backgroundTint="?attr/colorPrimary"
+                android:textColor="?attr/colorOnPrimary"/>
+
+        </LinearLayout>
+
+        <!-- SECCIÓN: GRÁFICO CIRCULAR -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📊 Distribución de Uso (Hoy)"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:layout_marginBottom="16dp"/>
+
+                <!-- El gráfico circular de MPAndroidChart -->
+                <com.github.mikephil.charting.charts.PieChart
+                    android:id="@+id/pieChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="250dp"
+                    android:layout_marginBottom="8dp"/>
+
+                <!-- Contenedor para la leyenda de apps -->
+                <LinearLayout
+                    android:id="@+id/layoutAppLegend"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"/>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+    </LinearLayout>
+</ScrollView>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/layout/item_app_selection.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/appItemContainer"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="12dp"
+    android:background="?android:attr/selectableItemBackground">
+
+    <ImageView
+        android:id="@+id/appIcon"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:contentDescription="App icon"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <CheckBox
+        android:id="@+id/appCheckBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:buttonTint="?attr/colorAccent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <TextView
+        android:id="@+id/appName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="8dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:textColor="?android:attr/textColorPrimary"
+        app:layout_constraintStart_toEndOf="@id/appIcon"
+        app:layout_constraintEnd_toStartOf="@id/appCheckBox"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/appPackage"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="4dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textSize="12sp"
+        android:textColor="?android:attr/textColorSecondary"
+        app:layout_constraintStart_toEndOf="@id/appIcon"
+        app:layout_constraintEnd_toStartOf="@id/appCheckBox"
+        app:layout_constraintTop_toBottomOf="@id/appName"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/layout/fragment_settings_enhanced.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    android:padding="16dp"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- SECCION: CONFIGURACION GENERAL -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⚙️ Configuración General"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:layout_marginBottom="16dp"/>
+
+                <!-- TEMA OSCURO -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Tema oscuro"
+                        android:textSize="16sp"
+                        android:textColor="?android:attr/textColorPrimary"/>
+
+                    <Switch
+                        android:id="@+id/swDarkMode"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:thumbTint="?attr/colorAccent"
+                        app:trackTint="?attr/colorAccent"/>
+
+                    <TextView
+                        android:id="@+id/tvThemeStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="☀️ Claro"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorSecondary"/>
+
+                </LinearLayout>
+
+                <!-- FRECUENCIA DE LOS BANNERS (única opción) -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Frecuencia de los banners:"
+                    android:textSize="14sp"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:layout_marginBottom="4dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center_vertical">
+
+                    <Spinner
+                        android:id="@+id/spBannersPerDay"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                    <TextView
+                        android:id="@+id/tvBannersPerDayValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="5 minutos"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorPrimary"/>
+
+                </LinearLayout>
+
+                <!-- Texto explicativo del comportamiento -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="⏱️ El banner permanece visible hasta que lo cierres con un click"
+                    android:textSize="12sp"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:padding="8dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:layout_marginTop="4dp"/>
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- SECCION: NOTIFICACIONES -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🔔 Notificaciones"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:layout_marginBottom="16dp"/>
+
+                <!-- Auto-start -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Inicio automático"
+                        android:textSize="16sp"
+                        android:textColor="?android:attr/textColorPrimary"/>
+
+                    <Switch
+                        android:id="@+id/swAutoStart"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:thumbTint="?attr/colorAccent"
+                        app:trackTint="?attr/colorAccent"/>
+
+                    <TextView
+                        android:id="@+id/tvAutoStartStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="⭕ Manual"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorSecondary"/>
+
+                </LinearLayout>
+
+                <!-- Optimizacion bateria -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Optimización batería"
+                        android:textSize="16sp"
+                        android:textColor="?android:attr/textColorPrimary"/>
+
+                    <Switch
+                        android:id="@+id/swBatteryOptimization"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:thumbTint="?attr/colorAccent"
+                        app:trackTint="?attr/colorAccent"/>
+
+                    <TextView
+                        android:id="@+id/tvBatteryStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="✅ Activa"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorSecondary"/>
+
+                </LinearLayout>
+
+                <!-- Vibracion -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Vibración"
+                        android:textSize="16sp"
+                        android:textColor="?android:attr/textColorPrimary"/>
+
+                    <Switch
+                        android:id="@+id/swVibrateNotification"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:thumbTint="?attr/colorAccent"
+                        app:trackTint="?attr/colorAccent"/>
+
+                    <TextView
+                        android:id="@+id/tvVibrateStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="✅ Activa"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorSecondary"/>
+
+                </LinearLayout>
+
+                <!-- Sonido -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Sonido"
+                        android:textSize="16sp"
+                        android:textColor="?android:attr/textColorPrimary"/>
+
+                    <Switch
+                        android:id="@+id/swSoundNotification"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:thumbTint="?attr/colorAccent"
+                        app:trackTint="?attr/colorAccent"/>
+
+                    <TextView
+                        android:id="@+id/tvSoundStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="🔇 Silencio"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorSecondary"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- SECCION: REPORTES -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📊 Reportes"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:layout_marginBottom="16dp"/>
+
+                <!-- Exportacion diaria -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Exportación diaria automática"
+                        android:textSize="16sp"
+                        android:textColor="?android:attr/textColorPrimary"/>
+
+                    <Switch
+                        android:id="@+id/swExportDailyReports"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:thumbTint="?attr/colorAccent"
+                        app:trackTint="?attr/colorAccent"/>
+
+                    <TextView
+                        android:id="@+id/tvExportStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="⭕ Manual"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorSecondary"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- SECCION: ACCIONES -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+
+            <Button
+                android:id="@+id/btnSaveSettings"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="💾 Guardar"
+                android:backgroundTint="?attr/colorPrimary"
+                android:textColor="?attr/colorOnPrimary"/>
+
+            <Button
+                android:id="@+id/btnResetSettings"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="🔄 Restablecer"
+                android:backgroundTint="?attr/colorError"
+                android:textColor="?android:attr/textColorPrimaryInverse"/>
+
+        </LinearLayout>
+
+        <!-- SECCION: ESTADO -->
+        <TextView
+            android:id="@+id/tvSettingsStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Última actualización: --:--:--"
+            android:textSize="12sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:gravity="center"
+            android:padding="16dp"/>
+
+    </LinearLayout>
+
+</ScrollView>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/layout/item_stat.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="?attr/selectableItemBackground">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="4dp">
+
+        <TextView
+            android:id="@+id/tvAppName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="📱 WhatsApp"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary" />
+
+        <TextView
+            android:id="@+id/tvTimeSpent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1h 22m"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorAccent" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvDetails"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="8 sesiones hoy"
+        android:textSize="14sp"
+        android:textColor="?android:attr/textColorSecondary"
+        android:layout_marginTop="2dp" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_marginTop="8dp"
+        android:max="100"
+        android:progress="65"
+        android:progressTint="?attr/colorPrimary" />
+
+</LinearLayout>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/layout/item_real_stat.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="?attr/colorSurface">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- Nombre de la app -->
+        <TextView
+            android:id="@+id/tvAppName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Nombre de la App"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary"
+            android:layout_marginBottom="4dp"/>
+
+        <!-- Barra de progreso -->
+        <ProgressBar
+            android:id="@+id/progressBar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:layout_marginBottom="8dp"
+            android:max="100"
+            android:progress="50"
+            android:progressTint="?attr/colorPrimary"/>
+
+        <!-- Información de tiempo y sesiones -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Tiempo usado -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⏱️"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="4dp"
+                    android:textColor="?android:attr/textColorSecondary"/>
+
+                <TextView
+                    android:id="@+id/tvTimeSpent"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0h 00m"
+                    android:textSize="14sp"
+                    android:textColor="?android:attr/textColorSecondary"/>
+
+            </LinearLayout>
+
+            <!-- Sesiones -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📊"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="4dp"
+                    android:textColor="?android:attr/textColorSecondary"/>
+
+                <TextView
+                    android:id="@+id/tvSessions"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 sesiones"
+                    android:textSize="14sp"
+                    android:textColor="?android:attr/textColorSecondary"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/layout/item_simple_app.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:background="?attr/colorSurface">
+
+    <!-- Checkbox para selección -->
+    <CheckBox
+        android:id="@+id/checkBoxApp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="12dp"
+        app:buttonTint="?attr/colorAccent"/>
+
+    <!-- Icono de la app -->
+    <ImageView
+        android:id="@+id/imageAppIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="12dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_default_app"/>
+
+    <!-- Nombre de la app -->
+    <TextView
+        android:id="@+id/textAppName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Nombre de la App"
+        android:textSize="16sp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:gravity="center_vertical"
+        android:maxLines="1"
+        android:ellipsize="end"/>
+
+</LinearLayout>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/layout/dialog_app_selection.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="?attr/colorSurface">
+
+    <!-- Título del diálogo -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📱 Seleccionar Apps"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="?android:attr/textColorPrimary"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Contador y botones de acción rápida -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="12dp">
+
+        <!-- Contador -->
+        <TextView
+            android:id="@+id/tvSelectedCount"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="0 apps seleccionadas"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:gravity="center_vertical"/>
+
+        <!-- Botón Seleccionar Todas -->
+        <Button
+            android:id="@+id/btnSelectAll"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:text="✓ Todas"
+            android:textSize="12sp"
+            android:padding="6dp"
+            android:backgroundTint="?attr/colorPrimary"
+            android:textColor="?android:attr/textColorPrimaryInverse"/>
+
+        <!-- Botón Deseleccionar Todas -->
+        <Button
+            android:id="@+id/btnDeselectAll"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="✗ Ninguna"
+            android:textSize="12sp"
+            android:padding="6dp"
+            android:backgroundTint="?attr/colorAccent"
+            android:textColor="?android:attr/textColorPrimaryInverse"/>
+
+    </LinearLayout>
+
+    <!-- Lista de apps -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerViewDialogApps"
+        android:layout_width="match_parent"
+        android:layout_height="400dp"
+        android:background="?attr/colorSurface"
+        android:padding="4dp"/>
+
+    <!-- Botones de acción final -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/btnCancelSelection"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="Cancelar"
+            android:backgroundTint="?attr/colorPrimary"
+            android:textColor="?android:attr/textColorPrimaryInverse"/>
+
+        <Button
+            android:id="@+id/btnConfirmSelection"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Confirmar"
+            android:backgroundTint="?attr/colorAccent"
+            android:textColor="?android:attr/textColorPrimaryInverse"/>
+
+    </LinearLayout>
+
+</LinearLayout>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>
+
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>
+
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/drawable-v24/ic_launcher_foreground.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M54,35 L34,70 M54,35 L74,70 M34,70 L74,70" />
+    
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,35m-6,0a6,6 0,1 1,12 0a6,6 0,1 1,-12 0" />
+    
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,70m-6,0a6,6 0,1 1,12 0a6,6 0,1 1,-12 0" />
+    
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M74,70m-6,0a6,6 0,1 1,12 0a6,6 0,1 1,-12 0" />
+</vector>
+
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/xml/accessibility_service_config.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/accessibility_service_description"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFlags="flagReportViewIds"
+    android:canRetrieveWindowContent="true"
+    android:notificationTimeout="100"
+    android:settingsActivity="com.gnzalobnites.appsusagemonitor.MainNavActivity" />
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/xml/file_paths.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <cache-path name="cache" path="." />
+</paths>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/values-night/themes.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    
+    <!-- MISMO NOMBRE - VALORES PARA MODO OSCURO -->
+    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Primary brand color -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryVariant">@color/colorPrimaryDark_night</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        
+        <!-- Secondary brand color -->
+        <item name="colorSecondary">@color/colorAccent_night</item>
+        <item name="colorSecondaryVariant">@color/colorAccentDark</item>
+        <item name="colorOnSecondary">@android:color/black</item>
+        
+        <!-- VALORES PARA MODO OSCURO -->
+        <item name="android:colorBackground">@color/background_dark</item>
+        <item name="colorSurface">@color/card_dark</item>
+        <item name="colorOnSurface">@color/text_primary_dark</item>
+        
+        <!-- Status bar -->
+        <item name="android:statusBarColor">@color/colorPrimaryDark_night</item>
+        <item name="android:windowLightStatusBar">false</item>
+        
+        <!-- Navigation bar -->
+        <item name="android:navigationBarColor">@color/colorPrimaryDark_night</item>
+        
+        <!-- Color de acento -->
+        <item name="colorAccent">@color/colorAccent_night</item>
+        
+        <!-- Formas redondeadas -->
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.App.SmallComponent</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.App.MediumComponent</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.App.LargeComponent</item>
+    </style>
+    
+    <!-- ✅ CORREGIDO: Usa el mismo splash para ambos temas -->
+    <style name="SplashTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:statusBarColor">@color/colorPrimaryDark_night</item>
+        <item name="android:navigationBarColor">@color/colorPrimaryDark_night</item>
+    </style>
+    
+    <!-- Toolbar -->
+    <style name="Widget.App.Toolbar" parent="Widget.MaterialComponents.Toolbar">
+        <item name="background">@color/colorPrimaryDark_night</item>
+        <item name="titleTextColor">@android:color/white</item>
+        <item name="android:elevation">4dp</item>
+    </style>
+    
+    <!-- Botón primario -->
+    <style name="Widget.App.Button.Primary" parent="Widget.MaterialComponents.Button">
+        <item name="backgroundTint">@color/colorPrimaryDark_night</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+    
+</resources>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/menu/nav_menu.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_dashboard"
+            android:icon="@drawable/ic_timer"
+            android:title="@string/dashboard_title" />
+        
+        <item
+            android:id="@+id/nav_stats"
+            android:icon="@drawable/ic_timing"
+            android:title="@string/stats_title" />
+        
+        <item
+            android:id="@+id/nav_monitor"
+            android:icon="@drawable/ic_service_active"
+            android:title="@string/monitor_title" />
+        
+        <item
+            android:id="@+id/nav_settings"
+            android:icon="@drawable/ic_settings"
+            android:title="@string/settings_title" />
+        
+        <item
+            android:id="@+id/nav_tools"
+            android:icon="@drawable/ic_debug"
+            android:title="@string/tools_title" />
+    </group>
+
+    <item android:title="Otros">
+        <menu>
+            <item
+                android:id="@+id/nav_permissions"
+                android:icon="@drawable/ic_permission"
+                android:title="@string/permissions_title" />
+            
+            <item
+                android:id="@+id/nav_test"
+                android:icon="@drawable/ic_test"
+                android:title="@string/test_banners_title" />
+            
+            <item
+                android:id="@+id/nav_about"
+                android:icon="@drawable/ic_info"
+                android:title="@string/about_title" />
+        </menu>
+    </item>
+
+</menu>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/layout-night/item_app_selection.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="12dp"
+    android:background="?android:attr/selectableItemBackground">
+
+    <ImageView
+        android:id="@+id/appIcon"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:contentDescription="App icon"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <CheckBox
+        android:id="@+id/appCheckBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:buttonTint="@color/teal_200"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <TextView
+        android:id="@+id/appName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="8dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:textColor="@color/text_primary_dark"
+        app:layout_constraintStart_toEndOf="@id/appIcon"
+        app:layout_constraintEnd_toStartOf="@id/appCheckBox"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/appPackage"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="4dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textSize="12sp"
+        android:textColor="@color/text_secondary_dark"
+        app:layout_constraintStart_toEndOf="@id/appIcon"
+        app:layout_constraintEnd_toStartOf="@id/appCheckBox"
+        app:layout_constraintTop_toBottomOf="@id/appName"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/color/nav_item_tint.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/colorAccent" android:state_checked="true" />
+    <item android:color="#B3FFFFFF" android:state_checked="false" />
+</selector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/color/nav_item_text.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/colorAccent" android:state_checked="true" />
+    <item android:color="#FFFFFFFF" android:state_checked="false" />
+</selector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/color/switch_track.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="#804D2E7A" android:state_checked="true" />
+    <item android:color="#4D757575" android:state_checked="false" />
+</selector>
+===== /storage/internal_new/project/AppsUsageMonitor/app/src/main/res/color/switch_thumb.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="#FFFFD700" android:state_checked="true" />
+    <item android:color="#FFFFFFFF" android:state_checked="false" />
+</selector>

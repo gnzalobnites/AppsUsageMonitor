@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-selector xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <item android:id="@+id/normal_state">
+        <shape android:shape="rectangle">
+            <!-- Gradiente llamativo que cambia -->
+            <gradient
+                android:startColor="#FF416C"
+                android:endColor="#FF4B2B"
+                android:angle="135"
+                android:type="sweep" />
+            
+            <corners android:radius="16dp" />
+            
+            <stroke
+                android:width="3dp"
+                android:color="#FFFFFF"
+                android:dashWidth="8dp"
+                android:dashGap="4dp" />
+            
+            <!-- Sombra externa intensa -->
+            <padding
+                android:left="4dp"
+                android:top="4dp"
+                android:right="4dp"
+                android:bottom="4dp" />
+        </shape>
+    </item>
+
+    <!-- Para efecto de pulso -->
+    <item android:id="@+id/pulse_state">
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#FF0000"
+                android:endColor="#FF9500"
+                android:angle="45" />
+            
+            <corners android:radius="16dp" />
+            
+            <stroke
+                android:width="4dp"
+                android:color="#FFFFFF" />
+        </shape>
+    </item>
+
+    <!-- Transición para efecto de pulso -->
+    <transition
+        android:fromId="@+id/normal_state"
+        android:toId="@+id/pulse_state">
+        <animation-list>
+            <item android:duration="500">
+                <shape android:shape="rectangle">
+                    <gradient
+                        android:startColor="#FF416C"
+                        android:endColor="#FF0000"
+                        android:angle="135" />
+                    <corners android:radius="16dp" />
+                </shape>
+            </item>
+        </animation-list>
+    </transition>
+
+</animated-selector>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+    
+    <!-- Gráfico de barras -->
+    <path
+        android:fillColor="#FF4081"
+        android:pathData="M4,9h3v10H4z" />
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="M9,13h3v6H9z" />
+    <path
+        android:fillColor="#2196F3"
+        android:pathData="M14,6h3v13h-3z" />
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M19,10h3v9h-3z" />
+    
+</vector>

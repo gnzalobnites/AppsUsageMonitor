@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_dashboard"
+            android:icon="@drawable/ic_timer"
+            android:title="@string/dashboard_title" />
+        
+        <item
+            android:id="@+id/nav_stats"
+            android:icon="@drawable/ic_timing"
+            android:title="@string/stats_title" />
+        
+        <item
+            android:id="@+id/nav_monitor"
+            android:icon="@drawable/ic_service_active"
+            android:title="@string/monitor_title" />
+        
+        <item
+            android:id="@+id/nav_settings"
+            android:icon="@drawable/ic_settings"
+            android:title="@string/settings_title" />
+        
+        <item
+            android:id="@+id/nav_tools"
+            android:icon="@drawable/ic_debug"
+            android:title="@string/tools_title" />
+    </group>
+
+    <item android:title="Otros">
+        <menu>
+            <item
+                android:id="@+id/nav_permissions"
+                android:icon="@drawable/ic_permission"
+                android:title="@string/permissions_title" />
+            
+            <item
+                android:id="@+id/nav_test"
+                android:icon="@drawable/ic_test"
+                android:title="@string/test_banners_title" />
+            
+            <item
+                android:id="@+id/nav_about"
+                android:icon="@drawable/ic_info"
+                android:title="@string/about_title" />
+        </menu>
+    </item>
+
+</menu>
