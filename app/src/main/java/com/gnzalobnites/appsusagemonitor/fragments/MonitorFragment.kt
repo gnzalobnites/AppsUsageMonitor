@@ -1,9 +1,5 @@
 package com.gnzalobnites.appsusagemonitor.fragments
 
-// Agrega ESTE import
-import com.gnzalobnites.appsusagemonitor.banner.BannerManager
-
-// El resto del código permanece igual
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -22,6 +18,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.gnzalobnites.appsusagemonitor.*
+import com.gnzalobnites.appsusagemonitor.banner.BannerManager
 import java.util.*
 
 class MonitorFragment : Fragment() {
@@ -38,7 +35,9 @@ class MonitorFragment : Fragment() {
     private lateinit var tvSelectedAppsCount: TextView
     private lateinit var recyclerViewApps: RecyclerView
     private lateinit var btnCheckPermissions: Button
-    private lateinit var tvUsageStatsStatus: TextView  // ← AGREGADO
+    private lateinit var tvUsageStatsStatus: TextView
+    private lateinit var swShowTikTokDemo: Switch
+    private lateinit var tvTikTokDemoStatus: TextView
     
     // Para selección de apps
     private var apps: List<ApplicationInfo> = emptyList()
@@ -102,7 +101,9 @@ class MonitorFragment : Fragment() {
         tvSelectedAppsCount = view.findViewById(R.id.tvSelectedAppsCount)
         recyclerViewApps = view.findViewById(R.id.recyclerViewApps)
         btnCheckPermissions = view.findViewById(R.id.btnCheckPermissions)
-        tvUsageStatsStatus = view.findViewById(R.id.tvUsageStatsStatus)  // ← AGREGADO
+        tvUsageStatsStatus = view.findViewById(R.id.tvUsageStatsStatus)
+        swShowTikTokDemo = view.findViewById(R.id.swShowTikTokDemo)
+        tvTikTokDemoStatus = view.findViewById(R.id.tvTikTokDemoStatus)
     }
     
     private fun setupUI() {
@@ -141,6 +142,11 @@ class MonitorFragment : Fragment() {
             Log.d(TAG, "Banners ${if (isChecked) "activados" else "desactivados"}")
         }
         
+        swShowTikTokDemo.setOnCheckedChangeListener { _, isChecked ->
+            tvTikTokDemoStatus.text = if (isChecked) "✅ Demo activada" else "⭕ Demo desactivada"
+            Log.d(TAG, "Demo TikTok ${if (isChecked) "activada" else "desactivada"}")
+        }
+        
         btnTestBanner.setOnClickListener {
             testBannerNow()
         }
@@ -173,7 +179,6 @@ class MonitorFragment : Fragment() {
             "⚠️ Modo preciso desactivado - Actívalo para mayor precisión"
         }
         
-        // Cambiar color según estado
         if (hasPermission) {
             tvUsageStatsStatus.setTextColor(
                 resources.getColor(android.R.color.holo_green_dark, requireContext().theme)
@@ -283,16 +288,22 @@ class MonitorFragment : Fragment() {
         
         val currentMonitoredApps = viewModel.monitoredApps.value?.toSet() ?: emptySet()
         
-        // Usar variable de clase en lugar de local
         dialogAdapter = SimpleAppsAdapter(
             requireContext(),
             apps,
-            currentMonitoredApps
-        ) { _, _ ->
-            dialogAdapter?.let { adapter ->
-                updateSelectedCountDialog(tvSelectedCount, adapter)
+            currentMonitoredApps.toSet(),
+            { packageName, isChecked ->
+                if (isChecked) {
+                    viewModel.addMonitoredApp(packageName)
+                } else {
+                    viewModel.removeMonitoredApp(packageName)
+                }
+                
+                dialogAdapter?.let { adapter ->
+                    updateSelectedCountDialog(tvSelectedCount, adapter)
+                }
             }
-        }
+        )
         
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = dialogAdapter
@@ -307,19 +318,14 @@ class MonitorFragment : Fragment() {
                 viewModel.addMonitoredApp(packageName)
             }
             dialogAdapter?.updateSelectedApps(allPackages)
-            dialogAdapter?.let { adapter ->
-                updateSelectedCountDialog(tvSelectedCount, adapter)
-            }
         }
         
         btnDeselectAll.setOnClickListener {
-            currentMonitoredApps.forEach { packageName ->
+            val currentSelected = dialogAdapter?.getSelectedApps() ?: emptySet()
+            currentSelected.forEach { packageName ->
                 viewModel.removeMonitoredApp(packageName)
             }
             dialogAdapter?.updateSelectedApps(emptySet())
-            dialogAdapter?.let { adapter ->
-                updateSelectedCountDialog(tvSelectedCount, adapter)
-            }
         }
         
         btnConfirm.setOnClickListener {
@@ -331,12 +337,14 @@ class MonitorFragment : Fragment() {
         }
         
         btnCancel.setOnClickListener {
+            val originalApps = viewModel.monitoredApps.value?.toSet() ?: emptySet()
+            dialogAdapter?.updateSelectedApps(originalApps)
+            
             selectionDialog?.dismiss()
             selectionDialog = null
             dialogAdapter = null
         }
         
-        // Usar variable de clase
         selectionDialog = AlertDialog.Builder(requireContext())
             .setView(dialogView)
             .setCancelable(true)
@@ -344,35 +352,34 @@ class MonitorFragment : Fragment() {
         
         selectionDialog?.show()
     }
-
+    
     private fun updateSelectedCountDialog(textView: TextView, adapter: SimpleAppsAdapter) {
         val count = adapter.getSelectedCount()
         textView.text = "$count apps seleccionadas"
     }
     
     private fun testBannerNow() {
-    Log.d(TAG, "=== PRUEBA DE BANNER ===")
-    
-    if (!Settings.canDrawOverlays(requireContext())) {
+        Log.d(TAG, "=== PRUEBA DE BANNER ===")
+        
+        if (!Settings.canDrawOverlays(requireContext())) {
+            Toast.makeText(requireContext(), 
+                "❌ Necesitas permiso de overlay", 
+                Toast.LENGTH_SHORT).show()
+            requestOverlayPermission()
+            return
+        }
+        
+        val testMessage = "🧪 BANNER DE PRUEBA\n\n" +
+                "• Temporal: 15 segundos\n" +
+                "• Toca para cerrar antes\n" +
+                "• No afecta monitoreo real"
+        
+        bannerManager.showTestBanner(testMessage)
+        
         Toast.makeText(requireContext(), 
-            "❌ Necesitas permiso de overlay", 
+            "✅ Banner mostrado (15s)", 
             Toast.LENGTH_SHORT).show()
-        requestOverlayPermission()
-        return
     }
-    
-    // Mensaje más claro
-    val testMessage = "🧪 BANNER DE PRUEBA\n\n" +
-            "• Temporal: 15 segundos\n" +
-            "• Toca para cerrar antes\n" +
-            "• No afecta monitoreo real"
-    
-    bannerManager.showTestBanner(testMessage)
-    
-    Toast.makeText(requireContext(), 
-        "✅ Banner mostrado (15s)", 
-        Toast.LENGTH_SHORT).show()
-}
     
     private fun requestOverlayPermission() {
         val intent = Intent(
@@ -384,14 +391,15 @@ class MonitorFragment : Fragment() {
     
     override fun onDestroy() {
         super.onDestroy()
-        // Limpiar referencias
         selectionDialog?.dismiss()
         selectionDialog = null
         dialogAdapter = null
     }
 }
 
-// SimpleAppsAdapter (sin cambios)
+// ======================================================
+// CLASE ADAPTER - AL FINAL DEL ARCHIVO (FUERA DE LA CLASE)
+// ======================================================
 class SimpleAppsAdapter(
     private val context: Context,
     private val apps: List<ApplicationInfo>,
@@ -401,11 +409,13 @@ class SimpleAppsAdapter(
     
     private val packageManager = context.packageManager
     private val selectedApps = initialSelectedApps.toMutableSet()
+    private var isUpdating = false
     
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val checkBox: CheckBox = itemView.findViewById(R.id.checkBoxApp)
         val appName: TextView = itemView.findViewById(R.id.textAppName)
         val appIcon: ImageView = itemView.findViewById(R.id.imageAppIcon)
+        var currentPackageName: String? = null
     }
     
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -418,24 +428,38 @@ class SimpleAppsAdapter(
         val app = apps[position]
         val packageName = app.packageName
         
+        holder.currentPackageName = packageName
+        
         try {
             holder.appIcon.setImageDrawable(app.loadIcon(packageManager))
             holder.appName.text = app.loadLabel(packageManager).toString()
-            holder.checkBox.isChecked = selectedApps.contains(packageName)
             
             holder.checkBox.setOnCheckedChangeListener(null)
+            holder.checkBox.isChecked = selectedApps.contains(packageName)
             
             holder.checkBox.setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked) {
-                    selectedApps.add(packageName)
-                } else {
-                    selectedApps.remove(packageName)
+                val currentPkg = holder.currentPackageName
+                
+                if (currentPkg == packageName && !isUpdating) {
+                    isUpdating = true
+                    
+                    if (isChecked) {
+                        selectedApps.add(packageName)
+                    } else {
+                        selectedApps.remove(packageName)
+                    }
+                    
+                    onAppChecked(packageName, isChecked)
+                    
+                    isUpdating = false
                 }
-                onAppChecked(packageName, isChecked)
             }
             
             holder.itemView.setOnClickListener {
-                holder.checkBox.isChecked = !holder.checkBox.isChecked
+                val currentPkg = holder.currentPackageName
+                if (currentPkg == packageName) {
+                    holder.checkBox.isChecked = !holder.checkBox.isChecked
+                }
             }
             
         } catch (e: Exception) {
@@ -446,10 +470,14 @@ class SimpleAppsAdapter(
     override fun getItemCount(): Int = apps.size
     
     fun updateSelectedApps(newSelectedApps: Set<String>) {
+        isUpdating = true
         selectedApps.clear()
         selectedApps.addAll(newSelectedApps)
         notifyDataSetChanged()
+        isUpdating = false
     }
     
     fun getSelectedCount(): Int = selectedApps.size
+    
+    fun getSelectedApps(): Set<String> = selectedApps.toSet()
 }
