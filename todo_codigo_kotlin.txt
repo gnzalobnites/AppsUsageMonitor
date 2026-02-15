@@ -679,22 +679,14 @@ class UserPreferences private constructor(context: Context) {
             Log.d("UserPreferences", "Modo oscuro establecido a: $value")
         }
 
-    // ✅ ELIMINADO: isDemoMode completamente
-
-    // =============================================
-    // ✅ CORREGIDO: Soporte para 10 segundos (-1)
-    // =============================================
+    // MODIFICADO: Soporte para 10 segundos (DEMO) - eliminado 1 segundo
     fun getBannerIntervalMs(): Long {
         val minutes = bannerIntervalMinutes
         
         return when {
             minutes == -1 -> {
-                Log.d("UserPreferences", "⚙️ Intervalo: 10 segundos (10000ms)")
+                Log.d("UserPreferences", "⚙️ Intervalo: 10 segundos (DEMO) → 10000ms")
                 10000L
-            }
-            minutes == 0 -> {
-                Log.d("UserPreferences", "⚙️ Intervalo: 1 segundo (1000ms)")
-                1000L
             }
             else -> {
                 val ms = TimeUnit.MINUTES.toMillis(minutes.toLong())
@@ -704,13 +696,10 @@ class UserPreferences private constructor(context: Context) {
         }
     }
     
-    // =============================================
-    // ✅ CORREGIDO: Mostrar texto correcto para 10 segundos
-    // =============================================
+    // MODIFICADO: Texto correcto para 10 segundos (DEMO)
     fun getBannerIntervalDisplayText(): String {
         return when (bannerIntervalMinutes) {
-            -1 -> "10 segundos"
-            0  -> "1 segundo (PRUEBAS)"
+            -1 -> "10 segundos (DEMO)"
             else -> "$bannerIntervalMinutes minutos"
         }
     }
@@ -749,7 +738,6 @@ class UserPreferences private constructor(context: Context) {
         private const val KEY_BANNER_DURATION_SEC = "banner_duration_sec"
         private const val KEY_MONITORED_APPS = "monitored_apps"
         private const val KEY_DARK_MODE = "dark_mode"
-        // ✅ ELIMINADO: KEY_DEMO_MODE
 
         @Volatile
         private var INSTANCE: UserPreferences? = null
@@ -1307,8 +1295,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         Log.d("MainViewModel", "✅ TODOS los LiveData inicializados")
     }
     
-    // AGREGAR ESTOS MÉTODOS QUE FALTAN:
-    
     fun saveAllSettings() {
         prefs.showBanner = _showBanner.value ?: false
         prefs.bannerIntervalMinutes = _bannerInterval.value ?: 1
@@ -1330,12 +1316,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         Log.d("MainViewModel", "• Mostrar banner actualizado: $show")
     }
     
-    // ✅ CORREGIDO: Permitir -1 (10 segundos) y 0 (1 segundo)
+    // MODIFICADO: Permitir -1 (10 segundos) - eliminado 0
     fun updateBannerInterval(interval: Int) {
-        // Ya no forzamos a 1, guardamos el valor exacto
         prefs.bannerIntervalMinutes = interval
         _bannerInterval.value = interval
-        Log.d("MainViewModel", "• Intervalo del banner actualizado: $interval (código)")
+        Log.d("MainViewModel", "• Intervalo del banner actualizado: $interval")
     }
     
     fun updateBannerDuration(duration: Int) {
@@ -1366,7 +1351,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun clearAllSettings() {
         prefs.clearAll()
         _showBanner.value = false
-        _bannerInterval.value = 1
+        _bannerInterval.value = 5 // Valor por defecto: 5 minutos
         _bannerDuration.value = 5
         _monitoredApps.value = emptyList()
         _isDarkMode.value = false
@@ -1394,71 +1379,48 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     private suspend fun getDailyTimeSummaryInternal(): String {
-    return withContext(Dispatchers.IO) {
-        try {
-            // Obtener apps monitoreadas
-            val monitoredPackages = prefs.monitoredApps.toList()
-            
-            // Obtener sesiones monitoreadas hoy
-            val sessions = repository.getTodayMonitoredSessions(monitoredPackages)
-            Log.d("MainViewModel", "• Sesiones monitoreadas hoy: ${sessions.size}")
-            
-            // Obtener tiempo total monitoreado hoy
-            val totalMonitoredTime = repository.getTotalMonitoredTimeToday(monitoredPackages)
-            
-            // Obtener estadísticas por app
-            val dailyStats = try {
-                repository.getDailyStatsOptimized()
-            } catch (e: Exception) {
-                Log.w("MainViewModel", "Usando fallback para estadísticas diarias: ${e.message}")
-                repository.getDailyStats()
-            }
-            
-            // Filtrar solo apps monitoreadas
-            val monitoredStats = dailyStats.filter { it.key in monitoredPackages }
-            
-            buildString {
-                append("📊 RESUMEN DIARIO\n")
-                append("Fecha: ${Date()}\n")
-                append("─".repeat(30))
-                append("\n\n")
+        return withContext(Dispatchers.IO) {
+            try {
+                // Obtener apps monitoreadas
+                val monitoredPackages = prefs.monitoredApps.toList()
                 
-                append("📈 ESTADÍSTICAS GENERALES\n")
-                append("• Apps monitoreadas: ${monitoredPackages.size}\n")
-                append("• Sesiones registradas: ${sessions.size}\n")
-                append("• Tiempo total monitoreado: ${formatTimeForDisplay(totalMonitoredTime)}\n\n")
+                // Obtener sesiones monitoreadas hoy
+                val sessions = repository.getTodayMonitoredSessions(monitoredPackages)
+                Log.d("MainViewModel", "• Sesiones monitoreadas hoy: ${sessions.size}")
                 
-                if (sessions.isNotEmpty() && monitoredStats.isNotEmpty()) {
-                    append("⏱️ TIEMPO POR APLICACIÓN MONITOREADA\n")
+                // Obtener tiempo total monitoreado hoy
+                val totalMonitoredTime = repository.getTotalMonitoredTimeToday(monitoredPackages)
+                
+                // Obtener estadísticas por app
+                val dailyStats = try {
+                    repository.getDailyStatsOptimized()
+                } catch (e: Exception) {
+                    Log.w("MainViewModel", "Usando fallback para estadísticas diarias: ${e.message}")
+                    repository.getDailyStats()
+                }
+                
+                // Filtrar solo apps monitoreadas
+                val monitoredStats = dailyStats.filter { it.key in monitoredPackages }
+                
+                buildString {
+                    append("📊 RESUMEN DIARIO\n")
+                    append("Fecha: ${Date()}\n")
+                    append("─".repeat(30))
+                    append("\n\n")
                     
-                    val sortedApps = monitoredStats.entries.sortedByDescending { it.value }
+                    append("📈 ESTADÍSTICAS GENERALES\n")
+                    append("• Apps monitoreadas: ${monitoredPackages.size}\n")
+                    append("• Sesiones registradas: ${sessions.size}\n")
+                    append("• Tiempo total monitoreado: ${formatTimeForDisplay(totalMonitoredTime)}\n\n")
                     
-                    sortedApps.forEachIndexed { index, (packageName, appTime) ->
-                        val sessionCount = sessions.count { it.packageName == packageName }
+                    if (sessions.isNotEmpty() && monitoredStats.isNotEmpty()) {
+                        append("⏱️ TIEMPO POR APLICACIÓN MONITOREADA\n")
                         
-                        val appName = try {
-                            val pm = getApplication<Application>().packageManager
-                            val appInfo = pm.getApplicationInfo(packageName, 0)
-                            pm.getApplicationLabel(appInfo).toString()
-                        } catch (e: Exception) {
-                            packageName
-                        }
+                        val sortedApps = monitoredStats.entries.sortedByDescending { it.value }
                         
-                        val percentage = if (totalMonitoredTime > 0) {
-                            String.format("%.1f", (appTime.toDouble() / totalMonitoredTime * 100))
-                        } else "0.0"
-                        
-                        append("${index + 1}. $appName\n")
-                        append("   ▸ Tiempo: ${formatTimeForDisplay(appTime)} ($percentage%)\n")
-                        append("   ▸ Sesiones: $sessionCount\n")
-                    }
-                } else {
-                    append("⚠️ No hay datos de uso para apps monitoreadas hoy.\n")
-                    
-                    // Mostrar las apps monitoreadas sin datos
-                    if (monitoredPackages.isNotEmpty()) {
-                        append("\n📱 Apps monitoreadas:\n")
-                        monitoredPackages.forEachIndexed { index, packageName ->
+                        sortedApps.forEachIndexed { index, (packageName, appTime) ->
+                            val sessionCount = sessions.count { it.packageName == packageName }
+                            
                             val appName = try {
                                 val pm = getApplication<Application>().packageManager
                                 val appInfo = pm.getApplicationInfo(packageName, 0)
@@ -1466,18 +1428,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             } catch (e: Exception) {
                                 packageName
                             }
+                            
+                            val percentage = if (totalMonitoredTime > 0) {
+                                String.format("%.1f", (appTime.toDouble() / totalMonitoredTime * 100))
+                            } else "0.0"
+                            
                             append("${index + 1}. $appName\n")
+                            append("   ▸ Tiempo: ${formatTimeForDisplay(appTime)} ($percentage%)\n")
+                            append("   ▸ Sesiones: $sessionCount\n")
+                        }
+                    } else {
+                        append("⚠️ No hay datos de uso para apps monitoreadas hoy.\n")
+                        
+                        // Mostrar las apps monitoreadas sin datos
+                        if (monitoredPackages.isNotEmpty()) {
+                            append("\n📱 Apps monitoreadas:\n")
+                            monitoredPackages.forEachIndexed { index, packageName ->
+                                val appName = try {
+                                    val pm = getApplication<Application>().packageManager
+                                    val appInfo = pm.getApplicationInfo(packageName, 0)
+                                    pm.getApplicationLabel(appInfo).toString()
+                                } catch (e: Exception) {
+                                    packageName
+                                }
+                                append("${index + 1}. $appName\n")
+                            }
                         }
                     }
                 }
+                
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "❌ Error interno al obtener resumen", e)
+                "Error al obtener resumen: ${e.message}"
             }
-            
-        } catch (e: Exception) {
-            Log.e("MainViewModel", "❌ Error interno al obtener resumen", e)
-            "Error al obtener resumen: ${e.message}"
         }
     }
-}
     
     suspend fun getDatabaseStats(): DatabaseStats {
         return withContext(Dispatchers.IO) {
@@ -1563,7 +1548,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
 }
 
-// Fuera de la clase MainViewModel
+// 🔴 IMPORTANTE: Esta definición debe estar FUERA de la clase
 data class DatabaseStats(
     val totalRecords: Int,
     val oldestRecord: Long?,
@@ -3983,15 +3968,15 @@ class SettingsFragment : Fragment() {
     private lateinit var tvExportStatus: TextView
     private lateinit var tvSettingsStatus: TextView
     
-    // SOLO spinner de intervalo (ELIMINADO el de duración)
+    // Spinner de intervalo (solo una opción)
     private lateinit var spBannersPerDay: Spinner
     private lateinit var tvBannersPerDayValue: TextView
     
     private lateinit var btnSaveSettings: Button
     private lateinit var btnResetSettings: Button
     
-    // Valores de configuración (SOLO intervalo)
-    private val bannerIntervalValues = arrayOf(-1, 0, 1, 2, 3, 5, 10, 15, 20, 30, 45, 60)
+    // Valores de configuración - ELIMINADO el valor 0 (1 segundo)
+    private val bannerIntervalValues = arrayOf(-1, 1, 2, 3, 5, 10, 15, 20, 30, 45, 60)
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -4042,7 +4027,6 @@ class SettingsFragment : Fragment() {
         tvExportStatus = view.findViewById(R.id.tvExportStatus)
         tvSettingsStatus = view.findViewById(R.id.tvSettingsStatus)
         
-        // SOLO spinner de intervalo
         spBannersPerDay = view.findViewById(R.id.spBannersPerDay)
         tvBannersPerDayValue = view.findViewById(R.id.tvBannersPerDayValue)
         
@@ -4053,10 +4037,20 @@ class SettingsFragment : Fragment() {
     private fun setupSpinners() {
         try {
             // SOLO spinner para intervalo de banners
+            // MODIFICADO: Eliminado "1 segundo (PRUEBAS)" y renombrado -1 como "10 segundos (DEMO)"
             val intervalLabels = bannerIntervalValues.map { value ->
                 when (value) {
                     -1 -> "10 segundos"
-                    0  -> "1 segundo (PRUEBAS)"
+                    1 -> "1 minuto"
+                    2 -> "2 minutos"
+                    3 -> "3 minutos"
+                    5 -> "5 minutos"
+                    10 -> "10 minutos"
+                    15 -> "15 minutos"
+                    20 -> "20 minutos"
+                    30 -> "30 minutos"
+                    45 -> "45 minutos"
+                    60 -> "60 minutos"
                     else -> "$value minutos"
                 }
             }.toTypedArray()
@@ -4086,11 +4080,12 @@ class SettingsFragment : Fragment() {
             
             // Intervalo (única opción)
             val interval = viewModel.bannerInterval.value ?: 5
+            // Buscar el índice correspondiente (si no existe, usar 5 minutos que es índice 4)
             val intervalIndex = bannerIntervalValues.indexOf(interval).takeIf { it >= 0 } ?: 4
             spBannersPerDay.setSelection(intervalIndex)
             
             val prefs = UserPreferences.getInstance(requireContext())
-            tvBannersPerDayValue.text = prefs.getBannerIntervalDisplayText()
+            tvBannersPerDayValue.text = getBannerIntervalDisplayText(interval)
             
             // Valores por defecto para otras opciones
             swAutoStart.isChecked = false
@@ -4101,6 +4096,24 @@ class SettingsFragment : Fragment() {
             
         } catch (e: Exception) {
             Log.e(TAG, "Error cargando configuración: ${e.message}")
+        }
+    }
+    
+    // NUEVO: Función helper para obtener texto de visualización
+    private fun getBannerIntervalDisplayText(interval: Int): String {
+        return when (interval) {
+            -1 -> "10 segundos (DEMO)"
+            1 -> "1 minuto"
+            2 -> "2 minutos"
+            3 -> "3 minutos"
+            5 -> "5 minutos"
+            10 -> "10 minutos"
+            15 -> "15 minutos"
+            20 -> "20 minutos"
+            30 -> "30 minutos"
+            45 -> "45 minutos"
+            60 -> "60 minutos"
+            else -> "$interval minutos"
         }
     }
     
@@ -4116,8 +4129,7 @@ class SettingsFragment : Fragment() {
                 val value = bannerIntervalValues[position]
                 viewModel.updateBannerInterval(value)
                 
-                val prefs = UserPreferences.getInstance(requireContext())
-                tvBannersPerDayValue.text = prefs.getBannerIntervalDisplayText()
+                tvBannersPerDayValue.text = getBannerIntervalDisplayText(value)
             }
             
             override fun onNothingSelected(parent: AdapterView<*>?) {}
@@ -4202,12 +4214,11 @@ class SettingsFragment : Fragment() {
     
     private fun showSaveConfirmation() {
         val interval = bannerIntervalValues[spBannersPerDay.selectedItemPosition]
-        val prefs = UserPreferences.getInstance(requireContext())
         
         val summary = StringBuilder().apply {
             append("⚙️ CONFIGURACIONES GUARDADAS:\n\n")
             append("• Tema: ${if (swDarkMode.isChecked) "Oscuro" else "Claro"}\n")
-            append("• Intervalo: ${prefs.getBannerIntervalDisplayText()}\n")
+            append("• Intervalo: ${getBannerIntervalDisplayText(interval)}\n")
             append("• Inicio automático: ${if (swAutoStart.isChecked) "Sí" else "No"}\n")
             append("• Optimización batería: ${if (swBatteryOptimization.isChecked) "Sí" else "No"}\n")
             append("• Vibración: ${if (swVibrateNotification.isChecked) "Sí" else "No"}\n")
@@ -4248,8 +4259,7 @@ class SettingsFragment : Fragment() {
         
         updateAllStatusTexts()
         
-        val prefs = UserPreferences.getInstance(requireContext())
-        tvBannersPerDayValue.text = prefs.getBannerIntervalDisplayText()
+        tvBannersPerDayValue.text = "5 minutos"
         
         viewModel.clearAllSettings()
         
