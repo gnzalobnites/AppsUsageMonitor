@@ -77,8 +77,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         Log.d("MainViewModel", "✅ TODOS los LiveData inicializados")
     }
     
-    // AGREGAR ESTOS MÉTODOS QUE FALTAN:
-    
     fun saveAllSettings() {
         prefs.showBanner = _showBanner.value ?: false
         prefs.bannerIntervalMinutes = _bannerInterval.value ?: 1
@@ -100,12 +98,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         Log.d("MainViewModel", "• Mostrar banner actualizado: $show")
     }
     
-    // ✅ CORREGIDO: Permitir -1 (10 segundos) y 0 (1 segundo)
+    // MODIFICADO: Permitir -1 (10 segundos) - eliminado 0
     fun updateBannerInterval(interval: Int) {
-        // Ya no forzamos a 1, guardamos el valor exacto
         prefs.bannerIntervalMinutes = interval
         _bannerInterval.value = interval
-        Log.d("MainViewModel", "• Intervalo del banner actualizado: $interval (código)")
+        Log.d("MainViewModel", "• Intervalo del banner actualizado: $interval")
     }
     
     fun updateBannerDuration(duration: Int) {
@@ -136,7 +133,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun clearAllSettings() {
         prefs.clearAll()
         _showBanner.value = false
-        _bannerInterval.value = 1
+        _bannerInterval.value = 5 // Valor por defecto: 5 minutos
         _bannerDuration.value = 5
         _monitoredApps.value = emptyList()
         _isDarkMode.value = false
@@ -164,71 +161,48 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     private suspend fun getDailyTimeSummaryInternal(): String {
-    return withContext(Dispatchers.IO) {
-        try {
-            // Obtener apps monitoreadas
-            val monitoredPackages = prefs.monitoredApps.toList()
-            
-            // Obtener sesiones monitoreadas hoy
-            val sessions = repository.getTodayMonitoredSessions(monitoredPackages)
-            Log.d("MainViewModel", "• Sesiones monitoreadas hoy: ${sessions.size}")
-            
-            // Obtener tiempo total monitoreado hoy
-            val totalMonitoredTime = repository.getTotalMonitoredTimeToday(monitoredPackages)
-            
-            // Obtener estadísticas por app
-            val dailyStats = try {
-                repository.getDailyStatsOptimized()
-            } catch (e: Exception) {
-                Log.w("MainViewModel", "Usando fallback para estadísticas diarias: ${e.message}")
-                repository.getDailyStats()
-            }
-            
-            // Filtrar solo apps monitoreadas
-            val monitoredStats = dailyStats.filter { it.key in monitoredPackages }
-            
-            buildString {
-                append("📊 RESUMEN DIARIO\n")
-                append("Fecha: ${Date()}\n")
-                append("─".repeat(30))
-                append("\n\n")
+        return withContext(Dispatchers.IO) {
+            try {
+                // Obtener apps monitoreadas
+                val monitoredPackages = prefs.monitoredApps.toList()
                 
-                append("📈 ESTADÍSTICAS GENERALES\n")
-                append("• Apps monitoreadas: ${monitoredPackages.size}\n")
-                append("• Sesiones registradas: ${sessions.size}\n")
-                append("• Tiempo total monitoreado: ${formatTimeForDisplay(totalMonitoredTime)}\n\n")
+                // Obtener sesiones monitoreadas hoy
+                val sessions = repository.getTodayMonitoredSessions(monitoredPackages)
+                Log.d("MainViewModel", "• Sesiones monitoreadas hoy: ${sessions.size}")
                 
-                if (sessions.isNotEmpty() && monitoredStats.isNotEmpty()) {
-                    append("⏱️ TIEMPO POR APLICACIÓN MONITOREADA\n")
+                // Obtener tiempo total monitoreado hoy
+                val totalMonitoredTime = repository.getTotalMonitoredTimeToday(monitoredPackages)
+                
+                // Obtener estadísticas por app
+                val dailyStats = try {
+                    repository.getDailyStatsOptimized()
+                } catch (e: Exception) {
+                    Log.w("MainViewModel", "Usando fallback para estadísticas diarias: ${e.message}")
+                    repository.getDailyStats()
+                }
+                
+                // Filtrar solo apps monitoreadas
+                val monitoredStats = dailyStats.filter { it.key in monitoredPackages }
+                
+                buildString {
+                    append("📊 RESUMEN DIARIO\n")
+                    append("Fecha: ${Date()}\n")
+                    append("─".repeat(30))
+                    append("\n\n")
                     
-                    val sortedApps = monitoredStats.entries.sortedByDescending { it.value }
+                    append("📈 ESTADÍSTICAS GENERALES\n")
+                    append("• Apps monitoreadas: ${monitoredPackages.size}\n")
+                    append("• Sesiones registradas: ${sessions.size}\n")
+                    append("• Tiempo total monitoreado: ${formatTimeForDisplay(totalMonitoredTime)}\n\n")
                     
-                    sortedApps.forEachIndexed { index, (packageName, appTime) ->
-                        val sessionCount = sessions.count { it.packageName == packageName }
+                    if (sessions.isNotEmpty() && monitoredStats.isNotEmpty()) {
+                        append("⏱️ TIEMPO POR APLICACIÓN MONITOREADA\n")
                         
-                        val appName = try {
-                            val pm = getApplication<Application>().packageManager
-                            val appInfo = pm.getApplicationInfo(packageName, 0)
-                            pm.getApplicationLabel(appInfo).toString()
-                        } catch (e: Exception) {
-                            packageName
-                        }
+                        val sortedApps = monitoredStats.entries.sortedByDescending { it.value }
                         
-                        val percentage = if (totalMonitoredTime > 0) {
-                            String.format("%.1f", (appTime.toDouble() / totalMonitoredTime * 100))
-                        } else "0.0"
-                        
-                        append("${index + 1}. $appName\n")
-                        append("   ▸ Tiempo: ${formatTimeForDisplay(appTime)} ($percentage%)\n")
-                        append("   ▸ Sesiones: $sessionCount\n")
-                    }
-                } else {
-                    append("⚠️ No hay datos de uso para apps monitoreadas hoy.\n")
-                    
-                    // Mostrar las apps monitoreadas sin datos
-                    if (monitoredPackages.isNotEmpty()) {
-                        append("\n📱 Apps monitoreadas:\n")
-                        monitoredPackages.forEachIndexed { index, packageName ->
+                        sortedApps.forEachIndexed { index, (packageName, appTime) ->
+                            val sessionCount = sessions.count { it.packageName == packageName }
+                            
                             val appName = try {
                                 val pm = getApplication<Application>().packageManager
                                 val appInfo = pm.getApplicationInfo(packageName, 0)
@@ -236,18 +210,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             } catch (e: Exception) {
                                 packageName
                             }
+                            
+                            val percentage = if (totalMonitoredTime > 0) {
+                                String.format("%.1f", (appTime.toDouble() / totalMonitoredTime * 100))
+                            } else "0.0"
+                            
                             append("${index + 1}. $appName\n")
+                            append("   ▸ Tiempo: ${formatTimeForDisplay(appTime)} ($percentage%)\n")
+                            append("   ▸ Sesiones: $sessionCount\n")
+                        }
+                    } else {
+                        append("⚠️ No hay datos de uso para apps monitoreadas hoy.\n")
+                        
+                        // Mostrar las apps monitoreadas sin datos
+                        if (monitoredPackages.isNotEmpty()) {
+                            append("\n📱 Apps monitoreadas:\n")
+                            monitoredPackages.forEachIndexed { index, packageName ->
+                                val appName = try {
+                                    val pm = getApplication<Application>().packageManager
+                                    val appInfo = pm.getApplicationInfo(packageName, 0)
+                                    pm.getApplicationLabel(appInfo).toString()
+                                } catch (e: Exception) {
+                                    packageName
+                                }
+                                append("${index + 1}. $appName\n")
+                            }
                         }
                     }
                 }
+                
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "❌ Error interno al obtener resumen", e)
+                "Error al obtener resumen: ${e.message}"
             }
-            
-        } catch (e: Exception) {
-            Log.e("MainViewModel", "❌ Error interno al obtener resumen", e)
-            "Error al obtener resumen: ${e.message}"
         }
     }
-}
     
     suspend fun getDatabaseStats(): DatabaseStats {
         return withContext(Dispatchers.IO) {
@@ -333,7 +330,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
 }
 
-// Fuera de la clase MainViewModel
+// 🔴 IMPORTANTE: Esta definición debe estar FUERA de la clase
 data class DatabaseStats(
     val totalRecords: Int,
     val oldestRecord: Long?,

@@ -38,22 +38,14 @@ class UserPreferences private constructor(context: Context) {
             Log.d("UserPreferences", "Modo oscuro establecido a: $value")
         }
 
-    // ✅ ELIMINADO: isDemoMode completamente
-
-    // =============================================
-    // ✅ CORREGIDO: Soporte para 10 segundos (-1)
-    // =============================================
+    // MODIFICADO: Soporte para 10 segundos (DEMO) - eliminado 1 segundo
     fun getBannerIntervalMs(): Long {
         val minutes = bannerIntervalMinutes
         
         return when {
             minutes == -1 -> {
-                Log.d("UserPreferences", "⚙️ Intervalo: 10 segundos (10000ms)")
+                Log.d("UserPreferences", "⚙️ Intervalo: 10 segundos (DEMO) → 10000ms")
                 10000L
-            }
-            minutes == 0 -> {
-                Log.d("UserPreferences", "⚙️ Intervalo: 1 segundo (1000ms)")
-                1000L
             }
             else -> {
                 val ms = TimeUnit.MINUTES.toMillis(minutes.toLong())
@@ -63,13 +55,10 @@ class UserPreferences private constructor(context: Context) {
         }
     }
     
-    // =============================================
-    // ✅ CORREGIDO: Mostrar texto correcto para 10 segundos
-    // =============================================
+    // MODIFICADO: Texto correcto para 10 segundos (DEMO)
     fun getBannerIntervalDisplayText(): String {
         return when (bannerIntervalMinutes) {
-            -1 -> "10 segundos"
-            0  -> "1 segundo (PRUEBAS)"
+            -1 -> "10 segundos (DEMO)"
             else -> "$bannerIntervalMinutes minutos"
         }
     }
@@ -108,7 +97,6 @@ class UserPreferences private constructor(context: Context) {
         private const val KEY_BANNER_DURATION_SEC = "banner_duration_sec"
         private const val KEY_MONITORED_APPS = "monitored_apps"
         private const val KEY_DARK_MODE = "dark_mode"
-        // ✅ ELIMINADO: KEY_DEMO_MODE
 
         @Volatile
         private var INSTANCE: UserPreferences? = null

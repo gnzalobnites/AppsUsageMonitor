@@ -38,15 +38,15 @@ class SettingsFragment : Fragment() {
     private lateinit var tvExportStatus: TextView
     private lateinit var tvSettingsStatus: TextView
     
-    // SOLO spinner de intervalo (ELIMINADO el de duración)
+    // Spinner de intervalo (solo una opción)
     private lateinit var spBannersPerDay: Spinner
     private lateinit var tvBannersPerDayValue: TextView
     
     private lateinit var btnSaveSettings: Button
     private lateinit var btnResetSettings: Button
     
-    // Valores de configuración (SOLO intervalo)
-    private val bannerIntervalValues = arrayOf(-1, 0, 1, 2, 3, 5, 10, 15, 20, 30, 45, 60)
+    // Valores de configuración - ELIMINADO el valor 0 (1 segundo)
+    private val bannerIntervalValues = arrayOf(-1, 1, 2, 3, 5, 10, 15, 20, 30, 45, 60)
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -97,7 +97,6 @@ class SettingsFragment : Fragment() {
         tvExportStatus = view.findViewById(R.id.tvExportStatus)
         tvSettingsStatus = view.findViewById(R.id.tvSettingsStatus)
         
-        // SOLO spinner de intervalo
         spBannersPerDay = view.findViewById(R.id.spBannersPerDay)
         tvBannersPerDayValue = view.findViewById(R.id.tvBannersPerDayValue)
         
@@ -108,10 +107,20 @@ class SettingsFragment : Fragment() {
     private fun setupSpinners() {
         try {
             // SOLO spinner para intervalo de banners
+            // MODIFICADO: Eliminado "1 segundo (PRUEBAS)" y renombrado -1 como "10 segundos (DEMO)"
             val intervalLabels = bannerIntervalValues.map { value ->
                 when (value) {
                     -1 -> "10 segundos"
-                    0  -> "1 segundo (PRUEBAS)"
+                    1 -> "1 minuto"
+                    2 -> "2 minutos"
+                    3 -> "3 minutos"
+                    5 -> "5 minutos"
+                    10 -> "10 minutos"
+                    15 -> "15 minutos"
+                    20 -> "20 minutos"
+                    30 -> "30 minutos"
+                    45 -> "45 minutos"
+                    60 -> "60 minutos"
                     else -> "$value minutos"
                 }
             }.toTypedArray()
@@ -141,11 +150,12 @@ class SettingsFragment : Fragment() {
             
             // Intervalo (única opción)
             val interval = viewModel.bannerInterval.value ?: 5
+            // Buscar el índice correspondiente (si no existe, usar 5 minutos que es índice 4)
             val intervalIndex = bannerIntervalValues.indexOf(interval).takeIf { it >= 0 } ?: 4
             spBannersPerDay.setSelection(intervalIndex)
             
             val prefs = UserPreferences.getInstance(requireContext())
-            tvBannersPerDayValue.text = prefs.getBannerIntervalDisplayText()
+            tvBannersPerDayValue.text = getBannerIntervalDisplayText(interval)
             
             // Valores por defecto para otras opciones
             swAutoStart.isChecked = false
@@ -156,6 +166,24 @@ class SettingsFragment : Fragment() {
             
         } catch (e: Exception) {
             Log.e(TAG, "Error cargando configuración: ${e.message}")
+        }
+    }
+    
+    // NUEVO: Función helper para obtener texto de visualización
+    private fun getBannerIntervalDisplayText(interval: Int): String {
+        return when (interval) {
+            -1 -> "10 segundos (DEMO)"
+            1 -> "1 minuto"
+            2 -> "2 minutos"
+            3 -> "3 minutos"
+            5 -> "5 minutos"
+            10 -> "10 minutos"
+            15 -> "15 minutos"
+            20 -> "20 minutos"
+            30 -> "30 minutos"
+            45 -> "45 minutos"
+            60 -> "60 minutos"
+            else -> "$interval minutos"
         }
     }
     
@@ -171,8 +199,7 @@ class SettingsFragment : Fragment() {
                 val value = bannerIntervalValues[position]
                 viewModel.updateBannerInterval(value)
                 
-                val prefs = UserPreferences.getInstance(requireContext())
-                tvBannersPerDayValue.text = prefs.getBannerIntervalDisplayText()
+                tvBannersPerDayValue.text = getBannerIntervalDisplayText(value)
             }
             
             override fun onNothingSelected(parent: AdapterView<*>?) {}
@@ -257,12 +284,11 @@ class SettingsFragment : Fragment() {
     
     private fun showSaveConfirmation() {
         val interval = bannerIntervalValues[spBannersPerDay.selectedItemPosition]
-        val prefs = UserPreferences.getInstance(requireContext())
         
         val summary = StringBuilder().apply {
             append("⚙️ CONFIGURACIONES GUARDADAS:\n\n")
             append("• Tema: ${if (swDarkMode.isChecked) "Oscuro" else "Claro"}\n")
-            append("• Intervalo: ${prefs.getBannerIntervalDisplayText()}\n")
+            append("• Intervalo: ${getBannerIntervalDisplayText(interval)}\n")
             append("• Inicio automático: ${if (swAutoStart.isChecked) "Sí" else "No"}\n")
             append("• Optimización batería: ${if (swBatteryOptimization.isChecked) "Sí" else "No"}\n")
             append("• Vibración: ${if (swVibrateNotification.isChecked) "Sí" else "No"}\n")
@@ -303,8 +329,7 @@ class SettingsFragment : Fragment() {
         
         updateAllStatusTexts()
         
-        val prefs = UserPreferences.getInstance(requireContext())
-        tvBannersPerDayValue.text = prefs.getBannerIntervalDisplayText()
+        tvBannersPerDayValue.text = "5 minutos"
         
         viewModel.clearAllSettings()
         

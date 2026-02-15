@@ -2274,7 +2274,7 @@ class DashboardFragment : Fragment() {
     private lateinit var btnToggleService: Button
     private lateinit var btnCheckPermissions: Button
     private lateinit var btnQuickSummary: Button
-    private lateinit var btnGoToMonitor: Button
+    private lateinit var btnGoToSettings: Button
     private lateinit var btnGoToStats: Button
     private lateinit var btnQuickMonitor: Button
     private lateinit var btnQuickBannerSettings: Button
@@ -2346,7 +2346,7 @@ class DashboardFragment : Fragment() {
             btnToggleService = view.findViewById(R.id.btnToggleService)
             btnCheckPermissions = view.findViewById(R.id.btnCheckPermissions)
             btnQuickSummary = view.findViewById(R.id.btnQuickSummary)
-            btnGoToMonitor = view.findViewById(R.id.btnGoToMonitor)
+            btnGoToSettings = view.findViewById(R.id.btnGoToSettings)
             btnGoToStats = view.findViewById(R.id.btnGoToStats)
             btnQuickMonitor = view.findViewById(R.id.btnQuickMonitor)
             btnQuickBannerSettings = view.findViewById(R.id.btnQuickBannerSettings)
@@ -2398,7 +2398,7 @@ class DashboardFragment : Fragment() {
             btnQuickMonitor.setOnClickListener { navigateToMonitor() }
             btnQuickBannerSettings.setOnClickListener { navigateToSettings() }
             btnThemeToggle.setOnClickListener { toggleTheme() }
-            btnGoToMonitor.setOnClickListener { navigateToMonitor() }
+            btnGoToSettings.setOnClickListener { navigateToSettings() }
             btnGoToStats.setOnClickListener { navigateToStats() }
             tvEmail.setOnClickListener { sendEmail() }
             btnBuyCoffee.setOnClickListener { openBuyMeACoffeeLink() }
@@ -3426,10 +3426,6 @@ class StatsFragment : Fragment() {
     }
 }package com.gnzalobnites.appsusagemonitor.fragments
 
-// Agrega ESTE import
-import com.gnzalobnites.appsusagemonitor.banner.BannerManager
-
-// El resto del código permanece igual
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -3448,6 +3444,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.gnzalobnites.appsusagemonitor.*
+import com.gnzalobnites.appsusagemonitor.banner.BannerManager
 import java.util.*
 
 class MonitorFragment : Fragment() {
@@ -3464,7 +3461,9 @@ class MonitorFragment : Fragment() {
     private lateinit var tvSelectedAppsCount: TextView
     private lateinit var recyclerViewApps: RecyclerView
     private lateinit var btnCheckPermissions: Button
-    private lateinit var tvUsageStatsStatus: TextView  // ← AGREGADO
+    private lateinit var tvUsageStatsStatus: TextView
+    private lateinit var swShowTikTokDemo: Switch
+    private lateinit var tvTikTokDemoStatus: TextView
     
     // Para selección de apps
     private var apps: List<ApplicationInfo> = emptyList()
@@ -3528,7 +3527,9 @@ class MonitorFragment : Fragment() {
         tvSelectedAppsCount = view.findViewById(R.id.tvSelectedAppsCount)
         recyclerViewApps = view.findViewById(R.id.recyclerViewApps)
         btnCheckPermissions = view.findViewById(R.id.btnCheckPermissions)
-        tvUsageStatsStatus = view.findViewById(R.id.tvUsageStatsStatus)  // ← AGREGADO
+        tvUsageStatsStatus = view.findViewById(R.id.tvUsageStatsStatus)
+        swShowTikTokDemo = view.findViewById(R.id.swShowTikTokDemo)
+        tvTikTokDemoStatus = view.findViewById(R.id.tvTikTokDemoStatus)
     }
     
     private fun setupUI() {
@@ -3567,6 +3568,11 @@ class MonitorFragment : Fragment() {
             Log.d(TAG, "Banners ${if (isChecked) "activados" else "desactivados"}")
         }
         
+        swShowTikTokDemo.setOnCheckedChangeListener { _, isChecked ->
+            tvTikTokDemoStatus.text = if (isChecked) "✅ Demo activada" else "⭕ Demo desactivada"
+            Log.d(TAG, "Demo TikTok ${if (isChecked) "activada" else "desactivada"}")
+        }
+        
         btnTestBanner.setOnClickListener {
             testBannerNow()
         }
@@ -3599,7 +3605,6 @@ class MonitorFragment : Fragment() {
             "⚠️ Modo preciso desactivado - Actívalo para mayor precisión"
         }
         
-        // Cambiar color según estado
         if (hasPermission) {
             tvUsageStatsStatus.setTextColor(
                 resources.getColor(android.R.color.holo_green_dark, requireContext().theme)
@@ -3709,16 +3714,22 @@ class MonitorFragment : Fragment() {
         
         val currentMonitoredApps = viewModel.monitoredApps.value?.toSet() ?: emptySet()
         
-        // Usar variable de clase en lugar de local
         dialogAdapter = SimpleAppsAdapter(
             requireContext(),
             apps,
-            currentMonitoredApps
-        ) { _, _ ->
-            dialogAdapter?.let { adapter ->
-                updateSelectedCountDialog(tvSelectedCount, adapter)
+            currentMonitoredApps.toSet(),
+            { packageName, isChecked ->
+                if (isChecked) {
+                    viewModel.addMonitoredApp(packageName)
+                } else {
+                    viewModel.removeMonitoredApp(packageName)
+                }
+                
+                dialogAdapter?.let { adapter ->
+                    updateSelectedCountDialog(tvSelectedCount, adapter)
+                }
             }
-        }
+        )
         
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = dialogAdapter
@@ -3733,19 +3744,14 @@ class MonitorFragment : Fragment() {
                 viewModel.addMonitoredApp(packageName)
             }
             dialogAdapter?.updateSelectedApps(allPackages)
-            dialogAdapter?.let { adapter ->
-                updateSelectedCountDialog(tvSelectedCount, adapter)
-            }
         }
         
         btnDeselectAll.setOnClickListener {
-            currentMonitoredApps.forEach { packageName ->
+            val currentSelected = dialogAdapter?.getSelectedApps() ?: emptySet()
+            currentSelected.forEach { packageName ->
                 viewModel.removeMonitoredApp(packageName)
             }
             dialogAdapter?.updateSelectedApps(emptySet())
-            dialogAdapter?.let { adapter ->
-                updateSelectedCountDialog(tvSelectedCount, adapter)
-            }
         }
         
         btnConfirm.setOnClickListener {
@@ -3757,12 +3763,14 @@ class MonitorFragment : Fragment() {
         }
         
         btnCancel.setOnClickListener {
+            val originalApps = viewModel.monitoredApps.value?.toSet() ?: emptySet()
+            dialogAdapter?.updateSelectedApps(originalApps)
+            
             selectionDialog?.dismiss()
             selectionDialog = null
             dialogAdapter = null
         }
         
-        // Usar variable de clase
         selectionDialog = AlertDialog.Builder(requireContext())
             .setView(dialogView)
             .setCancelable(true)
@@ -3770,35 +3778,34 @@ class MonitorFragment : Fragment() {
         
         selectionDialog?.show()
     }
-
+    
     private fun updateSelectedCountDialog(textView: TextView, adapter: SimpleAppsAdapter) {
         val count = adapter.getSelectedCount()
         textView.text = "$count apps seleccionadas"
     }
     
     private fun testBannerNow() {
-    Log.d(TAG, "=== PRUEBA DE BANNER ===")
-    
-    if (!Settings.canDrawOverlays(requireContext())) {
+        Log.d(TAG, "=== PRUEBA DE BANNER ===")
+        
+        if (!Settings.canDrawOverlays(requireContext())) {
+            Toast.makeText(requireContext(), 
+                "❌ Necesitas permiso de overlay", 
+                Toast.LENGTH_SHORT).show()
+            requestOverlayPermission()
+            return
+        }
+        
+        val testMessage = "🧪 BANNER DE PRUEBA\n\n" +
+                "• Temporal: 15 segundos\n" +
+                "• Toca para cerrar antes\n" +
+                "• No afecta monitoreo real"
+        
+        bannerManager.showTestBanner(testMessage)
+        
         Toast.makeText(requireContext(), 
-            "❌ Necesitas permiso de overlay", 
+            "✅ Banner mostrado (15s)", 
             Toast.LENGTH_SHORT).show()
-        requestOverlayPermission()
-        return
     }
-    
-    // Mensaje más claro
-    val testMessage = "🧪 BANNER DE PRUEBA\n\n" +
-            "• Temporal: 15 segundos\n" +
-            "• Toca para cerrar antes\n" +
-            "• No afecta monitoreo real"
-    
-    bannerManager.showTestBanner(testMessage)
-    
-    Toast.makeText(requireContext(), 
-        "✅ Banner mostrado (15s)", 
-        Toast.LENGTH_SHORT).show()
-}
     
     private fun requestOverlayPermission() {
         val intent = Intent(
@@ -3810,14 +3817,15 @@ class MonitorFragment : Fragment() {
     
     override fun onDestroy() {
         super.onDestroy()
-        // Limpiar referencias
         selectionDialog?.dismiss()
         selectionDialog = null
         dialogAdapter = null
     }
 }
 
-// SimpleAppsAdapter (sin cambios)
+// ======================================================
+// CLASE ADAPTER - AL FINAL DEL ARCHIVO (FUERA DE LA CLASE)
+// ======================================================
 class SimpleAppsAdapter(
     private val context: Context,
     private val apps: List<ApplicationInfo>,
@@ -3827,11 +3835,13 @@ class SimpleAppsAdapter(
     
     private val packageManager = context.packageManager
     private val selectedApps = initialSelectedApps.toMutableSet()
+    private var isUpdating = false
     
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val checkBox: CheckBox = itemView.findViewById(R.id.checkBoxApp)
         val appName: TextView = itemView.findViewById(R.id.textAppName)
         val appIcon: ImageView = itemView.findViewById(R.id.imageAppIcon)
+        var currentPackageName: String? = null
     }
     
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -3844,24 +3854,38 @@ class SimpleAppsAdapter(
         val app = apps[position]
         val packageName = app.packageName
         
+        holder.currentPackageName = packageName
+        
         try {
             holder.appIcon.setImageDrawable(app.loadIcon(packageManager))
             holder.appName.text = app.loadLabel(packageManager).toString()
-            holder.checkBox.isChecked = selectedApps.contains(packageName)
             
             holder.checkBox.setOnCheckedChangeListener(null)
+            holder.checkBox.isChecked = selectedApps.contains(packageName)
             
             holder.checkBox.setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked) {
-                    selectedApps.add(packageName)
-                } else {
-                    selectedApps.remove(packageName)
+                val currentPkg = holder.currentPackageName
+                
+                if (currentPkg == packageName && !isUpdating) {
+                    isUpdating = true
+                    
+                    if (isChecked) {
+                        selectedApps.add(packageName)
+                    } else {
+                        selectedApps.remove(packageName)
+                    }
+                    
+                    onAppChecked(packageName, isChecked)
+                    
+                    isUpdating = false
                 }
-                onAppChecked(packageName, isChecked)
             }
             
             holder.itemView.setOnClickListener {
-                holder.checkBox.isChecked = !holder.checkBox.isChecked
+                val currentPkg = holder.currentPackageName
+                if (currentPkg == packageName) {
+                    holder.checkBox.isChecked = !holder.checkBox.isChecked
+                }
             }
             
         } catch (e: Exception) {
@@ -3872,12 +3896,16 @@ class SimpleAppsAdapter(
     override fun getItemCount(): Int = apps.size
     
     fun updateSelectedApps(newSelectedApps: Set<String>) {
+        isUpdating = true
         selectedApps.clear()
         selectedApps.addAll(newSelectedApps)
         notifyDataSetChanged()
+        isUpdating = false
     }
     
     fun getSelectedCount(): Int = selectedApps.size
+    
+    fun getSelectedApps(): Set<String> = selectedApps.toSet()
 }package com.gnzalobnites.appsusagemonitor
 
 import android.os.Bundle
@@ -4687,25 +4715,30 @@ class BannerUIController(private val context: Context) {
      */
     fun setupWaitingUI(sessionInfo: SessionInfo, onBannerClick: () -> Unit) {
         bannerView?.apply {
-            // Tiempo de sesión
+            // Tiempo de sesión (siempre blanco)
             findViewById<TextView>(R.id.sessionTimeText)?.let {
                 it.text = TimeStats.formatTime(sessionInfo.getDuration())
+                it.setTextColor(android.graphics.Color.WHITE)
                 it.visibility = View.VISIBLE
             }
             
-            // Nombre de app
+            // Nombre de app (siempre blanco)
             findViewById<TextView>(R.id.appNameLabel)?.let {
                 it.text = " ${sessionInfo.appName}"
+                it.setTextColor(android.graphics.Color.WHITE)
                 it.visibility = View.VISIBLE
             }
             
-            // Icono
+            // Icono - color basado en tiempo
             findViewById<ImageView>(R.id.ninjaIcon)?.let {
                 it.visibility = View.VISIBLE
-                applyIconColor(it, sessionInfo.getDuration())
+                applyIconColorBasedOnTime(it, sessionInfo.getDuration())
             }
             
-            // Ocultar elementos expandidos
+            // Asegurar que el texto de hoy (si aparece) sea blanco
+            findViewById<TextView>(R.id.todayTotalText)?.setTextColor(android.graphics.Color.WHITE)
+            
+            // Ocultar elementos expandidos inicialmente
             findViewById<View>(R.id.expandedContent)?.visibility = View.GONE
             findViewById<TextView>(R.id.todayTotalText)?.visibility = View.GONE
             findViewById<TextView>(R.id.motivationalMessage)?.visibility = View.GONE
@@ -4715,7 +4748,6 @@ class BannerUIController(private val context: Context) {
             
             // Estilo base
             applyBaseStyling()
-            applyMinimizedColorScheme(sessionInfo.getDuration())
         }
     }
     
@@ -4749,17 +4781,36 @@ class BannerUIController(private val context: Context) {
      */
     fun updateExpandedContent(timeStats: TimeStats, appName: String) {
         bannerView?.apply {
-            findViewById<TextView>(R.id.sessionTimeText)?.text = timeStats.formattedSessionTime
-            findViewById<TextView>(R.id.appNameLabel)?.text = " $appName"
-            findViewById<TextView>(R.id.todayTotalText)?.text = "Hoy: ${timeStats.formattedTodayTotal}"
-            
-            // Mensaje motivacional aleatorio
-            if (java.util.Random().nextInt(10) == 0) {
-                findViewById<TextView>(R.id.motivationalMessage)?.text = 
-                    getRandomMotivationalMessage()
+            // Tiempo de sesión (blanco)
+            findViewById<TextView>(R.id.sessionTimeText)?.apply {
+                text = timeStats.formattedSessionTime
+                setTextColor(android.graphics.Color.WHITE)
             }
             
-            applyColorSchemeBasedOnTime(timeStats.sessionTime)
+            // Nombre de app (blanco)
+            findViewById<TextView>(R.id.appNameLabel)?.apply {
+                text = " $appName"
+                setTextColor(android.graphics.Color.WHITE)
+            }
+            
+            // Total hoy (blanco)
+            findViewById<TextView>(R.id.todayTotalText)?.apply {
+                text = "Hoy: ${timeStats.formattedTodayTotal}"
+                setTextColor(android.graphics.Color.WHITE)
+            }
+            
+            // Mensaje motivacional (blanco)
+            findViewById<TextView>(R.id.motivationalMessage)?.apply {
+                if (java.util.Random().nextInt(10) == 0) {
+                    text = getRandomMotivationalMessage()
+                }
+                setTextColor(android.graphics.Color.WHITE)
+            }
+            
+            // Icono - color basado en tiempo
+            findViewById<ImageView>(R.id.ninjaIcon)?.let {
+                applyIconColorBasedOnTime(it, timeStats.sessionTime)
+            }
         }
     }
     
@@ -4768,13 +4819,37 @@ class BannerUIController(private val context: Context) {
      */
     fun updateMinimizedContent(timeStats: TimeStats, appName: String) {
         bannerView?.apply {
-            findViewById<TextView>(R.id.sessionTimeText)?.text = timeStats.formattedSessionTime
-            findViewById<TextView>(R.id.appNameLabel)?.text = " $appName"
-            findViewById<ImageView>(R.id.ninjaIcon)?.let { 
-                applyIconColor(it, timeStats.sessionTime)
+            // Tiempo de sesión (blanco)
+            findViewById<TextView>(R.id.sessionTimeText)?.apply {
+                text = timeStats.formattedSessionTime
+                setTextColor(android.graphics.Color.WHITE)
             }
-            applyMinimizedColorScheme(timeStats.sessionTime)
+            
+            // Nombre de app (blanco)
+            findViewById<TextView>(R.id.appNameLabel)?.apply {
+                text = " $appName"
+                setTextColor(android.graphics.Color.WHITE)
+            }
+            
+            // Icono - color basado en tiempo
+            findViewById<ImageView>(R.id.ninjaIcon)?.let {
+                applyIconColorBasedOnTime(it, timeStats.sessionTime)
+            }
         }
+    }
+    
+    /**
+     * Aplica color al ícono basado en el tiempo de uso
+     */
+    private fun applyIconColorBasedOnTime(imageView: ImageView, duration: Long) {
+        val minutes = duration / 60000
+        val color = when {
+            minutes > 30 -> android.graphics.Color.parseColor("#FF6B6B")  // Rojo coral para >30 min
+            minutes > 15 -> android.graphics.Color.parseColor("#FFB347")  // Naranja para 15-30 min
+            minutes > 5  -> android.graphics.Color.parseColor("#4ECDC4")  // Turquesa para 5-15 min
+            else -> android.graphics.Color.parseColor("#95E1D3")          // Verde agua para <5 min
+        }
+        imageView.setColorFilter(color)
     }
     
     /**
@@ -4795,79 +4870,13 @@ class BannerUIController(private val context: Context) {
     
     // ========== MÉTODOS DE ESTILO ==========
     
-    private fun applyIconColor(imageView: ImageView, duration: Long) {
-        val minutes = duration / 60000
-        val color = when {
-            minutes > 30 -> 0xFFFF8B94.toInt()
-            minutes > 15 -> 0xFFFFD3B6.toInt()
-            else -> 0xFFA8E6CF.toInt()
-        }
-        imageView.setColorFilter(color)
-    }
-    
-    private fun applyMinimizedColorScheme(duration: Long) {
-        val minutes = duration / 60000
-        bannerView?.apply {
-            val sessionTimeText = findViewById<TextView>(R.id.sessionTimeText)
-            val appNameLabel = findViewById<TextView>(R.id.appNameLabel)
-            val ninjaIcon = findViewById<ImageView>(R.id.ninjaIcon)
-            
-            val accentColor = when {
-                minutes > 30 -> 0xFFFF8B94.toInt()
-                minutes > 15 -> 0xFFFFD3B6.toInt()
-                else -> 0xFFA8E6CF.toInt()
-            }
-            
-            sessionTimeText?.setTextColor(accentColor)
-            appNameLabel?.setTextColor(accentColor)
-            ninjaIcon?.setColorFilter(accentColor)
-        }
-    }
-    
-    private fun applyColorSchemeBasedOnTime(duration: Long) {
-        val minutes = duration / 60000
-        bannerView?.apply {
-            val sessionTimeText = findViewById<TextView>(R.id.sessionTimeText)
-            val todayTotalText = findViewById<TextView>(R.id.todayTotalText)
-            val ninjaIcon = findViewById<ImageView>(R.id.ninjaIcon)
-            val appNameLabel = findViewById<TextView>(R.id.appNameLabel)
-            val motivationalMessage = findViewById<TextView>(R.id.motivationalMessage)
-            
-            when {
-                minutes > 30 -> {
-                    val accentColor = 0xFFFF8B94.toInt()
-                    sessionTimeText?.setTextColor(accentColor)
-                    ninjaIcon?.setColorFilter(accentColor)
-                    appNameLabel?.setTextColor(accentColor)
-                    todayTotalText?.setTextColor(0xFFD4A5A5.toInt())
-                    motivationalMessage?.setTextColor(0xFFE8D6D6.toInt())
-                    findViewById<CardView>(R.id.bannerRootCard)?.setCardBackgroundColor(0xCC1A1A1A.toInt())
-                }
-                minutes > 15 -> {
-                    val accentColor = 0xFFFFD3B6.toInt()
-                    sessionTimeText?.setTextColor(accentColor)
-                    ninjaIcon?.setColorFilter(accentColor)
-                    appNameLabel?.setTextColor(accentColor)
-                    todayTotalText?.setTextColor(0xFFE6C4A8.toInt())
-                    motivationalMessage?.setTextColor(0xFFF5E6D6.toInt())
-                }
-                else -> {
-                    val accentColor = 0xFFA8E6CF.toInt()
-                    sessionTimeText?.setTextColor(accentColor)
-                    ninjaIcon?.setColorFilter(accentColor)
-                    appNameLabel?.setTextColor(accentColor)
-                    todayTotalText?.setTextColor(0xFFC6E6D6.toInt())
-                    motivationalMessage?.setTextColor(0xFFE6F5EF.toInt())
-                }
-            }
-        }
-    }
-    
     private fun applyBaseStyling() {
         bannerView?.findViewById<CardView>(R.id.bannerRootCard)?.apply {
             cardElevation = 8f
             radius = 24f
             alpha = 0.95f
+            // Mantener fondo oscuro para mejor contraste con texto blanco
+            setCardBackgroundColor(0xCC1A1A1A.toInt())
         }
     }
     

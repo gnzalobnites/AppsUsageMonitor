@@ -34,7 +34,7 @@ class DashboardFragment : Fragment() {
     private lateinit var btnToggleService: Button
     private lateinit var btnCheckPermissions: Button
     private lateinit var btnQuickSummary: Button
-    private lateinit var btnGoToMonitor: Button
+    private lateinit var btnGoToSettings: Button
     private lateinit var btnGoToStats: Button
     private lateinit var btnQuickMonitor: Button
     private lateinit var btnQuickBannerSettings: Button
@@ -106,7 +106,7 @@ class DashboardFragment : Fragment() {
             btnToggleService = view.findViewById(R.id.btnToggleService)
             btnCheckPermissions = view.findViewById(R.id.btnCheckPermissions)
             btnQuickSummary = view.findViewById(R.id.btnQuickSummary)
-            btnGoToMonitor = view.findViewById(R.id.btnGoToMonitor)
+            btnGoToSettings = view.findViewById(R.id.btnGoToSettings)
             btnGoToStats = view.findViewById(R.id.btnGoToStats)
             btnQuickMonitor = view.findViewById(R.id.btnQuickMonitor)
             btnQuickBannerSettings = view.findViewById(R.id.btnQuickBannerSettings)
@@ -158,7 +158,7 @@ class DashboardFragment : Fragment() {
             btnQuickMonitor.setOnClickListener { navigateToMonitor() }
             btnQuickBannerSettings.setOnClickListener { navigateToSettings() }
             btnThemeToggle.setOnClickListener { toggleTheme() }
-            btnGoToMonitor.setOnClickListener { navigateToMonitor() }
+            btnGoToSettings.setOnClickListener { navigateToSettings() }
             btnGoToStats.setOnClickListener { navigateToStats() }
             tvEmail.setOnClickListener { sendEmail() }
             btnBuyCoffee.setOnClickListener { openBuyMeACoffeeLink() }

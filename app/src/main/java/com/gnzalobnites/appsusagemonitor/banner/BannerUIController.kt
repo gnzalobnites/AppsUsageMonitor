@@ -29,25 +29,30 @@ class BannerUIController(private val context: Context) {
      */
     fun setupWaitingUI(sessionInfo: SessionInfo, onBannerClick: () -> Unit) {
         bannerView?.apply {
-            // Tiempo de sesión
+            // Tiempo de sesión (siempre blanco)
             findViewById<TextView>(R.id.sessionTimeText)?.let {
                 it.text = TimeStats.formatTime(sessionInfo.getDuration())
+                it.setTextColor(android.graphics.Color.WHITE)
                 it.visibility = View.VISIBLE
             }
             
-            // Nombre de app
+            // Nombre de app (siempre blanco)
             findViewById<TextView>(R.id.appNameLabel)?.let {
                 it.text = " ${sessionInfo.appName}"
+                it.setTextColor(android.graphics.Color.WHITE)
                 it.visibility = View.VISIBLE
             }
             
-            // Icono
+            // Icono - color basado en tiempo
             findViewById<ImageView>(R.id.ninjaIcon)?.let {
                 it.visibility = View.VISIBLE
-                applyIconColor(it, sessionInfo.getDuration())
+                applyIconColorBasedOnTime(it, sessionInfo.getDuration())
             }
             
-            // Ocultar elementos expandidos
+            // Asegurar que el texto de hoy (si aparece) sea blanco
+            findViewById<TextView>(R.id.todayTotalText)?.setTextColor(android.graphics.Color.WHITE)
+            
+            // Ocultar elementos expandidos inicialmente
             findViewById<View>(R.id.expandedContent)?.visibility = View.GONE
             findViewById<TextView>(R.id.todayTotalText)?.visibility = View.GONE
             findViewById<TextView>(R.id.motivationalMessage)?.visibility = View.GONE
@@ -57,7 +62,6 @@ class BannerUIController(private val context: Context) {
             
             // Estilo base
             applyBaseStyling()
-            applyMinimizedColorScheme(sessionInfo.getDuration())
         }
     }
     
@@ -91,17 +95,36 @@ class BannerUIController(private val context: Context) {
      */
     fun updateExpandedContent(timeStats: TimeStats, appName: String) {
         bannerView?.apply {
-            findViewById<TextView>(R.id.sessionTimeText)?.text = timeStats.formattedSessionTime
-            findViewById<TextView>(R.id.appNameLabel)?.text = " $appName"
-            findViewById<TextView>(R.id.todayTotalText)?.text = "Hoy: ${timeStats.formattedTodayTotal}"
-            
-            // Mensaje motivacional aleatorio
-            if (java.util.Random().nextInt(10) == 0) {
-                findViewById<TextView>(R.id.motivationalMessage)?.text = 
-                    getRandomMotivationalMessage()
+            // Tiempo de sesión (blanco)
+            findViewById<TextView>(R.id.sessionTimeText)?.apply {
+                text = timeStats.formattedSessionTime
+                setTextColor(android.graphics.Color.WHITE)
             }
             
-            applyColorSchemeBasedOnTime(timeStats.sessionTime)
+            // Nombre de app (blanco)
+            findViewById<TextView>(R.id.appNameLabel)?.apply {
+                text = " $appName"
+                setTextColor(android.graphics.Color.WHITE)
+            }
+            
+            // Total hoy (blanco)
+            findViewById<TextView>(R.id.todayTotalText)?.apply {
+                text = "Hoy: ${timeStats.formattedTodayTotal}"
+                setTextColor(android.graphics.Color.WHITE)
+            }
+            
+            // Mensaje motivacional (blanco)
+            findViewById<TextView>(R.id.motivationalMessage)?.apply {
+                if (java.util.Random().nextInt(10) == 0) {
+                    text = getRandomMotivationalMessage()
+                }
+                setTextColor(android.graphics.Color.WHITE)
+            }
+            
+            // Icono - color basado en tiempo
+            findViewById<ImageView>(R.id.ninjaIcon)?.let {
+                applyIconColorBasedOnTime(it, timeStats.sessionTime)
+            }
         }
     }
     
@@ -110,13 +133,37 @@ class BannerUIController(private val context: Context) {
      */
     fun updateMinimizedContent(timeStats: TimeStats, appName: String) {
         bannerView?.apply {
-            findViewById<TextView>(R.id.sessionTimeText)?.text = timeStats.formattedSessionTime
-            findViewById<TextView>(R.id.appNameLabel)?.text = " $appName"
-            findViewById<ImageView>(R.id.ninjaIcon)?.let { 
-                applyIconColor(it, timeStats.sessionTime)
+            // Tiempo de sesión (blanco)
+            findViewById<TextView>(R.id.sessionTimeText)?.apply {
+                text = timeStats.formattedSessionTime
+                setTextColor(android.graphics.Color.WHITE)
             }
-            applyMinimizedColorScheme(timeStats.sessionTime)
+            
+            // Nombre de app (blanco)
+            findViewById<TextView>(R.id.appNameLabel)?.apply {
+                text = " $appName"
+                setTextColor(android.graphics.Color.WHITE)
+            }
+            
+            // Icono - color basado en tiempo
+            findViewById<ImageView>(R.id.ninjaIcon)?.let {
+                applyIconColorBasedOnTime(it, timeStats.sessionTime)
+            }
         }
+    }
+    
+    /**
+     * Aplica color al ícono basado en el tiempo de uso
+     */
+    private fun applyIconColorBasedOnTime(imageView: ImageView, duration: Long) {
+        val minutes = duration / 60000
+        val color = when {
+            minutes > 30 -> android.graphics.Color.parseColor("#FF6B6B")  // Rojo coral para >30 min
+            minutes > 15 -> android.graphics.Color.parseColor("#FFB347")  // Naranja para 15-30 min
+            minutes > 5  -> android.graphics.Color.parseColor("#4ECDC4")  // Turquesa para 5-15 min
+            else -> android.graphics.Color.parseColor("#95E1D3")          // Verde agua para <5 min
+        }
+        imageView.setColorFilter(color)
     }
     
     /**
@@ -137,79 +184,13 @@ class BannerUIController(private val context: Context) {
     
     // ========== MÉTODOS DE ESTILO ==========
     
-    private fun applyIconColor(imageView: ImageView, duration: Long) {
-        val minutes = duration / 60000
-        val color = when {
-            minutes > 30 -> 0xFFFF8B94.toInt()
-            minutes > 15 -> 0xFFFFD3B6.toInt()
-            else -> 0xFFA8E6CF.toInt()
-        }
-        imageView.setColorFilter(color)
-    }
-    
-    private fun applyMinimizedColorScheme(duration: Long) {
-        val minutes = duration / 60000
-        bannerView?.apply {
-            val sessionTimeText = findViewById<TextView>(R.id.sessionTimeText)
-            val appNameLabel = findViewById<TextView>(R.id.appNameLabel)
-            val ninjaIcon = findViewById<ImageView>(R.id.ninjaIcon)
-            
-            val accentColor = when {
-                minutes > 30 -> 0xFFFF8B94.toInt()
-                minutes > 15 -> 0xFFFFD3B6.toInt()
-                else -> 0xFFA8E6CF.toInt()
-            }
-            
-            sessionTimeText?.setTextColor(accentColor)
-            appNameLabel?.setTextColor(accentColor)
-            ninjaIcon?.setColorFilter(accentColor)
-        }
-    }
-    
-    private fun applyColorSchemeBasedOnTime(duration: Long) {
-        val minutes = duration / 60000
-        bannerView?.apply {
-            val sessionTimeText = findViewById<TextView>(R.id.sessionTimeText)
-            val todayTotalText = findViewById<TextView>(R.id.todayTotalText)
-            val ninjaIcon = findViewById<ImageView>(R.id.ninjaIcon)
-            val appNameLabel = findViewById<TextView>(R.id.appNameLabel)
-            val motivationalMessage = findViewById<TextView>(R.id.motivationalMessage)
-            
-            when {
-                minutes > 30 -> {
-                    val accentColor = 0xFFFF8B94.toInt()
-                    sessionTimeText?.setTextColor(accentColor)
-                    ninjaIcon?.setColorFilter(accentColor)
-                    appNameLabel?.setTextColor(accentColor)
-                    todayTotalText?.setTextColor(0xFFD4A5A5.toInt())
-                    motivationalMessage?.setTextColor(0xFFE8D6D6.toInt())
-                    findViewById<CardView>(R.id.bannerRootCard)?.setCardBackgroundColor(0xCC1A1A1A.toInt())
-                }
-                minutes > 15 -> {
-                    val accentColor = 0xFFFFD3B6.toInt()
-                    sessionTimeText?.setTextColor(accentColor)
-                    ninjaIcon?.setColorFilter(accentColor)
-                    appNameLabel?.setTextColor(accentColor)
-                    todayTotalText?.setTextColor(0xFFE6C4A8.toInt())
-                    motivationalMessage?.setTextColor(0xFFF5E6D6.toInt())
-                }
-                else -> {
-                    val accentColor = 0xFFA8E6CF.toInt()
-                    sessionTimeText?.setTextColor(accentColor)
-                    ninjaIcon?.setColorFilter(accentColor)
-                    appNameLabel?.setTextColor(accentColor)
-                    todayTotalText?.setTextColor(0xFFC6E6D6.toInt())
-                    motivationalMessage?.setTextColor(0xFFE6F5EF.toInt())
-                }
-            }
-        }
-    }
-    
     private fun applyBaseStyling() {
         bannerView?.findViewById<CardView>(R.id.bannerRootCard)?.apply {
             cardElevation = 8f
             radius = 24f
             alpha = 0.95f
+            // Mantener fondo oscuro para mejor contraste con texto blanco
+            setCardBackgroundColor(0xCC1A1A1A.toInt())
         }
     }
     
