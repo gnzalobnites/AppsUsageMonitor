@@ -366,23 +366,26 @@
         android:top="4dp"
         android:right="8dp"
         android:bottom="4dp" />
-</shape><vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <!-- Luna simple -->
-        android:fillColor="#BB86FC"
-</vector>
+</shape><?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- Sol/círculo -->
+    <!-- Luna simple -->
+    <path
+        android:fillColor="#BB86FC"
+        android:pathData="M12,3c-4.97,0-9,4.03-9,9s4.03,9 9,9 9-4.03 9-9c0-0.46-0.04-0.92-0.1-1.36-0.98,1.37-2.58,2.26-4.4,2.26-2.98,0-5.4-2.42-5.4-5.4 0-1.81,0.89-3.42,2.26-4.4-0.44-0.06-0.9-0.1-1.36-0.1z" />
+</vector><?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Sol/círculo con rayos -->
     <path
         android:fillColor="#6200EE"
-        android:pathData="M12,7 a5,5 0 1,1 0,10 a5,5 0 1,1 0,-10" />
+        android:pathData="M12,7c-2.76,0-5,2.24-5,5s2.24,5 5,5 5-2.24 5-5-2.24-5-5-5zM2,13h2c0.55,0 1-0.45 1-1s-0.45-1-1-1H2c-0.55,0-1,0.45-1,1s0.45,1 1,1zM20,11h-2c-0.55,0-1,0.45-1,1s0.45,1 1,1h2c0.55,0 1-0.45 1-1s-0.45-1-1-1zM11,2v2c0,0.55 0.45,1 1,1s1-0.45 1-1V2c0-0.55-0.45-1-1-1s-1,0.45-1,1zM11,20v2c0,0.55 0.45,1 1,1s1-0.45 1-1v-2c0-0.55-0.45-1-1-1s-1,0.45-1,1zM5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 -0.39,0.39-0.39,1.03 0,1.41l1.06,1.06c0.39,0.39 1.03,0.39 1.41,0s0.39-1.03 0-1.41L5.99,4.58zM18.36,16.95c-0.39-0.39-1.03-0.39-1.41,0 -0.39,0.39-0.39,1.03 0,1.41l1.06,1.06c0.39,0.39 1.03,0.39 1.41,0 0.39-0.39 0.39-1.03 0-1.41l-1.06-1.06zM19.42,5.99c0.39-0.39 0.39-1.03 0-1.41 -0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03 0,1.41s1.03,0.39 1.41,0l1.06-1.06zM7.05,18.36c0.39-0.39 0.39-1.03 0-1.41 -0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03 0,1.41s1.03,0.39 1.41,0l1.06-1.06z" />
 </vector><?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
@@ -752,6 +755,11 @@
         android:width="1dp"
         android:color="@color/colorPrimary"/>
 </shape><?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="#FF0000" />
+    <size android:width="16dp" android:height="16dp" />
+</shape><?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -816,12 +824,26 @@
 
                 </LinearLayout>
 
+                <!-- Estado de modo preciso (UsageStats) -->
+                <TextView
+                    android:id="@+id/tvUsageStatsStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="⚠️ Modo preciso desactivado"
+                    android:textSize="14sp"
+                    android:padding="8dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center"
+                    android:background="?attr/selectableItemBackground"
+                    android:textColor="@android:color/darker_gray"/>
+
                 <!-- Demo TikTok -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:layout_marginBottom="16dp">
+                    android:layout_marginBottom="8dp">
 
                     <Switch
                         android:id="@+id/swShowTikTokDemo"
@@ -844,14 +866,34 @@
 
                 </LinearLayout>
 
-                <!-- Botón de prueba -->
-                <Button
-                    android:id="@+id/btnTestBanner"
+                <!-- Botones de acción -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="🧪 Probar Banner"
-                    android:backgroundTint="?attr/colorAccent"
-                    android:textColor="?android:attr/textColorPrimaryInverse"/>
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
+
+                    <Button
+                        android:id="@+id/btnTestBanner"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="🧪 Probar Banner"
+                        android:backgroundTint="?attr/colorAccent"
+                        android:textColor="?android:attr/textColorPrimaryInverse"
+                        android:layout_marginEnd="4dp"/>
+
+                    <Button
+                        android:id="@+id/btnCheckPermissions"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="🔐 Permisos"
+                        android:backgroundTint="?attr/colorPrimary"
+                        android:textColor="?android:attr/textColorPrimaryInverse"
+                        android:layout_marginStart="4dp"/>
+
+                </LinearLayout>
 
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -1207,6 +1249,54 @@
 </androidx.constraintlayout.widget.ConstraintLayout><?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingVertical="8dp"
+    android:gravity="center_vertical">
+
+    <!-- Color indicator -->
+    <View
+        android:id="@+id/viewColor"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/circle_shape"/>
+
+    <!-- App name -->
+    <TextView
+        android:id="@+id/tvLegendAppName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="App Name"
+        android:textSize="14sp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:maxLines="1"
+        android:ellipsize="end"/>
+
+    <!-- Time -->
+    <TextView
+        android:id="@+id/tvLegendAppTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0m"
+        android:textSize="14sp"
+        android:textColor="?android:attr/textColorSecondary"
+        android:layout_marginEnd="12dp"/>
+
+    <!-- Percentage -->
+    <TextView
+        android:id="@+id/tvLegendAppPercentage"
+        android:layout_width="48dp"
+        android:layout_height="wrap_content"
+        android:text="0%"
+        android:textSize="14sp"
+        android:textColor="?attr/colorAccent"
+        android:gravity="end"/>
+
+</LinearLayout><?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="center"
     android:orientation="vertical"
@@ -1222,192 +1312,292 @@
         android:textColor="#424242" />
         
 </LinearLayout><?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp"
+    android:fillViewport="true"
     android:background="?attr/colorSurface">
 
-    <!-- Tarjeta de estado del servicio -->
-    <androidx.cardview.widget.CardView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp"
-        app:cardBackgroundColor="?attr/colorSurface">
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <LinearLayout
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="?attr/colorSurface">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="🏠 Dashboard"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:textColor="?android:attr/textColorPrimary"
-                android:layout_marginBottom="16dp"/>
-
-            <!-- Estado del servicio -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
+                android:orientation="vertical"
+                android:padding="16dp">
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@android:drawable/ic_dialog_info"
-                    android:layout_marginEnd="12dp"
-                    android:tint="?attr/colorPrimary"/>
-
-                <TextView
-                    android:id="@+id/tvServiceStatus"
-                    android:layout_width="wrap_content"
+                <RelativeLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Estado del servicio"
-                    android:textSize="16sp"
-                    android:textColor="?android:attr/textColorPrimary"/>
-            </LinearLayout>
+                    android:layout_marginBottom="16dp">
 
-            <!-- Apps monitoreadas -->
+                    <TextView
+                        android:id="@+id/tvDashboardTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🏠 Dashboard"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:layout_centerVertical="true"
+                        android:layout_alignParentStart="true"/>
+
+                    <ImageButton
+                        android:id="@+id/btnThemeToggle"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@android:drawable/ic_menu_compass"
+                        android:contentDescription="Cambiar tema"
+                        android:padding="12dp"
+                        android:tint="?attr/colorAccent"/>
+                </RelativeLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@android:drawable/ic_dialog_info"
+                        android:layout_marginEnd="12dp"
+                        android:tint="?attr/colorAccent"/>
+                    <TextView
+                        android:id="@+id/tvServiceStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Estado del servicio"
+                        android:textSize="16sp"
+                        android:textColor="?android:attr/textColorPrimary"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="16dp">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@android:drawable/ic_menu_view"
+                        android:layout_marginEnd="12dp"
+                        android:tint="?attr/colorAccent"/>
+                    <TextView
+                        android:id="@+id/tvMonitoredAppsCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0 apps monitoreadas"
+                        android:textSize="16sp"
+                        android:textColor="?android:attr/textColorPrimary"/>
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnToggleService"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="▶️ Iniciar Servicio"
+                    android:textSize="16sp"
+                    android:padding="12dp"
+                    android:backgroundTint="?attr/colorPrimary"
+                    android:textColor="?attr/colorOnPrimary"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="16dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@android:drawable/ic_menu_view"
-                    android:layout_marginEnd="12dp"
-                    android:tint="?attr/colorPrimary"/>
+                android:orientation="vertical"
+                android:padding="16dp">
 
                 <TextView
-                    android:id="@+id/tvMonitoredAppsCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0 apps monitoreadas"
-                    android:textSize="16sp"
-                    android:textColor="?android:attr/textColorPrimary"/>
-            </LinearLayout>
+                    android:text="⚙️ Acceso Rápido a Configuración"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:layout_marginBottom="16dp"/>
 
-            <!-- Botón principal -->
-            <Button
-                android:id="@+id/btnToggleService"
+                <Button
+                    android:id="@+id/btnQuickMonitor"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="📱 Elegir Apps"
+                    android:layout_marginBottom="12dp"
+                    android:backgroundTint="?attr/colorPrimary"/>
+
+                <Button
+                    android:id="@+id/btnQuickBannerSettings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🔔 Configurar Banners"
+                    android:backgroundTint="?attr/colorAccent"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="▶️ Iniciar Servicio"
-                android:textSize="16sp"
-                android:padding="12dp"
-                android:backgroundTint="?attr/colorPrimary"
-                android:textColor="?attr/colorOnPrimary"/>
+                android:orientation="vertical"
+                android:padding="16dp">
 
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⚡ Acciones Rápidas"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp"/>
 
-    <!-- Tarjeta de acciones rápidas -->
-    <androidx.cardview.widget.CardView
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <Button
+                        android:id="@+id/btnCheckPermissions"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:text="🔧 Permisos"/>
+                    <Button
+                        android:id="@+id/btnQuickSummary"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="🛡️ Estado"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
+                    <Button
+                        android:id="@+id/btnGoToSettings"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:text="⚙️ Ajustes"/>
+                    <Button
+                        android:id="@+id/btnGoToStats"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="📊 Tiempos"/>
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:paddingTop="24dp"
+    android:paddingBottom="16dp">
+
+    <View
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp"
-        app:cardBackgroundColor="?attr/colorSurface">
+        android:layout_height="0.5dp"
+        android:background="#33AAAAAA"
+        android:layout_marginBottom="12dp"
+        android:layout_marginHorizontal="20dp"/>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="⚡ Acciones Rápidas"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="?android:attr/textColorPrimary"
-                android:layout_marginBottom="12dp"/>
-
-            <!-- Fila 1: Permisos y Resumen -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
-
-                <Button
-                    android:id="@+id/btnCheckPermissions"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
-                    android:text="🔧 Permisos"
-                    android:backgroundTint="?attr/colorPrimary"
-                    android:textColor="?attr/colorOnPrimary"/>
-
-                <Button
-                    android:id="@+id/btnQuickSummary"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="📊 Resumen"
-                    android:backgroundTint="?attr/colorPrimary"
-                    android:textColor="?attr/colorOnPrimary"/>
-
-            </LinearLayout>
-
-            <!-- Fila 2: Navegación -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/btnGoToMonitor"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
-                    android:text="👁️ Monitor"
-                    android:backgroundTint="?attr/colorAccent"
-                    android:textColor="?attr/colorOnSecondary"/>
-
-                <Button
-                    android:id="@+id/btnGoToStats"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="📈 Stats"
-                    android:backgroundTint="?attr/colorAccent"
-                    android:textColor="?attr/colorOnSecondary"/>
-
-            </LinearLayout>
-
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
-
-    <!-- Mensaje informativo -->
     <TextView
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="💡 Dashboard simplificado\nConfigura las apps y banners en 'Monitor', ve estadísticas en 'Stats'"
-        android:textSize="14sp"
-        android:textColor="?android:attr/textColorSecondary"
-        android:gravity="center"
-        android:padding="16dp"
-        android:layout_marginTop="8dp"/>
+        android:text="¿Tienes sugerencias? Escríbeme a"
+        android:textSize="13sp"
+        android:textColor="?android:attr/textColorSecondary" />
 
-</LinearLayout><?xml version="1.0" encoding="utf-8"?>
+    <TextView
+        android:id="@+id/tvEmail"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="benitesgonzalogaston@gmail.com"
+        android:textSize="13sp"
+        android:textColor="#E57373"
+        android:paddingTop="2dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"/>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="¿Te sirve esta herramienta? "
+            android:textSize="13sp"
+            android:textColor="?android:attr/textColorSecondary" />
+
+        <TextView
+            android:id="@+id/btnBuyCoffee"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Invítame un café ☕"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="#E57373"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"/>
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="v1.0.0"
+        android:textSize="10sp"
+        android:alpha="0.5"
+        android:layout_marginTop="12dp"
+        android:textColor="?android:attr/textColorSecondary" />
+
+</LinearLayout>
+
+    </LinearLayout>
+</ScrollView>
+<?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -1474,11 +1664,11 @@
                             android:text="0h 00m"
                             android:textSize="24sp"
                             android:textStyle="bold"
-                            android:textColor="?attr/colorPrimary"/>
+                            android:textColor="?attr/colorAccent"/>
 
                     </LinearLayout>
 
-                    <!-- Sesiones -->
+                    <!-- Apps monitoreadas -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -1489,12 +1679,12 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="📊 Sesiones"
+                            android:text="📊 Apps"
                             android:textSize="14sp"
                             android:textColor="?android:attr/textColorSecondary"/>
 
                         <TextView
-                            android:id="@+id/tvSessionCount"
+                            android:id="@+id/tvMonitoredAppCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="0"
@@ -1515,7 +1705,7 @@
                     android:layout_marginTop="8dp"
                     android:max="100"
                     android:progress="0"
-                    android:progressTint="?attr/colorPrimary"/>
+                    android:progressTint="?attr/colorAccent"/>
 
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -1535,7 +1725,7 @@
                 android:layout_marginEnd="8dp"
                 android:text="↻ Recargar"
                 android:backgroundTint="?attr/colorPrimary"
-                android:textColor="?android:attr/textColorPrimaryInverse"/>
+                android:textColor="?attr/colorOnPrimary"/>
 
             <Button
                 android:id="@+id/btnExportStats"
@@ -1545,7 +1735,7 @@
                 android:layout_marginEnd="8dp"
                 android:text="📤 Exportar"
                 android:backgroundTint="?attr/colorPrimary"
-                android:textColor="?android:attr/textColorPrimaryInverse"/>
+                android:textColor="?attr/colorOnPrimary"/>
 
             <Button
                 android:id="@+id/btnViewDetails"
@@ -1554,14 +1744,15 @@
                 android:layout_weight="1"
                 android:text="📋 Detalles"
                 android:backgroundTint="?attr/colorPrimary"
-                android:textColor="?android:attr/textColorPrimaryInverse"/>
+                android:textColor="?attr/colorOnPrimary"/>
 
         </LinearLayout>
 
-        <!-- Lista de estadísticas por app -->
+        <!-- SECCIÓN: GRÁFICO CIRCULAR -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
             app:cardCornerRadius="12dp"
             app:cardElevation="4dp"
             app:cardBackgroundColor="?attr/colorSurface">
@@ -1575,17 +1766,26 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="📱 Tiempo por Aplicación"
+                    android:text="📊 Distribución de Uso (Hoy)"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="?android:attr/textColorPrimary"
-                    android:layout_marginBottom="12dp"/>
+                    android:layout_marginBottom="16dp"/>
 
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/recyclerViewStats"
+                <!-- El gráfico circular de MPAndroidChart -->
+                <com.github.mikephil.charting.charts.PieChart
+                    android:id="@+id/pieChart"
                     android:layout_width="match_parent"
-                    android:layout_height="300dp"
-                    android:background="?attr/colorSurface"/>
+                    android:layout_height="250dp"
+                    android:layout_marginBottom="8dp"/>
+
+                <!-- Contenedor para la leyenda de apps -->
+                <LinearLayout
+                    android:id="@+id/layoutAppLegend"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"/>
 
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -1688,7 +1888,7 @@
                     android:textColor="?android:attr/textColorPrimary"
                     android:layout_marginBottom="16dp"/>
 
-                <!-- TEMA OSCURO - SOLO UNO -->
+                <!-- TEMA OSCURO -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -1722,7 +1922,7 @@
 
                 </LinearLayout>
 
-                <!-- FRECUENCIA DE LOS BANNERS (Spinner) -->
+                <!-- FRECUENCIA DE LOS BANNERS (única opción) -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -1735,7 +1935,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:layout_marginBottom="16dp"
+                    android:layout_marginBottom="8dp"
                     android:gravity="center_vertical">
 
                     <Spinner
@@ -1749,44 +1949,22 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:text="5 banners/día"
+                        android:text="5 minutos"
                         android:textSize="14sp"
                         android:textColor="?android:attr/textColorPrimary"/>
 
                 </LinearLayout>
 
-                <!-- DURACION DEL BANNER (Spinner) -->
+                <!-- Texto explicativo del comportamiento -->
                 <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Duración del banner (segundos):"
-                    android:textSize="14sp"
-                    android:textColor="?android:attr/textColorSecondary"
-                    android:layout_marginBottom="4dp"/>
-
-                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="8dp"
-                    android:gravity="center_vertical">
-
-                    <Spinner
-                        android:id="@+id/spBannerDuration"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1" />
-
-                    <TextView
-                        android:id="@+id/tvBannerDurationValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:text="10 segundos"
-                        android:textSize="14sp"
-                        android:textColor="?android:attr/textColorPrimary"/>
-
-                </LinearLayout>
+                    android:text="⏱️ El banner permanece visible hasta que lo cierres con un click"
+                    android:textSize="12sp"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:padding="8dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:layout_marginTop="4dp"/>
 
             </LinearLayout>
 
@@ -2034,7 +2212,7 @@
                 android:layout_marginEnd="8dp"
                 android:text="💾 Guardar"
                 android:backgroundTint="?attr/colorPrimary"
-                android:textColor="?android:attr/textColorPrimaryInverse"/>
+                android:textColor="?attr/colorOnPrimary"/>
 
             <Button
                 android:id="@+id/btnResetSettings"
@@ -2583,15 +2761,21 @@
     <item android:color="#FFFFFFFF" android:state_checked="false" />
 </selector><?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" 
     package="com.gnzalobnites.appsusagemonitor">
 
+    <!-- Permisos básicos -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.GET_RUNNING_SERVICES" />
+    
+    <!-- PERMISO PARA DATOS DE USO -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
     
     <!-- Para API 30+ -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" 
-        android:maxSdkVersion="30" />
+        tools:ignore="QueryAllPackagesPermission" /> 
     
     <queries>
         <!-- Para acceder a la lista de apps instaladas -->
@@ -2641,7 +2825,7 @@
         
         <!-- Broadcast Receiver para banners de prueba -->
         <receiver
-            android:name=".FocusAwareService$testBannerReceiver"
+            android:name=".FocusAwareService$TestBannerReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter>
