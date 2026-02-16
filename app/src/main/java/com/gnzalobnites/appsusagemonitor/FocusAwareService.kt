@@ -45,25 +45,28 @@ class FocusAwareService : AccessibilityService() {
     private lateinit var serviceViewModel: SimpleServiceViewModel
     
     // Broadcast Receiver para comunicación con BannerManager
-    private val bannerExitReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            when (intent?.action) {
-                "APP_EXIT_DETECTED" -> {
-                    val packageName = intent.getStringExtra("packageName")
-                    Log.d(TAG, "📡 BannerManager detectó salida de app: $packageName")
-                    
-                    // Asegurar que la sesión termina
-                    if (activeSession?.packageName == packageName) {
-                        endCurrentSession()
-                    }
+    // Broadcast Receiver para comunicación con BannerManager
+private val bannerExitReceiver = object : BroadcastReceiver() {
+    override fun onReceive(context: Context?, intent: Intent?) {
+        when (intent?.action) {
+            "APP_EXIT_DETECTED" -> {
+                val packageName = intent.getStringExtra("packageName")
+                val timestamp = intent.getLongExtra("timestamp", 0)
+                Log.d(TAG, "📡 BannerManager detectó salida de app: $packageName en $timestamp")
+                
+                // Asegurar que la sesión termina
+                if (activeSession?.packageName == packageName) {
+                    Log.d(TAG, "🛑 Terminando sesión por salida detectada")
+                    endCurrentSession()
                 }
-                "FORCE_HIDE_BANNER" -> {
-                    Log.d(TAG, "📡 Recibida orden de forzar ocultamiento de banner")
-                    // El BannerManager ya maneja esto internamente
-                }
+            }
+            "BANNER_HIDDEN" -> {
+                Log.d(TAG, "📡 Banner ocultado completamente")
+                // Podemos hacer algo si es necesario
             }
         }
     }
+}
     
     companion object {
         const val TAG = "FocusAwareService"
