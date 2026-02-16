@@ -21,6 +21,10 @@ class BannerUIController(private val context: Context) {
     fun createBannerView(): View {
         val inflater = LayoutInflater.from(context)
         bannerView = inflater.inflate(R.layout.banner_overlay, null)
+        
+        // Garantizar que no hay listeners que consuman eventos
+        bannerView?.setOnTouchListener(null)
+        
         return bannerView!!
     }
     
@@ -57,7 +61,8 @@ class BannerUIController(private val context: Context) {
             findViewById<TextView>(R.id.todayTotalText)?.visibility = View.GONE
             findViewById<TextView>(R.id.motivationalMessage)?.visibility = View.GONE
             
-            // Click listener
+            // ¡CORREGIDO! Click listener para AMBOS estados (minimizado y expandido)
+            // El banner SIEMPRE debe detectar clicks cuando está visible
             setOnClickListener { onBannerClick() }
             
             // Estilo base

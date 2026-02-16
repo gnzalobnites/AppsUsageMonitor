@@ -9,6 +9,7 @@ import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.ImageView
@@ -21,6 +22,7 @@ class BannerTestUtils(private val context: Context) {
     private var windowManager: WindowManager? = null
     private var testBannerView: View? = null
     private val handler = Handler(Looper.getMainLooper())
+    private var hideRunnable: Runnable? = null
     
     fun initialize(windowManager: WindowManager) {
         this.windowManager = windowManager
@@ -38,6 +40,7 @@ class BannerTestUtils(private val context: Context) {
         Log.d("BannerTest", "🧪 Mostrando banner de prueba")
         
         try {
+            // Asegurar que no hay banner previo
             hideTestBanner()
             
             val inflater = LayoutInflater.from(context)
@@ -51,13 +54,25 @@ class BannerTestUtils(private val context: Context) {
                 findViewById<TextView>(R.id.appNameLabel)?.visibility = View.GONE
                 findViewById<ImageView>(R.id.ninjaIcon)?.visibility = View.VISIBLE
                 
+                // Click listener para cerrar
                 setOnClickListener {
                     Log.d("BannerTest", "🖱️ Banner cerrado por usuario")
                     hideTestBanner()
                     onBannerClosed()
                 }
+                
+                // Touch listener para detectar toques fuera
+                setOnTouchListener { v, event ->
+                    if (event.action == MotionEvent.ACTION_OUTSIDE) {
+                        Log.d("BannerTest", "👆 Toque fuera del banner de prueba")
+                        false // No consumir, dejar pasar
+                    } else {
+                        v.onTouchEvent(event)
+                    }
+                }
             }
             
+            // Parámetros correctos: interactivo pero no bloqueante
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -66,7 +81,9 @@ class BannerTestUtils(private val context: Context) {
                 } else {
                     WindowManager.LayoutParams.TYPE_PHONE
                 },
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
@@ -75,14 +92,18 @@ class BannerTestUtils(private val context: Context) {
             
             windowManager?.addView(testBannerView, params)
             
+            // Cancelar auto-ocultamiento anterior
+            hideRunnable?.let { handler.removeCallbacks(it) }
+            
             // Auto-ocultar después de 15 segundos
-            handler.postDelayed({
+            hideRunnable = Runnable {
                 if (testBannerView != null) {
                     Log.d("BannerTest", "⏱️ Auto-ocultando")
                     hideTestBanner()
                     onBannerClosed()
                 }
-            }, 15000)
+            }
+            handler.postDelayed(hideRunnable!!, 15000)
             
         } catch (e: Exception) {
             Log.e("BannerTest", "Error: ${e.message}")
@@ -91,12 +112,17 @@ class BannerTestUtils(private val context: Context) {
     
     fun hideTestBanner() {
         try {
+            // Cancelar auto-ocultamiento pendiente
+            hideRunnable?.let { handler.removeCallbacks(it) }
+            hideRunnable = null
+            
             testBannerView?.let { view ->
                 windowManager?.removeView(view)
                 testBannerView = null
             }
         } catch (e: Exception) {
-            // Ignorar
+            // Ignorar, solo asegurar que la referencia se limpia
+            testBannerView = null
         }
     }
 }

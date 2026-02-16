@@ -45,25 +45,28 @@ class FocusAwareService : AccessibilityService() {
     private lateinit var serviceViewModel: SimpleServiceViewModel
     
     // Broadcast Receiver para comunicación con BannerManager
-    private val bannerExitReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            when (intent?.action) {
-                "APP_EXIT_DETECTED" -> {
-                    val packageName = intent.getStringExtra("packageName")
-                    Log.d(TAG, "📡 BannerManager detectó salida de app: $packageName")
-                    
-                    // Asegurar que la sesión termina
-                    if (activeSession?.packageName == packageName) {
-                        endCurrentSession()
-                    }
+    // Broadcast Receiver para comunicación con BannerManager
+private val bannerExitReceiver = object : BroadcastReceiver() {
+    override fun onReceive(context: Context?, intent: Intent?) {
+        when (intent?.action) {
+            "APP_EXIT_DETECTED" -> {
+                val packageName = intent.getStringExtra("packageName")
+                val timestamp = intent.getLongExtra("timestamp", 0)
+                Log.d(TAG, "📡 BannerManager detectó salida de app: $packageName en $timestamp")
+                
+                // Asegurar que la sesión termina
+                if (activeSession?.packageName == packageName) {
+                    Log.d(TAG, "🛑 Terminando sesión por salida detectada")
+                    endCurrentSession()
                 }
-                "FORCE_HIDE_BANNER" -> {
-                    Log.d(TAG, "📡 Recibida orden de forzar ocultamiento de banner")
-                    // El BannerManager ya maneja esto internamente
-                }
+            }
+            "BANNER_HIDDEN" -> {
+                Log.d(TAG, "📡 Banner ocultado completamente")
+                // Podemos hacer algo si es necesario
             }
         }
     }
+}
     
     companion object {
         const val TAG = "FocusAwareService"
@@ -4282,9 +4285,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
+import android.view.MotionEvent
+import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -4311,6 +4318,13 @@ class BannerManager(private val context: Context) {
     private var currentSession: SessionInfo? = null
     private var isBannerShowing = false
     
+    // WindowManager
+    private var windowManager: WindowManager? = null
+    
+    // Handlers para postDelayed (compatible con Kotlin 1.3.72)
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var removeBannerRunnable: Runnable? = null
+    
     // Corrutinas
     private var updateJob: Job? = null
     private val managerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -4318,7 +4332,7 @@ class BannerManager(private val context: Context) {
     // Broadcast receiver
     private val appExitReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "FORCE_HIDE_BANNER") {
+            if (intent?.action == "APP_EXIT_DETECTED") {
                 handleAppExit()
             }
         }
@@ -4332,18 +4346,18 @@ class BannerManager(private val context: Context) {
         this.userPreferences = userPrefs
         this.database = db
         
-        val windowManager = ContextCompat.getSystemService(context, WindowManager::class.java)!!
+        this.windowManager = ContextCompat.getSystemService(context, WindowManager::class.java)
         
         // Inicializar componentes
         uiController = BannerUIController(context)
-        scheduler = BannerScheduler(userPreferences) { showBannerWaiting() }
+        scheduler = BannerScheduler(userPreferences) { showBanner() }
         foregroundMonitor = BannerForegroundMonitor(context) { handleAppExit() }
-        testUtils = BannerTestUtils(context).apply { initialize(windowManager) }
+        testUtils = BannerTestUtils(context).apply { initialize(windowManager!!) }
         
         foregroundMonitor.initialize()
         
         // Registrar receiver
-        context.registerReceiver(appExitReceiver, IntentFilter("FORCE_HIDE_BANNER"))
+        context.registerReceiver(appExitReceiver, IntentFilter("APP_EXIT_DETECTED"))
         
         Log.d("BannerManager", "✅ Inicializado con componentes separados")
     }
@@ -4371,7 +4385,9 @@ class BannerManager(private val context: Context) {
         
         foregroundMonitor.stopMonitoring()
         scheduler.cancelAll()
-        hideBannerImmediately()
+        
+        // ¡CRÍTICO! Eliminar el banner COMPLETAMENTE y asegurar que no queden residuos
+        forceRemoveBanner()
         
         currentSession = null
         bannerState = BannerState.HIDDEN
@@ -4381,7 +4397,7 @@ class BannerManager(private val context: Context) {
     // MOSTRAR/OCULTAR BANNER
     // ======================================================
 
-    private fun showBannerWaiting() {
+    private fun showBanner() {
         val session = currentSession ?: return
         
         if (!foregroundMonitor.isAppInForeground(session.packageName)) {
@@ -4393,10 +4409,14 @@ class BannerManager(private val context: Context) {
         
         try {
             uiController.createBannerView()
-            uiController.setupWaitingUI(session) { onBannerClicked() }
             
-            val windowManager = ContextCompat.getSystemService(context, WindowManager::class.java)
-            val params = createWindowParams()
+            // Configurar con listener de clicks
+            uiController.setupWaitingUI(session) { 
+                onBannerClicked() 
+            }
+            
+            // El banner minimizado DEBE recibir clicks para expandirse
+            val params = createBannerParams(isInteractive = true)
             windowManager?.addView(uiController.bannerView, params)
             
             bannerState = BannerState.VISIBLE_WAITING
@@ -4412,6 +4432,8 @@ class BannerManager(private val context: Context) {
     }
 
     private fun onBannerClicked() {
+        Log.d("BannerManager", "👆 Banner clickeado en estado: $bannerState")
+        
         when (bannerState) {
             BannerState.VISIBLE_WAITING -> expandBanner()
             BannerState.VISIBLE_EXPANDED -> closeBannerAndScheduleNext()
@@ -4424,13 +4446,45 @@ class BannerManager(private val context: Context) {
             val session = currentSession ?: return@launch
             val timeStats = getCurrentTimeStats()
             
-            uiController.expandBanner(timeStats, session.appName)
-            bannerState = BannerState.VISIBLE_EXPANDED
+            // Guardar referencia antes de eliminar
+            val currentView = uiController.bannerView
+            
+            if (currentView != null && windowManager != null) {
+                try {
+                    // PASO 1: Eliminar completamente el view actual
+                    windowManager?.removeView(currentView)
+                    
+                    // Pequeña pausa para asegurar que el sistema procesa la eliminación
+                    delay(50)
+                    
+                    // PASO 2: Actualizar UI al estado expandido
+                    uiController.expandBanner(timeStats, session.appName)
+                    
+                    // PASO 3: Crear NUEVOS parámetros para el estado expandido
+                    val expandedParams = createBannerParams(isInteractive = true)
+                    
+                    // PASO 4: Volver a agregar el view con los nuevos parámetros
+                    windowManager?.addView(uiController.bannerView, expandedParams)
+                    
+                    bannerState = BannerState.VISIBLE_EXPANDED
+                    
+                    Log.d("BannerManager", "🔄 Banner RECREADO para modo expandido")
+                    
+                } catch (e: Exception) {
+                    Log.e("BannerManager", "Error en expansión: ${e.message}")
+                    // En caso de error, intentar recuperar
+                    bannerState = BannerState.HIDDEN
+                }
+            }
         }
     }
 
     private fun closeBannerAndScheduleNext() {
+        // Animación de cierre
         uiController.hideWithAnimation {
+            // Eliminar completamente después de la animación
+            forceRemoveBanner()
+            
             isBannerShowing = false
             bannerState = BannerState.HIDDEN
             scheduler.scheduleNextBanner(bannerState, currentSession != null)
@@ -4439,28 +4493,84 @@ class BannerManager(private val context: Context) {
         stopLiveUpdates()
     }
 
-    private fun hideBannerImmediately() {
-        stopLiveUpdates()
-        foregroundMonitor.stopMonitoring()
-        
-        uiController.bannerView?.let { view ->
-            try {
-                ContextCompat.getSystemService(context, WindowManager::class.java)?.removeView(view)
-            } catch (e: Exception) {}
+    /**
+     * Elimina el banner de forma forzada y garantiza que no queden residuos
+     */
+    private fun forceRemoveBanner() {
+        try {
+            uiController.bannerView?.let { view ->
+                // Cancelar cualquier Runnable pendiente
+                removeBannerRunnable?.let { mainHandler.removeCallbacks(it) }
+                
+                // Eliminar del WindowManager
+                windowManager?.removeView(view)
+                
+                // Limpiar referencias
+                uiController.bannerView = null
+                
+                Log.d("BannerManager", "🗑️ Banner eliminado completamente")
+            }
+        } catch (e: Exception) {
+            Log.e("BannerManager", "Error al eliminar banner: ${e.message}")
+            // Asegurar que la referencia se limpia incluso si hay error
+            uiController.bannerView = null
         }
         
         isBannerShowing = false
-        bannerState = BannerState.HIDDEN
     }
 
     private fun handleAppExit() {
-        Log.d("BannerManager", "👋 Usuario salió de la app")
-        hideBannerImmediately()
+        Log.d("BannerManager", "👋 Usuario salió de la app - ELIMINANDO BANNER")
+        
+        // ¡CRÍTICO! Al salir de la app monitoreada, el banner debe DESAPARECER COMPLETAMENTE
+        forceRemoveBanner()
         endSession()
+        
+        // Enviar broadcast para notificar que el banner ya no está
+        val intent = Intent("BANNER_HIDDEN").apply {
+            putExtra("timestamp", System.currentTimeMillis())
+        }
+        context.sendBroadcast(intent)
     }
 
     // ======================================================
-    // ACTUALIZACIONES EN VIVO (CORREGIDO CON CORRUTINAS)
+    // WINDOW PARAMS - UNIFICADO
+    // ======================================================
+
+    /**
+     * Parámetros unificados para banner
+     * @param isInteractive true para recibir clicks, false para modo solo visual
+     */
+    private fun createBannerParams(isInteractive: Boolean): WindowManager.LayoutParams {
+        val flags = if (isInteractive) {
+            // Modo interactivo: recibe clicks pero NO bloquea fuera del área
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+        } else {
+            // Modo no interactivo: no recibe clicks, no bloquea nada
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        }
+        
+        return WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                WindowManager.LayoutParams.TYPE_PHONE
+            },
+            flags,
+            android.graphics.PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.END
+            y = 100
+        }
+    }
+
+    // ======================================================
+    // ACTUALIZACIONES EN VIVO
     // ======================================================
 
     private val UPDATE_INTERVAL_MS = 1000L
@@ -4469,17 +4579,15 @@ class BannerManager(private val context: Context) {
         stopLiveUpdates()
         
         updateJob = managerScope.launch {
-            while (bannerState != BannerState.HIDDEN) {
+            while (bannerState != BannerState.HIDDEN && currentSession != null) {
                 try {
-                    val session = currentSession
-                    if (session != null) {
-                        val timeStats = getCurrentTimeStats() // ¡Ahora es suspend!
-                        
-                        if (bannerState == BannerState.VISIBLE_EXPANDED) {
-                            uiController.updateExpandedContent(timeStats, session.appName)
-                        } else {
-                            uiController.updateMinimizedContent(timeStats, session.appName)
-                        }
+                    val session = currentSession ?: break
+                    val timeStats = getCurrentTimeStats()
+                    
+                    if (bannerState == BannerState.VISIBLE_EXPANDED) {
+                        uiController.updateExpandedContent(timeStats, session.appName)
+                    } else {
+                        uiController.updateMinimizedContent(timeStats, session.appName)
                     }
                     delay(UPDATE_INTERVAL_MS)
                 } catch (e: Exception) {
@@ -4496,7 +4604,7 @@ class BannerManager(private val context: Context) {
     }
 
     // ======================================================
-    // UTILIDADES (CORREGIDAS)
+    // UTILIDADES
     // ======================================================
 
     private suspend fun getCurrentTimeStats(): TimeStats {
@@ -4540,26 +4648,8 @@ class BannerManager(private val context: Context) {
         }
     }
 
-    private fun createWindowParams(): WindowManager.LayoutParams {
-        return WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            } else {
-                WindowManager.LayoutParams.TYPE_PHONE
-            },
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-            android.graphics.PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.END
-            y = 100
-        }
-    }
-
     // ======================================================
-    // PERMISOS (DELEGADOS)
+    // PERMISOS
     // ======================================================
 
     fun hasUsageStatsPermission(): Boolean = foregroundMonitor.hasUsageStatsPermission()
@@ -4613,7 +4703,7 @@ class BannerManager(private val context: Context) {
         foregroundMonitor.stopMonitoring()
         scheduler.cancelAll()
         stopLiveUpdates()
-        hideBannerImmediately()
+        forceRemoveBanner()
         testUtils.hideTestBanner()
         managerScope.cancel()
     }
@@ -4717,6 +4807,10 @@ class BannerUIController(private val context: Context) {
     fun createBannerView(): View {
         val inflater = LayoutInflater.from(context)
         bannerView = inflater.inflate(R.layout.banner_overlay, null)
+        
+        // Garantizar que no hay listeners que consuman eventos
+        bannerView?.setOnTouchListener(null)
+        
         return bannerView!!
     }
     
@@ -4753,7 +4847,8 @@ class BannerUIController(private val context: Context) {
             findViewById<TextView>(R.id.todayTotalText)?.visibility = View.GONE
             findViewById<TextView>(R.id.motivationalMessage)?.visibility = View.GONE
             
-            // Click listener
+            // ¡CORREGIDO! Click listener para AMBOS estados (minimizado y expandido)
+            // El banner SIEMPRE debe detectar clicks cuando está visible
             setOnClickListener { onBannerClick() }
             
             // Estilo base
@@ -4960,6 +5055,7 @@ class BannerScheduler(
 import android.app.AppOpsManager
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -4971,10 +5067,11 @@ class BannerForegroundMonitor(
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private var checkRunnable: Runnable? = null
-    private val CHECK_INTERVAL_MS = 1000L
+    private val CHECK_INTERVAL_MS = 500L // Más frecuente para detectar salida rápido
     
     private lateinit var usageStatsManager: UsageStatsManager
     private var currentPackageName: String? = null
+    private var wasInForeground = true
     
     fun initialize() {
         this.usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
@@ -4983,11 +5080,33 @@ class BannerForegroundMonitor(
     fun startMonitoring(packageName: String) {
         stopMonitoring()
         currentPackageName = packageName
+        wasInForeground = true
         
         checkRunnable = object : Runnable {
             override fun run() {
-                checkIfInForeground()
-                handler.postDelayed(this, CHECK_INTERVAL_MS)
+                val wasInForegroundBefore = wasInForeground
+                wasInForeground = checkIfInForeground()
+                
+                // Si antes estaba en foreground y ahora no → SALIÓ DE LA APP
+                if (wasInForegroundBefore && !wasInForeground) {
+                    Log.d("ForegroundMonitor", "🚪 Usuario SALIÓ de: $packageName")
+                    
+                    // Enviar broadcast inmediato
+                    val intent = Intent("APP_EXIT_DETECTED").apply {
+                        putExtra("packageName", packageName)
+                        putExtra("timestamp", System.currentTimeMillis())
+                    }
+                    context.sendBroadcast(intent)
+                    
+                    // Llamar al callback
+                    onAppExit()
+                    
+                    // Detener monitoreo
+                    stopMonitoring()
+                } else {
+                    // Seguir monitoreando
+                    handler.postDelayed(this, CHECK_INTERVAL_MS)
+                }
             }
         }
         
@@ -5001,12 +5120,36 @@ class BannerForegroundMonitor(
         currentPackageName = null
     }
     
-    private fun checkIfInForeground() {
-        val pkg = currentPackageName ?: return
+    private fun checkIfInForeground(): Boolean {
+        val pkg = currentPackageName ?: return true
         
-        if (!isAppInForeground(pkg)) {
-            Log.d("ForegroundMonitor", "🚪 Usuario salió de: $pkg")
-            onAppExit()
+        if (!hasUsageStatsPermission()) {
+            // Sin permiso, asumimos que sigue en foreground para no cerrar falsamente
+            return true
+        }
+        
+        return try {
+            val currentTime = System.currentTimeMillis()
+            val stats = usageStatsManager.queryUsageStats(
+                UsageStatsManager.INTERVAL_BEST,
+                currentTime - 2000,
+                currentTime
+            )
+            
+            if (stats.isNullOrEmpty()) return true
+            
+            // Ordenar por último uso (más reciente primero)
+            val sorted = stats.sortedByDescending { it.lastTimeUsed }
+            val topApp = sorted.firstOrNull()
+            
+            val isInForeground = topApp?.packageName == pkg
+            Log.d("ForegroundMonitor", "🔍 $pkg en foreground: $isInForeground (top: ${topApp?.packageName})")
+            
+            isInForeground
+            
+        } catch (e: Exception) {
+            Log.e("ForegroundMonitor", "Error: ${e.message}")
+            true
         }
     }
     
@@ -5017,7 +5160,7 @@ class BannerForegroundMonitor(
             val currentTime = System.currentTimeMillis()
             val stats = usageStatsManager.queryUsageStats(
                 UsageStatsManager.INTERVAL_BEST,
-                currentTime - 2000,
+                currentTime - 1000,
                 currentTime
             )
             
@@ -5060,6 +5203,7 @@ import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.ImageView
@@ -5072,6 +5216,7 @@ class BannerTestUtils(private val context: Context) {
     private var windowManager: WindowManager? = null
     private var testBannerView: View? = null
     private val handler = Handler(Looper.getMainLooper())
+    private var hideRunnable: Runnable? = null
     
     fun initialize(windowManager: WindowManager) {
         this.windowManager = windowManager
@@ -5089,6 +5234,7 @@ class BannerTestUtils(private val context: Context) {
         Log.d("BannerTest", "🧪 Mostrando banner de prueba")
         
         try {
+            // Asegurar que no hay banner previo
             hideTestBanner()
             
             val inflater = LayoutInflater.from(context)
@@ -5102,13 +5248,25 @@ class BannerTestUtils(private val context: Context) {
                 findViewById<TextView>(R.id.appNameLabel)?.visibility = View.GONE
                 findViewById<ImageView>(R.id.ninjaIcon)?.visibility = View.VISIBLE
                 
+                // Click listener para cerrar
                 setOnClickListener {
                     Log.d("BannerTest", "🖱️ Banner cerrado por usuario")
                     hideTestBanner()
                     onBannerClosed()
                 }
+                
+                // Touch listener para detectar toques fuera
+                setOnTouchListener { v, event ->
+                    if (event.action == MotionEvent.ACTION_OUTSIDE) {
+                        Log.d("BannerTest", "👆 Toque fuera del banner de prueba")
+                        false // No consumir, dejar pasar
+                    } else {
+                        v.onTouchEvent(event)
+                    }
+                }
             }
             
+            // Parámetros correctos: interactivo pero no bloqueante
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -5117,7 +5275,9 @@ class BannerTestUtils(private val context: Context) {
                 } else {
                     WindowManager.LayoutParams.TYPE_PHONE
                 },
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
@@ -5126,14 +5286,18 @@ class BannerTestUtils(private val context: Context) {
             
             windowManager?.addView(testBannerView, params)
             
+            // Cancelar auto-ocultamiento anterior
+            hideRunnable?.let { handler.removeCallbacks(it) }
+            
             // Auto-ocultar después de 15 segundos
-            handler.postDelayed({
+            hideRunnable = Runnable {
                 if (testBannerView != null) {
                     Log.d("BannerTest", "⏱️ Auto-ocultando")
                     hideTestBanner()
                     onBannerClosed()
                 }
-            }, 15000)
+            }
+            handler.postDelayed(hideRunnable!!, 15000)
             
         } catch (e: Exception) {
             Log.e("BannerTest", "Error: ${e.message}")
@@ -5142,12 +5306,17 @@ class BannerTestUtils(private val context: Context) {
     
     fun hideTestBanner() {
         try {
+            // Cancelar auto-ocultamiento pendiente
+            hideRunnable?.let { handler.removeCallbacks(it) }
+            hideRunnable = null
+            
             testBannerView?.let { view ->
                 windowManager?.removeView(view)
                 testBannerView = null
             }
         } catch (e: Exception) {
-            // Ignorar
+            // Ignorar, solo asegurar que la referencia se limpia
+            testBannerView = null
         }
     }
 }package com.gnzalobnites.appsusagemonitor
