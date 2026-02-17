@@ -66,3 +66,14 @@ google-services.json
 # End of https://www.toptal.com/developers/gitignore/api/androidkeystore.properties
 *.jks
 keystore.properties
+
+# Archivos varios
+compilar.sh
+kotlin.sh
+kotlin_temas.sh
+layouts.sh
+layouts.txt
+res.sh
+res.txt
+todo_codigo_kotlin.txt
+todo_codigo_xml.txt
