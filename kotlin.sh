@@ -1,1 +1,0 @@
-cd /storage/internal_new/project/AppsUsageMonitor && find . -name "*.kt" -type f -not -path "*/build/*" -exec cat {} \; > ./todo_codigo_kotlin.txt
