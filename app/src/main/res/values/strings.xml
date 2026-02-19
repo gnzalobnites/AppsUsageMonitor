@@ -84,7 +84,7 @@
     <string name="dashboard_footer_suggestions">Have suggestions? Email me at</string>
     <string name="dashboard_footer_like_app">Find this tool useful?</string>
     <string name="dashboard_footer_buy_coffee">Buy me a coffee ☕</string>
-    <string name="dashboard_footer_version">v1.0.0</string>
+    <string name="dashboard_footer_version">v1.2.4</string>
     <string name="dashboard_service_active">✅ Service active</string>
     <string name="dashboard_service_stopped">⭕ Service stopped</string>
     

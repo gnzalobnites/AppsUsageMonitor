@@ -84,7 +84,7 @@
     <string name="dashboard_footer_suggestions">¿Tienes sugerencias? Escríbeme a</string>
     <string name="dashboard_footer_like_app">¿Te sirve esta herramienta? </string>
     <string name="dashboard_footer_buy_coffee">Invítame un café ☕</string>
-    <string name="dashboard_footer_version">v1.0.0</string>
+    <string name="dashboard_footer_version">v1.2.4</string>
     <string name="dashboard_service_active">✅ Servicio activo</string>
     <string name="dashboard_service_stopped">⭕ Servicio detenido</string>
     
