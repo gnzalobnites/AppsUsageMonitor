@@ -29,7 +29,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="🔔 Configuración de Banners"
+                    android:text="@string/monitor_banners_title"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="?android:attr/textColorPrimary"
@@ -47,7 +47,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Activar banners"
+                        android:text="@string/monitor_enable_banners"
                         android:textSize="16sp"
                         android:textColor="?android:attr/textColorPrimary"
                         android:thumbTint="?attr/colorAccent"
@@ -57,7 +57,7 @@
                         android:id="@+id/tvBannerStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="⭕ Desactivado"
+                        android:text="@string/monitor_banner_status_off"
                         android:textSize="14sp"
                         android:textColor="?android:attr/textColorSecondary"/>
 
@@ -68,7 +68,7 @@
                     android:id="@+id/tvUsageStatsStatus"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="⚠️ Modo preciso desactivado"
+                    android:text="@string/monitor_usage_stats_off"
                     android:textSize="14sp"
                     android:padding="8dp"
                     android:layout_marginTop="4dp"
@@ -89,7 +89,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Demo TikTok"
+                        android:text="@string/monitor_tiktok_demo"
                         android:textSize="16sp"
                         android:textColor="?android:attr/textColorPrimary"
                         android:thumbTint="?attr/colorAccent"
@@ -99,7 +99,7 @@
                         android:id="@+id/tvTikTokDemoStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="⭕ Demo desactivada"
+                        android:text="@string/monitor_demo_status_off"
                         android:textSize="14sp"
                         android:textColor="?android:attr/textColorSecondary"/>
 
@@ -117,7 +117,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="🧪 Probar Banner"
+                        android:text="@string/monitor_test_banner"
                         android:backgroundTint="?attr/colorAccent"
                         android:textColor="?android:attr/textColorPrimaryInverse"
                         android:layout_marginEnd="4dp"/>
@@ -127,7 +127,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="🔐 Permisos"
+                        android:text="@string/monitor_permissions"
                         android:backgroundTint="?attr/colorPrimary"
                         android:textColor="?android:attr/textColorPrimaryInverse"
                         android:layout_marginStart="4dp"/>
@@ -154,7 +154,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="📱 Apps Monitoreadas"
+                    android:text="@string/monitor_apps_title"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="?android:attr/textColorPrimary"
@@ -172,7 +172,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="0/0 apps seleccionadas"
+                        android:text="@string/monitor_apps_count"
                         android:textSize="16sp"
                         android:textColor="?android:attr/textColorPrimary"/>
 
@@ -180,7 +180,7 @@
                         android:id="@+id/btnSelectApps"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="📝 Seleccionar"
+                        android:text="@string/monitor_select_apps"
                         android:backgroundTint="?attr/colorPrimary"
                         android:textColor="?android:attr/textColorPrimaryInverse"/>
 
@@ -190,7 +190,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Apps seleccionadas:"
+                    android:text="@string/monitor_selected_apps_label"
                     android:textSize="14sp"
                     android:textColor="?android:attr/textColorSecondary"
                     android:layout_marginBottom="8dp"/>

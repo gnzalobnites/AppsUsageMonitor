@@ -28,14 +28,15 @@
                 android:layout_width="18dp"
                 android:layout_height="18dp"
                 android:src="@drawable/ic_time_alert"
-				android:elevation="2dp"
-                android:translationZ="2dp" />
+                android:elevation="2dp"
+                android:translationZ="2dp"
+                android:contentDescription="@string/item_app_icon_desc" />
 
             <TextView
                 android:id="@+id/appNameLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text=" App"
+                android:text="@string/banner_app_label"
                 android:textColor="#E0E0E0"
                 android:textSize="11sp"
                 android:alpha="0.7"
@@ -71,7 +72,7 @@
                 android:id="@+id/todayTotalText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Hoy: 00:00"
+                android:text="@string/banner_today_prefix"
                 android:textColor="#B0B0B0"
                 android:textSize="12sp"
                 android:layout_marginTop="4dp" />

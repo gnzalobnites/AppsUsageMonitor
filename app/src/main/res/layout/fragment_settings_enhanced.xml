@@ -30,7 +30,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="⚙️ Configuración General"
+                    android:text="@string/settings_general_title"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="?android:attr/textColorPrimary"
@@ -48,7 +48,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Tema oscuro"
+                        android:text="@string/settings_dark_mode"
                         android:textSize="16sp"
                         android:textColor="?android:attr/textColorPrimary"/>
 
@@ -64,7 +64,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:text="☀️ Claro"
+                        android:text="@string/settings_theme_light"
                         android:textSize="14sp"
                         android:textColor="?android:attr/textColorSecondary"/>
 
@@ -74,7 +74,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Frecuencia de los banners:"
+                    android:text="@string/settings_banner_frequency_label"
                     android:textSize="14sp"
                     android:textColor="?android:attr/textColorSecondary"
                     android:layout_marginBottom="4dp"/>
@@ -107,7 +107,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="⏱️ El banner permanece visible hasta que lo cierres con un click"
+                    android:text="@string/settings_banner_behavior_info"
                     android:textSize="12sp"
                     android:textColor="?android:attr/textColorSecondary"
                     android:padding="8dp"
@@ -136,7 +136,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="🔔 Notificaciones"
+                    android:text="@string/settings_notifications_title"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="?android:attr/textColorPrimary"
@@ -154,7 +154,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Inicio automático"
+                        android:text="@string/settings_auto_start"
                         android:textSize="16sp"
                         android:textColor="?android:attr/textColorPrimary"/>
 
@@ -170,7 +170,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:text="⭕ Manual"
+                        android:text="@string/settings_auto_start_manual"
                         android:textSize="14sp"
                         android:textColor="?android:attr/textColorSecondary"/>
 
@@ -188,7 +188,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Optimización batería"
+                        android:text="@string/settings_battery_opt"
                         android:textSize="16sp"
                         android:textColor="?android:attr/textColorPrimary"/>
 
@@ -205,7 +205,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:text="✅ Activa"
+                        android:text="@string/settings_battery_on"
                         android:textSize="14sp"
                         android:textColor="?android:attr/textColorSecondary"/>
 
@@ -223,7 +223,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Vibración"
+                        android:text="@string/settings_vibration"
                         android:textSize="16sp"
                         android:textColor="?android:attr/textColorPrimary"/>
 
@@ -240,7 +240,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:text="✅ Activa"
+                        android:text="@string/settings_vibration_on"
                         android:textSize="14sp"
                         android:textColor="?android:attr/textColorSecondary"/>
 
@@ -258,7 +258,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Sonido"
+                        android:text="@string/settings_sound"
                         android:textSize="16sp"
                         android:textColor="?android:attr/textColorPrimary"/>
 
@@ -274,7 +274,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:text="🔇 Silencio"
+                        android:text="@string/settings_sound_off"
                         android:textSize="14sp"
                         android:textColor="?android:attr/textColorSecondary"/>
 
@@ -302,7 +302,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="📊 Reportes"
+                    android:text="@string/settings_reports_title"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="?android:attr/textColorPrimary"
@@ -319,7 +319,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Exportación diaria automática"
+                        android:text="@string/settings_daily_export"
                         android:textSize="16sp"
                         android:textColor="?android:attr/textColorPrimary"/>
 
@@ -335,7 +335,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:text="⭕ Manual"
+                        android:text="@string/settings_export_manual"
                         android:textSize="14sp"
                         android:textColor="?android:attr/textColorSecondary"/>
 
@@ -358,7 +358,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginEnd="8dp"
-                android:text="💾 Guardar"
+                android:text="@string/settings_save"
                 android:backgroundTint="?attr/colorPrimary"
                 android:textColor="?attr/colorOnPrimary"/>
 
@@ -367,7 +367,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="🔄 Restablecer"
+                android:text="@string/settings_reset"
                 android:backgroundTint="?attr/colorError"
                 android:textColor="?android:attr/textColorPrimaryInverse"/>
 
@@ -378,7 +378,7 @@
             android:id="@+id/tvSettingsStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Última actualización: --:--:--"
+            android:text="@string/settings_last_update"
             android:textSize="12sp"
             android:textColor="?android:attr/textColorSecondary"
             android:gravity="center"

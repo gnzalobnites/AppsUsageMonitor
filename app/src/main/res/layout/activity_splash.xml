@@ -18,14 +18,14 @@
             android:layout_width="120dp"
             android:layout_height="120dp"
             android:src="@drawable/ic_launcher_foreground"
-            android:contentDescription="App Logo" />
+            android:contentDescription="@string/item_app_icon_desc" />
 
         <TextView
             android:id="@+id/app_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Apps Usage Monitor"
+            android:text="@string/app_name"
             android:textColor="#FFFFFF"
             android:textSize="24sp"
             android:textStyle="bold"
@@ -39,7 +39,7 @@
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="40dp"
-        android:text="by Gonzalo Benites"
+        android:text="@string/splash_author"
         android:textColor="#B3FFFFFF"
         android:textSize="14sp"
         android:letterSpacing="0.1"

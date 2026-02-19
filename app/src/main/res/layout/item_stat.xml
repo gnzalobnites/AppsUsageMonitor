@@ -18,7 +18,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="📱 WhatsApp"
+            android:text="@string/item_stat_app_placeholder"
             android:textSize="16sp"
             android:textStyle="bold"
             android:textColor="?android:attr/textColorPrimary" />
@@ -27,7 +27,7 @@
             android:id="@+id/tvTimeSpent"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="1h 22m"
+            android:text="@string/item_stat_time_placeholder"
             android:textSize="16sp"
             android:textStyle="bold"
             android:textColor="?attr/colorAccent" />
@@ -37,7 +37,7 @@
         android:id="@+id/tvDetails"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="8 sesiones hoy"
+        android:text="@string/item_stat_details_placeholder"
         android:textSize="14sp"
         android:textColor="?android:attr/textColorSecondary"
         android:layout_marginTop="2dp" />

@@ -11,7 +11,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="📱 Seleccionar Apps"
+        android:text="@string/dialog_select_apps_title"
         android:textSize="18sp"
         android:textStyle="bold"
         android:textColor="?android:attr/textColorPrimary"
@@ -30,7 +30,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="0 apps seleccionadas"
+            android:text="@string/dialog_apps_selected_count"
             android:textSize="14sp"
             android:textColor="?android:attr/textColorSecondary"
             android:gravity="center_vertical"/>
@@ -41,7 +41,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
-            android:text="✓ Todas"
+            android:text="@string/dialog_select_all"
             android:textSize="12sp"
             android:padding="6dp"
             android:backgroundTint="?attr/colorPrimary"
@@ -52,7 +52,7 @@
             android:id="@+id/btnDeselectAll"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="✗ Ninguna"
+            android:text="@string/dialog_deselect_all"
             android:textSize="12sp"
             android:padding="6dp"
             android:backgroundTint="?attr/colorAccent"
@@ -82,7 +82,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
-            android:text="Cancelar"
+            android:text="@string/dialog_cancel"
             android:backgroundTint="?attr/colorPrimary"
             android:textColor="?android:attr/textColorPrimaryInverse"/>
 
@@ -91,7 +91,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Confirmar"
+            android:text="@string/dialog_confirm"
             android:backgroundTint="?attr/colorAccent"
             android:textColor="?android:attr/textColorPrimaryInverse"/>
 

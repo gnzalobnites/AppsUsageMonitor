@@ -11,7 +11,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="Contenido en desarrollo"
+        android:text="@string/simple_fragment_placeholder"
         android:textSize="18sp"
         android:textColor="#424242" />
         

@@ -47,6 +47,9 @@ class SettingsFragment : Fragment() {
     
     // Valores de configuración - ELIMINADO el valor 0 (1 segundo)
     private val bannerIntervalValues = arrayOf(-1, 1, 2, 3, 5, 10, 15, 20, 30, 45, 60)
+    
+    // Array de strings para el spinner
+    private lateinit var intervalLabels: Array<String>
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -64,6 +67,9 @@ class SettingsFragment : Fragment() {
         try {
             viewModel = ViewModelProvider(requireActivity()).get(MainViewModel::class.java)
             
+            // Cargar el array de strings del XML
+            intervalLabels = resources.getStringArray(R.array.banner_interval_labels)
+            
             initViews(view)
             setupSpinners()
             loadCurrentSettings()
@@ -77,7 +83,7 @@ class SettingsFragment : Fragment() {
             
         } catch (e: Exception) {
             Log.e(TAG, "Error en onViewCreated: ${e.message}", e)
-            Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.error_occurred) + ": ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -106,25 +112,7 @@ class SettingsFragment : Fragment() {
     
     private fun setupSpinners() {
         try {
-            // SOLO spinner para intervalo de banners
-            // MODIFICADO: Eliminado "1 segundo (PRUEBAS)" y renombrado -1 como "10 segundos (DEMO)"
-            val intervalLabels = bannerIntervalValues.map { value ->
-                when (value) {
-                    -1 -> "10 segundos"
-                    1 -> "1 minuto"
-                    2 -> "2 minutos"
-                    3 -> "3 minutos"
-                    5 -> "5 minutos"
-                    10 -> "10 minutos"
-                    15 -> "15 minutos"
-                    20 -> "20 minutos"
-                    30 -> "30 minutos"
-                    45 -> "45 minutos"
-                    60 -> "60 minutos"
-                    else -> "$value minutos"
-                }
-            }.toTypedArray()
-            
+            // Usar el array de strings del XML directamente
             val intervalAdapter = ArrayAdapter(
                 requireContext(), 
                 android.R.layout.simple_spinner_item, 
@@ -146,7 +134,10 @@ class SettingsFragment : Fragment() {
             // Tema
             val isDarkMode = viewModel.isDarkMode.value ?: false
             swDarkMode.isChecked = isDarkMode
-            tvThemeStatus.text = if (isDarkMode) "🌙 Tema oscuro" else "☀️ Tema claro"
+            tvThemeStatus.text = if (isDarkMode) 
+                getString(R.string.settings_theme_dark) 
+            else 
+                getString(R.string.settings_theme_light)
             
             // Intervalo (única opción)
             val interval = viewModel.bannerInterval.value ?: 5
@@ -155,7 +146,7 @@ class SettingsFragment : Fragment() {
             spBannersPerDay.setSelection(intervalIndex)
             
             val prefs = UserPreferences.getInstance(requireContext())
-            tvBannersPerDayValue.text = getBannerIntervalDisplayText(interval)
+            tvBannersPerDayValue.text = intervalLabels[intervalIndex]
             
             // Valores por defecto para otras opciones
             swAutoStart.isChecked = false
@@ -169,27 +160,12 @@ class SettingsFragment : Fragment() {
         }
     }
     
-    // NUEVO: Función helper para obtener texto de visualización
-    private fun getBannerIntervalDisplayText(interval: Int): String {
-        return when (interval) {
-            -1 -> "10 segundos (DEMO)"
-            1 -> "1 minuto"
-            2 -> "2 minutos"
-            3 -> "3 minutos"
-            5 -> "5 minutos"
-            10 -> "10 minutos"
-            15 -> "15 minutos"
-            20 -> "20 minutos"
-            30 -> "30 minutos"
-            45 -> "45 minutos"
-            60 -> "60 minutos"
-            else -> "$interval minutos"
-        }
-    }
-    
     private fun setupListeners() {
         swDarkMode.setOnCheckedChangeListener { _, isChecked ->
-            tvThemeStatus.text = if (isChecked) "🌙 Tema oscuro" else "☀️ Tema claro"
+            tvThemeStatus.text = if (isChecked) 
+                getString(R.string.settings_theme_dark) 
+            else 
+                getString(R.string.settings_theme_light)
             viewModel.updateDarkMode(isChecked)
             applyThemeChange(isChecked)
         }
@@ -199,30 +175,45 @@ class SettingsFragment : Fragment() {
                 val value = bannerIntervalValues[position]
                 viewModel.updateBannerInterval(value)
                 
-                tvBannersPerDayValue.text = getBannerIntervalDisplayText(value)
+                tvBannersPerDayValue.text = intervalLabels[position]
             }
             
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
         
         swAutoStart.setOnCheckedChangeListener { _, isChecked ->
-            tvAutoStartStatus.text = if (isChecked) "✅ Inicio automático" else "⭕ Inicio manual"
+            tvAutoStartStatus.text = if (isChecked) 
+                getString(R.string.settings_auto_start_auto) 
+            else 
+                getString(R.string.settings_auto_start_manual)
         }
         
         swBatteryOptimization.setOnCheckedChangeListener { _, isChecked ->
-            tvBatteryStatus.text = if (isChecked) "✅ Optimización activa" else "⚠️ Sin optimización"
+            tvBatteryStatus.text = if (isChecked) 
+                getString(R.string.settings_battery_on) 
+            else 
+                getString(R.string.settings_battery_off)
         }
         
         swVibrateNotification.setOnCheckedChangeListener { _, isChecked ->
-            tvVibrateStatus.text = if (isChecked) "✅ Vibración activa" else "🔇 Sin vibración"
+            tvVibrateStatus.text = if (isChecked) 
+                getString(R.string.settings_vibration_on) 
+            else 
+                getString(R.string.settings_vibration_off)
         }
         
         swSoundNotification.setOnCheckedChangeListener { _, isChecked ->
-            tvSoundStatus.text = if (isChecked) "🔔 Sonido activo" else "🔇 Silencio"
+            tvSoundStatus.text = if (isChecked) 
+                getString(R.string.settings_sound_on) 
+            else 
+                getString(R.string.settings_sound_off)
         }
         
         swExportDailyReports.setOnCheckedChangeListener { _, isChecked ->
-            tvExportStatus.text = if (isChecked) "✅ Exportación automática" else "⭕ Exportación manual"
+            tvExportStatus.text = if (isChecked) 
+                getString(R.string.settings_export_auto) 
+            else 
+                getString(R.string.settings_export_manual)
         }
         
         btnSaveSettings.setOnClickListener { saveSettings() }
@@ -235,10 +226,16 @@ class SettingsFragment : Fragment() {
             if (swDarkMode.isChecked != isDarkMode) {
                 swDarkMode.isChecked = isDarkMode
             }
-            tvThemeStatus.text = if (isDarkMode) "🌙 Tema oscuro" else "☀️ Tema claro"
+            tvThemeStatus.text = if (isDarkMode) 
+                getString(R.string.settings_theme_dark) 
+            else 
+                getString(R.string.settings_theme_light)
             
             swDarkMode.setOnCheckedChangeListener { _, checked ->
-                tvThemeStatus.text = if (checked) "🌙 Tema oscuro" else "☀️ Tema claro"
+                tvThemeStatus.text = if (checked) 
+                    getString(R.string.settings_theme_dark) 
+                else 
+                    getString(R.string.settings_theme_light)
                 viewModel.updateDarkMode(checked)
                 applyThemeChange(checked)
             }
@@ -246,18 +243,36 @@ class SettingsFragment : Fragment() {
     }
     
     private fun updateAllStatusTexts() {
-        tvThemeStatus.text = if (swDarkMode.isChecked) "🌙 Tema oscuro" else "☀️ Tema claro"
-        tvAutoStartStatus.text = if (swAutoStart.isChecked) "✅ Inicio automático" else "⭕ Inicio manual"
-        tvBatteryStatus.text = if (swBatteryOptimization.isChecked) "✅ Optimización activa" else "⚠️ Sin optimización"
-        tvVibrateStatus.text = if (swVibrateNotification.isChecked) "✅ Vibración activa" else "🔇 Sin vibración"
-        tvSoundStatus.text = if (swSoundNotification.isChecked) "🔔 Sonido activo" else "🔇 Silencio"
-        tvExportStatus.text = if (swExportDailyReports.isChecked) "✅ Exportación automática" else "⭕ Exportación manual"
+        tvThemeStatus.text = if (swDarkMode.isChecked) 
+            getString(R.string.settings_theme_dark) 
+        else 
+            getString(R.string.settings_theme_light)
+        tvAutoStartStatus.text = if (swAutoStart.isChecked) 
+            getString(R.string.settings_auto_start_auto) 
+        else 
+            getString(R.string.settings_auto_start_manual)
+        tvBatteryStatus.text = if (swBatteryOptimization.isChecked) 
+            getString(R.string.settings_battery_on) 
+        else 
+            getString(R.string.settings_battery_off)
+        tvVibrateStatus.text = if (swVibrateNotification.isChecked) 
+            getString(R.string.settings_vibration_on) 
+        else 
+            getString(R.string.settings_vibration_off)
+        tvSoundStatus.text = if (swSoundNotification.isChecked) 
+            getString(R.string.settings_sound_on) 
+        else 
+            getString(R.string.settings_sound_off)
+        tvExportStatus.text = if (swExportDailyReports.isChecked) 
+            getString(R.string.settings_export_auto) 
+        else 
+            getString(R.string.settings_export_manual)
     }
     
     private fun updateSettingsStatus() {
         val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
         val currentTime = dateFormat.format(Date())
-        tvSettingsStatus.text = "Última actualización: $currentTime"
+        tvSettingsStatus.text = getString(R.string.settings_last_update, currentTime)
     }
     
     private fun applyThemeChange(isDarkMode: Boolean) {
@@ -271,14 +286,14 @@ class SettingsFragment : Fragment() {
             
         } catch (e: Exception) {
             Log.e(TAG, "Error aplicando tema: ${e.message}")
-            Toast.makeText(requireContext(), "Error al cambiar tema", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.error_occurred), Toast.LENGTH_SHORT).show()
         }
     }
     
     private fun saveSettings() {
         viewModel.saveAllSettings()
         updateSettingsStatus()
-        Toast.makeText(requireContext(), "✅ Configuraciones guardadas", Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireContext(), getString(R.string.settings_saved_dialog_title), Toast.LENGTH_SHORT).show()
         showSaveConfirmation()
     }
     
@@ -286,32 +301,50 @@ class SettingsFragment : Fragment() {
         val interval = bannerIntervalValues[spBannersPerDay.selectedItemPosition]
         
         val summary = StringBuilder().apply {
-            append("⚙️ CONFIGURACIONES GUARDADAS:\n\n")
-            append("• Tema: ${if (swDarkMode.isChecked) "Oscuro" else "Claro"}\n")
-            append("• Intervalo: ${getBannerIntervalDisplayText(interval)}\n")
-            append("• Inicio automático: ${if (swAutoStart.isChecked) "Sí" else "No"}\n")
-            append("• Optimización batería: ${if (swBatteryOptimization.isChecked) "Sí" else "No"}\n")
-            append("• Vibración: ${if (swVibrateNotification.isChecked) "Sí" else "No"}\n")
-            append("• Sonido: ${if (swSoundNotification.isChecked) "Sí" else "No"}\n")
-            append("• Exportación automática: ${if (swExportDailyReports.isChecked) "Sí" else "No"}\n\n")
-            append("✅ El banner permanece visible hasta que lo cierres manualmente")
+            append(getString(R.string.settings_saved_summary, 
+                if (swDarkMode.isChecked) 
+                    getString(R.string.settings_theme_dark) 
+                else 
+                    getString(R.string.settings_theme_light),
+                intervalLabels[spBannersPerDay.selectedItemPosition],
+                if (swAutoStart.isChecked) 
+                    getString(R.string.dialog_yes) 
+                else 
+                    getString(R.string.dialog_no),
+                if (swBatteryOptimization.isChecked) 
+                    getString(R.string.dialog_yes) 
+                else 
+                    getString(R.string.dialog_no),
+                if (swVibrateNotification.isChecked) 
+                    getString(R.string.dialog_yes) 
+                else 
+                    getString(R.string.dialog_no),
+                if (swSoundNotification.isChecked) 
+                    getString(R.string.dialog_yes) 
+                else 
+                    getString(R.string.dialog_no),
+                if (swExportDailyReports.isChecked) 
+                    getString(R.string.dialog_yes) 
+                else 
+                    getString(R.string.dialog_no)
+            ))
         }
         
         AlertDialog.Builder(requireContext())
-            .setTitle("Configuraciones Guardadas")
+            .setTitle(getString(R.string.settings_saved_dialog_title))
             .setMessage(summary.toString())
-            .setPositiveButton("OK", null)
+            .setPositiveButton(getString(R.string.dialog_yes), null)
             .show()
     }
     
     private fun resetSettings() {
         AlertDialog.Builder(requireContext())
-            .setTitle("Restablecer Configuraciones")
-            .setMessage("¿Estás seguro de querer restablecer todas las configuraciones?")
-            .setPositiveButton("Sí, restablecer") { _, _ ->
+            .setTitle(getString(R.string.settings_reset_dialog_title))
+            .setMessage(getString(R.string.settings_reset_dialog_message))
+            .setPositiveButton(getString(R.string.dialog_yes)) { _, _ ->
                 performReset()
             }
-            .setNegativeButton("Cancelar", null)
+            .setNegativeButton(getString(R.string.dialog_no), null)
             .show()
     }
     
@@ -329,19 +362,22 @@ class SettingsFragment : Fragment() {
         
         updateAllStatusTexts()
         
-        tvBannersPerDayValue.text = "5 minutos"
+        tvBannersPerDayValue.text = intervalLabels[4]
         
         viewModel.clearAllSettings()
         
         swDarkMode.setOnCheckedChangeListener { _, isChecked ->
-            tvThemeStatus.text = if (isChecked) "🌙 Tema oscuro" else "☀️ Tema claro"
+            tvThemeStatus.text = if (isChecked) 
+                getString(R.string.settings_theme_dark) 
+            else 
+                getString(R.string.settings_theme_light)
             viewModel.updateDarkMode(isChecked)
             applyThemeChange(isChecked)
         }
         
         applyThemeChange(false)
         
-        Toast.makeText(requireContext(), "✅ Configuraciones restablecidas", Toast.LENGTH_SHORT).show()
-        tvSettingsStatus.text = "Configuraciones restablecidas"
+        Toast.makeText(requireContext(), getString(R.string.settings_reset), Toast.LENGTH_SHORT).show()
+        tvSettingsStatus.text = getString(R.string.settings_reset)
     }
 }

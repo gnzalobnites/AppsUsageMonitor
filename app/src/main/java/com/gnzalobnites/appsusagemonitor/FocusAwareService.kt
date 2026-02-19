@@ -1,9 +1,6 @@
 package com.gnzalobnites.appsusagemonitor
 
-// Agrega ESTE import al inicio del archivo
 import com.gnzalobnites.appsusagemonitor.banner.BannerManager
-
-// El resto del código permanece igual
 import android.accessibilityservice.AccessibilityService
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -45,28 +42,26 @@ class FocusAwareService : AccessibilityService() {
     private lateinit var serviceViewModel: SimpleServiceViewModel
     
     // Broadcast Receiver para comunicación con BannerManager
-    // Broadcast Receiver para comunicación con BannerManager
-private val bannerExitReceiver = object : BroadcastReceiver() {
-    override fun onReceive(context: Context?, intent: Intent?) {
-        when (intent?.action) {
-            "APP_EXIT_DETECTED" -> {
-                val packageName = intent.getStringExtra("packageName")
-                val timestamp = intent.getLongExtra("timestamp", 0)
-                Log.d(TAG, "📡 BannerManager detectó salida de app: $packageName en $timestamp")
-                
-                // Asegurar que la sesión termina
-                if (activeSession?.packageName == packageName) {
-                    Log.d(TAG, "🛑 Terminando sesión por salida detectada")
-                    endCurrentSession()
+    private val bannerExitReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                "APP_EXIT_DETECTED" -> {
+                    val packageName = intent.getStringExtra("packageName")
+                    val timestamp = intent.getLongExtra("timestamp", 0)
+                    Log.d(TAG, "📡 BannerManager detectó salida de app: $packageName en $timestamp")
+                    
+                    // Asegurar que la sesión termina
+                    if (activeSession?.packageName == packageName) {
+                        Log.d(TAG, "🛑 Terminando sesión por salida detectada")
+                        endCurrentSession()
+                    }
                 }
-            }
-            "BANNER_HIDDEN" -> {
-                Log.d(TAG, "📡 Banner ocultado completamente")
-                // Podemos hacer algo si es necesario
+                "BANNER_HIDDEN" -> {
+                    Log.d(TAG, "📡 Banner ocultado completamente")
+                }
             }
         }
     }
-}
     
     companion object {
         const val TAG = "FocusAwareService"
