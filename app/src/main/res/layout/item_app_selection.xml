@@ -12,7 +12,7 @@
         android:id="@+id/appIcon"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:contentDescription="App icon"
+        android:contentDescription="@string/item_app_icon_desc"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent" />
@@ -38,6 +38,7 @@
         android:textStyle="bold"
         android:textSize="16sp"
         android:textColor="?android:attr/textColorPrimary"
+        android:text="@string/item_simple_app_placeholder"
         app:layout_constraintStart_toEndOf="@id/appIcon"
         app:layout_constraintEnd_toStartOf="@id/appCheckBox"
         app:layout_constraintTop_toTopOf="parent" />
@@ -52,6 +53,7 @@
         android:maxLines="1"
         android:textSize="12sp"
         android:textColor="?android:attr/textColorSecondary"
+        android:text="com.example.package"
         app:layout_constraintStart_toEndOf="@id/appIcon"
         app:layout_constraintEnd_toStartOf="@id/appCheckBox"
         app:layout_constraintTop_toBottomOf="@id/appName"

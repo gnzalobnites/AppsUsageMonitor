@@ -19,7 +19,7 @@
             android:id="@+id/tvAppName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Nombre de la App"
+            android:text="@string/item_real_stat_app_placeholder"
             android:textSize="16sp"
             android:textStyle="bold"
             android:textColor="?android:attr/textColorPrimary"
@@ -89,7 +89,7 @@
                     android:id="@+id/tvSessions"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0 sesiones"
+                    android:text="@string/item_real_stat_sessions_placeholder"
                     android:textSize="14sp"
                     android:textColor="?android:attr/textColorSecondary"/>
 

@@ -93,7 +93,7 @@ class StatsFragment : Fragment() {
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error en onViewCreated: ${e.message}", e)
-            Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.error_occurred) + ": ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -109,8 +109,8 @@ class StatsFragment : Fragment() {
         layoutAppLegend = view.findViewById(R.id.layoutAppLegend)
         
         // Configurar texto inicial
-        tvTimeRangeTitle.text = "📅 Estadísticas - Hoy"
-        tvTotalTime.text = "0m"
+        tvTimeRangeTitle.text = getString(R.string.stats_time_range_today)
+        tvTotalTime.text = "0" + getString(R.string.stats_total_label).substringAfter("⏱️")
         tvMonitoredAppCount.text = "0"
         progressBar.visibility = View.GONE
     }
@@ -130,7 +130,7 @@ class StatsFragment : Fragment() {
             pieChart.setCenterTextSize(14f)
             pieChart.setEntryLabelColor(Color.BLACK)
             pieChart.setEntryLabelTextSize(12f)
-            pieChart.setCenterText("Sin datos")
+            pieChart.setCenterText(getString(R.string.no_data_available))
         } catch (e: Exception) {
             Log.e(TAG, "Error configurando pieChart: ${e.message}")
         }
@@ -157,9 +157,9 @@ class StatsFragment : Fragment() {
         // Mostrar loading
         progressBar.visibility = View.VISIBLE
         progressBar.progress = 0
-        tvTotalTime.text = "Calculando..."
+        tvTotalTime.text = getString(R.string.stats_calculating)
         pieChart.clear()
-        pieChart.setCenterText("Cargando...")
+        pieChart.setCenterText(getString(R.string.stats_loading))
         layoutAppLegend.removeAllViews()
         layoutAppLegend.visibility = View.GONE
 
@@ -167,7 +167,7 @@ class StatsFragment : Fragment() {
         Log.d(TAG, "Apps monitoreadas: ${monitoredPackages.size}")
         
         if (monitoredPackages.isEmpty()) {
-            showNoDataMessage("No hay apps monitoreadas")
+            showNoDataMessage(getString(R.string.select_apps))
             return
         }
 
@@ -188,7 +188,7 @@ class StatsFragment : Fragment() {
                 
                 // Actualizar UI en hilo principal
                 if (usageData.isEmpty()) {
-                    showNoDataMessage("No hay datos de uso hoy")
+                    showNoDataMessage(getString(R.string.stats_no_data))
                 } else {
                     tvTotalTime.text = formatTime(totalTime)
                     showPieChart(usageData, totalTime)
@@ -199,7 +199,7 @@ class StatsFragment : Fragment() {
                 
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Error en loadStats: ${e.message}", e)
-                showNoDataMessage("Error al cargar datos")
+                showNoDataMessage(getString(R.string.stats_error))
             } finally {
                 // Ocultar progreso después de un momento
                 delay(500)
@@ -268,7 +268,7 @@ class StatsFragment : Fragment() {
     private fun showPieChart(data: List<AppUsageData>, totalTime: Long) {
         try {
             if (data.isEmpty()) {
-                pieChart.setCenterText("Sin datos")
+                pieChart.setCenterText(getString(R.string.no_data_available))
                 pieChart.invalidate()
                 return
             }
@@ -298,7 +298,7 @@ class StatsFragment : Fragment() {
             
             // Texto central
             val totalTimeFormatted = formatTimeShort(totalTime)
-            pieChart.setCenterText("$totalTimeFormatted\nTotal")
+            pieChart.setCenterText("$totalTimeFormatted\n${getString(R.string.stats_total_label)}")
             
             // Aplicar y actualizar
             pieChart.data = pieData
@@ -361,7 +361,7 @@ class StatsFragment : Fragment() {
     }
     
     private fun showNoDataMessage(message: String) {
-        tvTotalTime.text = "0m"
+        tvTotalTime.text = "0" + getString(R.string.stats_total_label).substringAfter("⏱️")
         tvMonitoredAppCount.text = (viewModel.monitoredApps.value?.size ?: 0).toString()
         
         pieChart.clear()
@@ -374,7 +374,7 @@ class StatsFragment : Fragment() {
     }
     
     private fun formatTime(milliseconds: Long): String {
-        if (milliseconds <= 0) return "0m"
+        if (milliseconds <= 0) return "0" + getString(R.string.stats_total_label).substringAfter("⏱️")
         
         val totalSeconds = milliseconds / 1000
         val hours = totalSeconds / 3600
@@ -389,7 +389,7 @@ class StatsFragment : Fragment() {
     }
     
     private fun formatTimeShort(milliseconds: Long): String {
-        if (milliseconds <= 0) return "0m"
+        if (milliseconds <= 0) return "0" + getString(R.string.stats_total_label).substringAfter("⏱️")
         
         val totalSeconds = milliseconds / 1000
         val hours = totalSeconds / 3600
@@ -398,22 +398,22 @@ class StatsFragment : Fragment() {
         return when {
             hours > 0 -> String.format("%dh %02dm", hours, minutes)
             minutes > 0 -> String.format("%dm", minutes)
-            else -> "< 1m"
+            else -> "< 1" + getString(R.string.stats_total_label).substringAfter("⏱️").replace("⏱️", "").trim()
         }
     }
     
     private fun showExportDialog() {
         AlertDialog.Builder(requireContext())
-            .setTitle("📤 Exportar Estadísticas")
-            .setMessage("¿Qué formato deseas exportar?")
-            .setPositiveButton("CSV") { _, _ ->
-                Toast.makeText(requireContext(), "Exportando a CSV...", Toast.LENGTH_SHORT).show()
+            .setTitle(getString(R.string.export_dialog_title))
+            .setMessage(getString(R.string.export_dialog_title) + "?")
+            .setPositiveButton(getString(R.string.export_csv)) { _, _ ->
+                Toast.makeText(requireContext(), getString(R.string.export_csv) + "...", Toast.LENGTH_SHORT).show()
                 // Aquí iría la lógica real de exportación
             }
-            .setNeutralButton("JSON") { _, _ ->
-                Toast.makeText(requireContext(), "Exportando a JSON...", Toast.LENGTH_SHORT).show()
+            .setNeutralButton(getString(R.string.export_json)) { _, _ ->
+                Toast.makeText(requireContext(), getString(R.string.export_json) + "...", Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Cancelar", null)
+            .setNegativeButton(getString(R.string.dialog_cancel), null)
             .show()
     }
     
@@ -429,39 +429,39 @@ class StatsFragment : Fragment() {
                 val (usageData, totalTime) = stats
                 
                 if (usageData.isEmpty()) {
-                    Toast.makeText(requireContext(), "No hay datos para mostrar", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.no_data_available), Toast.LENGTH_SHORT).show()
                     return@launch
                 }
                 
                 val message = StringBuilder().apply {
-                    append("📊 DETALLE POR APP\n\n")
-                    append("Total: ${formatTime(totalTime)}\n")
-                    append("Apps activas: ${usageData.size}\n")
+                    append(getString(R.string.stats_details) + "\n\n")
+                    append(getString(R.string.stats_total_label) + ": ${formatTime(totalTime)}\n")
+                    append(getString(R.string.stats_apps_label) + ": ${usageData.size}\n")
                     append("─".repeat(30) + "\n\n")
                     
                     usageData.take(10).forEachIndexed { index, data ->
                         append("${index + 1}. ${data.appName}\n")
                         append("   ⏱️ ${formatTime(data.totalTime)} (${String.format("%.1f", data.percentage)}%)\n")
-                        append("   📊 Sesiones: ${data.sessionCount}\n\n")
+                        append("   📊 ${getString(R.string.stats_details)}: ${data.sessionCount}\n\n")
                     }
                     
                     if (usageData.size > 10) {
-                        append("... y ${usageData.size - 10} apps más")
+                        append(getString(R.string.dialog_apps_selected_count, usageData.size - 10))
                     }
                 }
                 
                 AlertDialog.Builder(requireContext())
-                    .setTitle("Detalles de Uso")
+                    .setTitle(getString(R.string.details_dialog_title))
                     .setMessage(message.toString())
-                    .setPositiveButton("OK", null)
-                    .setNeutralButton("Recargar") { _, _ ->
+                    .setPositiveButton(getString(R.string.dialog_yes), null)
+                    .setNeutralButton(getString(R.string.refresh)) { _, _ ->
                         loadStats()
                     }
                     .show()
                 
             } catch (e: Exception) {
                 Log.e(TAG, "Error mostrando detalles: ${e.message}")
-                Toast.makeText(requireContext(), "Error cargando detalles", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.stats_error), Toast.LENGTH_SHORT).show()
             }
         }
     }

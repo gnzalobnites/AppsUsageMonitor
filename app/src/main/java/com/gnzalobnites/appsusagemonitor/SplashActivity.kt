@@ -26,7 +26,10 @@ class SplashActivity : AppCompatActivity() {
         
         // Ocultar action bar si existe
         supportActionBar?.hide()
-                
+        
+        // Mostrar el autor desde strings.xml (opcional - para logs o futura implementación)
+        val authorText = getString(R.string.splash_author)
+        
         Handler(Looper.getMainLooper()).postDelayed({
             navigateToMainActivity()
         }, SPLASH_DELAY_MS)

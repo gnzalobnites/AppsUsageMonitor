@@ -20,7 +20,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:text="App Name"
+        android:text="@string/legend_app_name_placeholder"
         android:textSize="14sp"
         android:textColor="?android:attr/textColorPrimary"
         android:maxLines="1"
@@ -31,7 +31,7 @@
         android:id="@+id/tvLegendAppTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="0m"
+        android:text="@string/legend_app_time_placeholder"
         android:textSize="14sp"
         android:textColor="?android:attr/textColorSecondary"
         android:layout_marginEnd="12dp"/>
@@ -41,7 +41,7 @@
         android:id="@+id/tvLegendAppPercentage"
         android:layout_width="48dp"
         android:layout_height="wrap_content"
-        android:text="0%"
+        android:text="@string/legend_app_percentage_placeholder"
         android:textSize="14sp"
         android:textColor="?attr/colorAccent"
         android:gravity="end"/>

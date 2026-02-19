@@ -23,7 +23,9 @@
             android:background="?attr/colorPrimary"
             android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
             app:navigationIcon="@drawable/ic_menu_white_24dp"
-            app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+            android:title="@string/app_name"
+            android:titleTextColor="@android:color/white" />
 
         <!-- Contenedor para fragments -->
         <FrameLayout

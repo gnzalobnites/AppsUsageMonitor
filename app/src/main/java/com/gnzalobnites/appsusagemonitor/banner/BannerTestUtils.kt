@@ -40,39 +40,45 @@ class BannerTestUtils(private val context: Context) {
         Log.d("BannerTest", "🧪 Mostrando banner de prueba")
         
         try {
-            // Asegurar que no hay banner previo
             hideTestBanner()
             
             val inflater = LayoutInflater.from(context)
             testBannerView = inflater.inflate(R.layout.banner_overlay, null)
             
             testBannerView?.apply {
+                // Configuración de texto para modo prueba
                 findViewById<TextView>(R.id.sessionTimeText)?.text = "🧪 MODO PRUEBA"
                 findViewById<TextView>(R.id.todayTotalText)?.visibility = View.GONE
-                findViewById<TextView>(R.id.motivationalMessage)?.visibility = View.VISIBLE
-                findViewById<TextView>(R.id.motivationalMessage)?.text = testMessage
+                findViewById<TextView>(R.id.motivationalMessage)?.apply {
+                    visibility = View.VISIBLE
+                    text = testMessage
+                    setTextColor(android.graphics.Color.WHITE)
+                }
                 findViewById<TextView>(R.id.appNameLabel)?.visibility = View.GONE
-                findViewById<ImageView>(R.id.ninjaIcon)?.visibility = View.VISIBLE
                 
-                // Click listener para cerrar
+                // Configuración del icono (Estilo Notification Badge)
+                findViewById<ImageView>(R.id.ninjaIcon)?.apply {
+                    visibility = View.VISIBLE
+                    setImageResource(R.drawable.ic_time_alert) // Asegura el nuevo recurso
+                    alpha = 1.0f         // Máximo brillo
+                    clearColorFilter()   // Sin tintes que alteren el naranja/rojo
+                }
+                
                 setOnClickListener {
                     Log.d("BannerTest", "🖱️ Banner cerrado por usuario")
                     hideTestBanner()
                     onBannerClosed()
                 }
                 
-                // Touch listener para detectar toques fuera
                 setOnTouchListener { v, event ->
                     if (event.action == MotionEvent.ACTION_OUTSIDE) {
-                        Log.d("BannerTest", "👆 Toque fuera del banner de prueba")
-                        false // No consumir, dejar pasar
+                        false 
                     } else {
                         v.onTouchEvent(event)
                     }
                 }
             }
             
-            // Parámetros correctos: interactivo pero no bloqueante
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -92,13 +98,9 @@ class BannerTestUtils(private val context: Context) {
             
             windowManager?.addView(testBannerView, params)
             
-            // Cancelar auto-ocultamiento anterior
             hideRunnable?.let { handler.removeCallbacks(it) }
-            
-            // Auto-ocultar después de 15 segundos
             hideRunnable = Runnable {
                 if (testBannerView != null) {
-                    Log.d("BannerTest", "⏱️ Auto-ocultando")
                     hideTestBanner()
                     onBannerClosed()
                 }
@@ -112,7 +114,6 @@ class BannerTestUtils(private val context: Context) {
     
     fun hideTestBanner() {
         try {
-            // Cancelar auto-ocultamiento pendiente
             hideRunnable?.let { handler.removeCallbacks(it) }
             hideRunnable = null
             
@@ -121,7 +122,6 @@ class BannerTestUtils(private val context: Context) {
                 testBannerView = null
             }
         } catch (e: Exception) {
-            // Ignorar, solo asegurar que la referencia se limpia
             testBannerView = null
         }
     }

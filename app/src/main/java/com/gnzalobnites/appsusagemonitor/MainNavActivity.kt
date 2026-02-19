@@ -75,9 +75,7 @@ class MainNavActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ ERROR CRÍTICO en onCreate: ${e.message}", e)
-            showErrorAndRecover(
-                "Error al iniciar la aplicación: ${e.localizedMessage ?: "Error desconocido"}"
-            )
+            showErrorAndRecover(getString(R.string.error_occurred))
         }
     }
 
@@ -89,6 +87,14 @@ class MainNavActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
                     drawerLayout.closeDrawer(GravityCompat.START)
                 } else {
                     drawerLayout.openDrawer(GravityCompat.START)
+                    
+                    // Actualizar strings de accesibilidad
+                    drawerLayout.announceForAccessibility(
+                        if (drawerLayout.isDrawerOpen(GravityCompat.START)) 
+                            getString(R.string.navigation_drawer_open) 
+                        else 
+                            getString(R.string.navigation_drawer_close)
+                    )
                 }
                 return true
             }
@@ -122,19 +128,19 @@ class MainNavActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
                         navigateToSettings()
                     }
                     R.id.nav_tools -> {
-                        loadSimpleFragment("Herramientas")
+                        loadSimpleFragment(R.string.nav_tools)
                         navView.setCheckedItem(R.id.nav_tools)
                     }
                     R.id.nav_permissions -> {
-                        Toast.makeText(this, "Los permisos se configuran desde Dashboard", 
+                        Toast.makeText(this, getString(R.string.nav_permissions_toast), 
                             Toast.LENGTH_SHORT).show()
                         loadDashboard()
                     }
                     R.id.nav_test -> {
-                        Toast.makeText(this, "Test banner - en desarrollo", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.nav_test_toast), Toast.LENGTH_SHORT).show()
                     }
                     R.id.nav_about -> {
-                        Toast.makeText(this, "Apps Usage Monitor v1.0", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.nav_about_toast), Toast.LENGTH_SHORT).show()
                     }
                     else -> {
                         Log.w(TAG, "Item de navegación no manejado: ${item.itemId}")
@@ -146,7 +152,7 @@ class MainNavActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
             
         } catch (e: Exception) {
             Log.e(TAG, "Error en navegación: ${e.message}", e)
-            Toast.makeText(this, "Error al navegar", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.error_occurred), Toast.LENGTH_SHORT).show()
             return false
         }
     }
@@ -169,7 +175,7 @@ class MainNavActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error cargando dashboard: ${e.message}", e)
-            Toast.makeText(this, "Error cargando dashboard", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.error_occurred), Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -190,8 +196,8 @@ class MainNavActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error cargando fragment simple: ${e.message}", e)
-            Toast.makeText(this, "Error cargando contenido", Toast.LENGTH_SHORT).show()
-            showErrorAndRecover("No se pudo cargar el contenido solicitado")
+            Toast.makeText(this, getString(R.string.error_occurred), Toast.LENGTH_SHORT).show()
+            showErrorAndRecover(getString(R.string.error_occurred))
         }
     }
     
@@ -224,7 +230,7 @@ class MainNavActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error cargando fragment personalizado: ${e.message}", e)
-            Toast.makeText(this, "Error al cambiar de vista", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.error_occurred), Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -247,7 +253,7 @@ class MainNavActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
             
         } catch (e: Exception) {
             Log.e(TAG, "Error navegando a settings: ${e.message}", e)
-            Toast.makeText(this, "Error abriendo configuración", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.error_occurred), Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -277,15 +283,13 @@ class MainNavActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
 
     private fun showExitConfirmationDialog() {
         AlertDialog.Builder(this)
-            .setTitle("Salir")
-            .setMessage("¿Estás seguro de que quieres salir de la aplicación?")
-            .setPositiveButton("Sí", object : android.content.DialogInterface.OnClickListener {
-                override fun onClick(dialog: android.content.DialogInterface, which: Int) {
-                    // Cerrar la aplicación
-                    finishAffinity()
-                }
-            })
-            .setNegativeButton("No", null)
+            .setTitle(getString(R.string.dialog_exit_title))
+            .setMessage(getString(R.string.dialog_exit_message))
+            .setPositiveButton(getString(R.string.dialog_yes)) { dialog, which ->
+                // Cerrar la aplicación
+                finishAffinity()
+            }
+            .setNegativeButton(getString(R.string.dialog_no), null)
             .show()
     }
     
@@ -308,9 +312,9 @@ class MainNavActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
                 
                 // Opcional: mostrar diálogo informativo
                 AlertDialog.Builder(this)
-                    .setTitle("Información")
-                    .setMessage("Se ha recuperado de un error. Se ha cargado el Dashboard.")
-                    .setPositiveButton("OK", null)
+                    .setTitle(getString(R.string.dialog_info_title))
+                    .setMessage(getString(R.string.dialog_recovery_message))
+                    .setPositiveButton(getString(R.string.dialog_yes), null)
                     .show()
                     
             } catch (e: Exception) {

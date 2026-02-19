@@ -89,7 +89,7 @@ class MonitorFragment : Fragment() {
             
         } catch (e: Exception) {
             Log.e(TAG, "Error en onViewCreated: ${e.message}", e)
-            Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.error_occurred) + ": ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -123,7 +123,10 @@ class MonitorFragment : Fragment() {
     private fun loadCurrentSettings() {
         val showBanner = viewModel.showBanner.value ?: false
         swEnableBanners.isChecked = showBanner
-        tvBannerStatus.text = if (showBanner) "✅ Banners activados" else "⭕ Banners desactivados"
+        tvBannerStatus.text = if (showBanner) 
+            "✅ " + getString(R.string.dialog_yes)
+        else 
+            "⭕ " + getString(R.string.dialog_no)
     }
     
     private fun setupRecyclerView() {
@@ -138,12 +141,18 @@ class MonitorFragment : Fragment() {
     private fun setupListeners() {
         swEnableBanners.setOnCheckedChangeListener { _, isChecked ->
             viewModel.updateShowBanner(isChecked)
-            tvBannerStatus.text = if (isChecked) "✅ Banners activados" else "⭕ Banners desactivados"
+            tvBannerStatus.text = if (isChecked) 
+                "✅ " + getString(R.string.dialog_yes)
+            else 
+                "⭕ " + getString(R.string.dialog_no)
             Log.d(TAG, "Banners ${if (isChecked) "activados" else "desactivados"}")
         }
         
         swShowTikTokDemo.setOnCheckedChangeListener { _, isChecked ->
-            tvTikTokDemoStatus.text = if (isChecked) "✅ Demo activada" else "⭕ Demo desactivada"
+            tvTikTokDemoStatus.text = if (isChecked) 
+                "✅ " + getString(R.string.dialog_yes)
+            else 
+                "⭕ " + getString(R.string.dialog_no)
             Log.d(TAG, "Demo TikTok ${if (isChecked) "activada" else "desactivada"}")
         }
         
@@ -174,9 +183,9 @@ class MonitorFragment : Fragment() {
     private fun updateUsageStatsStatus() {
         val hasPermission = bannerManager.hasUsageStatsPermission()
         tvUsageStatsStatus.text = if (hasPermission) {
-            "✅ Modo preciso activado (recomendado)"
+            getString(R.string.monitor_usage_stats_on)
         } else {
-            "⚠️ Modo preciso desactivado - Actívalo para mayor precisión"
+            getString(R.string.monitor_usage_stats_off)
         }
         
         if (hasPermission) {
@@ -196,32 +205,32 @@ class MonitorFragment : Fragment() {
         val usageStatsPerm = bannerManager.hasUsageStatsPermission()
         
         val message = StringBuilder().apply {
-            append("📋 ESTADO DE PERMISOS:\n\n")
+            append("📋 " + getString(R.string.permission_dialog_title) + ":\n\n")
             append("• Overlay: ${if(overlayPerm) "✅" else "❌"}\n")
             append("• Accesibilidad: ${if(accessibilityPerm) "✅" else "❌"}\n")
             append("• Datos de Uso: ${if(usageStatsPerm) "✅" else "⚠️"}\n\n")
             
             if (!usageStatsPerm) {
-                append("RECOMENDACIÓN: Activa 'Datos de Uso' para:\n")
-                append("✓ Detectar con precisión cuándo sales de las apps\n")
-                append("✓ Mayor eficiencia energética\n")
-                append("✓ Estadísticas más exactas\n\n")
-                append("Sin este permiso, usaremos el método estándar (menos preciso).")
+                append(getString(R.string.monitor_usage_stats_off) + ":\n")
+                append("✓ " + getString(R.string.monitor_usage_stats_on) + "\n")
+                append("✓ " + getString(R.string.service_active) + "\n")
+                append("✓ " + getString(R.string.stats_title) + "\n\n")
+                append(getString(R.string.settings_battery_opt) + ".")
             } else {
-                append("✓ Todos los permisos recomendados están activados.")
+                append("✓ " + getString(R.string.permission_dialog_title) + ".")
             }
         }
         
         AlertDialog.Builder(requireContext())
-            .setTitle("Permisos del Sistema")
+            .setTitle(getString(R.string.permission_dialog_title))
             .setMessage(message.toString())
-            .setPositiveButton("Configurar Datos de Uso") { _, _ ->
+            .setPositiveButton(getString(R.string.permission_usage_stats_instructions, getString(R.string.app_name))) { _, _ ->
                 bannerManager.requestUsageStatsPermission(requireActivity())
             }
-            .setNeutralButton("Verificar Accesibilidad") { _, _ ->
+            .setNeutralButton(getString(R.string.permissions_title)) { _, _ ->
                 startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             }
-            .setNegativeButton("Cerrar", null)
+            .setNegativeButton(getString(R.string.dialog_cancel), null)
             .show()
     }
     
@@ -261,10 +270,10 @@ class MonitorFragment : Fragment() {
         
         if (isChecked) {
             viewModel.addMonitoredApp(packageName)
-            Toast.makeText(requireContext(), "✓ $appName monitoreada", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.monitor_app_added, appName), Toast.LENGTH_SHORT).show()
         } else {
             viewModel.removeMonitoredApp(packageName)
-            Toast.makeText(requireContext(), "✗ $appName removida", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.monitor_app_removed, appName), Toast.LENGTH_SHORT).show()
         }
         updateSelectedAppsCount()
     }
@@ -272,7 +281,7 @@ class MonitorFragment : Fragment() {
     private fun updateSelectedAppsCount() {
         val count = viewModel.monitoredApps.value?.size ?: 0
         val total = apps.size
-        tvSelectedAppsCount.text = "$count/$total apps seleccionadas"
+        tvSelectedAppsCount.text = getString(R.string.monitor_apps_count, count, total)
     }
     
     private fun showAppSelectionDialog() {
@@ -318,6 +327,7 @@ class MonitorFragment : Fragment() {
                 viewModel.addMonitoredApp(packageName)
             }
             dialogAdapter?.updateSelectedApps(allPackages)
+            tvSelectedCount.text = getString(R.string.dialog_apps_selected_count, allPackages.size)
         }
         
         btnDeselectAll.setOnClickListener {
@@ -326,6 +336,7 @@ class MonitorFragment : Fragment() {
                 viewModel.removeMonitoredApp(packageName)
             }
             dialogAdapter?.updateSelectedApps(emptySet())
+            tvSelectedCount.text = getString(R.string.dialog_apps_selected_count, 0)
         }
         
         btnConfirm.setOnClickListener {
@@ -333,7 +344,7 @@ class MonitorFragment : Fragment() {
             selectionDialog = null
             dialogAdapter = null
             updateSelectedAppsCount()
-            Toast.makeText(requireContext(), "✅ Selección guardada", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.settings_saved_dialog_title), Toast.LENGTH_SHORT).show()
         }
         
         btnCancel.setOnClickListener {
@@ -346,6 +357,7 @@ class MonitorFragment : Fragment() {
         }
         
         selectionDialog = AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.dialog_select_apps_title))
             .setView(dialogView)
             .setCancelable(true)
             .create()
@@ -355,7 +367,7 @@ class MonitorFragment : Fragment() {
     
     private fun updateSelectedCountDialog(textView: TextView, adapter: SimpleAppsAdapter) {
         val count = adapter.getSelectedCount()
-        textView.text = "$count apps seleccionadas"
+        textView.text = getString(R.string.dialog_apps_selected_count, count)
     }
     
     private fun testBannerNow() {
@@ -363,21 +375,21 @@ class MonitorFragment : Fragment() {
         
         if (!Settings.canDrawOverlays(requireContext())) {
             Toast.makeText(requireContext(), 
-                "❌ Necesitas permiso de overlay", 
+                getString(R.string.error_overlay_permission), 
                 Toast.LENGTH_SHORT).show()
             requestOverlayPermission()
             return
         }
         
-        val testMessage = "🧪 BANNER DE PRUEBA\n\n" +
-                "• Temporal: 15 segundos\n" +
-                "• Toca para cerrar antes\n" +
-                "• No afecta monitoreo real"
+        val testMessage = "🧪 " + getString(R.string.test_banner_shown) + "\n\n" +
+                "• " + getString(R.string.banner_interval_label) + ": 15s\n" +
+                "• " + getString(R.string.dialog_cancel) + "\n" +
+                "• " + getString(R.string.test_banners_title)
         
         bannerManager.showTestBanner(testMessage)
         
         Toast.makeText(requireContext(), 
-            "✅ Banner mostrado (15s)", 
+            getString(R.string.test_banner_shown), 
             Toast.LENGTH_SHORT).show()
     }
     
