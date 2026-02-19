@@ -44,21 +44,18 @@ android {
         }
         debug {
             signingConfig signingConfigs.release
-            // multiDexEnabled false // Esta línea no es necesaria aquí
         }
     }
 
+    // 👇 CAMBIO IMPORTANTE: Java 11 para compatibilidad con Java 21 del servidor
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '11'
     }
-    
-    // ELIMINADO: El bloque 'dexOptions' está obsoleto y puede causar errores.
-    // Gradle maneja esto automáticamente ahora.
     
     splits {
         abi {
@@ -73,13 +70,17 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     
-    // Kotlin
+    // Kotlin 1.3.72
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     
-    // AndroidX
+    // AndroidX Core
     implementation 'androidx.core:core-ktx:1.3.2'
     implementation 'androidx.appcompat:appcompat:1.2.0'
+    
+    // Fragment
     implementation 'androidx.fragment:fragment-ktx:1.2.5'
+    
+    // Material
     implementation 'com.google.android.material:material:1.2.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     
@@ -102,11 +103,11 @@ dependencies {
     implementation "androidx.navigation:navigation-fragment-ktx:$nav_version"
     implementation "androidx.navigation:navigation-ui-ktx:$nav_version"
     
-    // UI
+    // CardView y RecyclerView
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.1.0'
     
-    // Charts
+    // MPAndroidChart
     implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
     
     // Testing
