@@ -1,13 +1,13 @@
 buildscript {
-    ext.kotlin_version = '1.6.21'  // Actualizado para compatibilidad
+    ext.kotlin_version = '1.8.0' // Actualizado para compatibilidad
     
     repositories {
         google()
-        mavenCentral()  // Reemplaza a jcenter()
+        mavenCentral()
     }
     
     dependencies {
-        // ACTUALIZADO: Plugin de Android Gradle 7.4.2 (compatible con Java 21)
+        // Plugin de Android Gradle actualizado a una versión compatible con Java 21
         classpath 'com.android.tools.build:gradle:7.4.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
