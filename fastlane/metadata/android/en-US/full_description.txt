@@ -1,9 +1,9 @@
-Monitoriza el tiempo que pasas en tus aplicaciones con banners de conciencia temporal configurables. Ofrece estadísticas detalladas, gráficos circulares y tema dinámico según el tiempo de uso.
+Monitor the time you spend on your apps with configurable awareness banners. Get detailed statistics, pie charts, and a dynamic theme that adapts to your usage time.
 
-Características principales:
-* Banners de conciencia temporal en intervalo configurable (DEMO desde 10 segundos)
-* Interacción intuitiva (1 click expande, 2do click cierra)
-* Estadísticas con gráficos circulares por app
-* Tema dinámico con colores según tiempo de uso
-* Alta precisión con UsageStatsManager
-* Tema oscuro/claro persistente
+Main features:
+* Configurable awareness banners (DEMO from 10 seconds)
+* Intuitive interaction: 1 click expands, 2nd click closes
+* Detailed statistics with pie charts per app
+* Dynamic theme with colors based on usage time
+* High precision using Android's UsageStatsManager
+* Persistent dark/light theme
