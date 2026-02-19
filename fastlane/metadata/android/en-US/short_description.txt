@@ -1,1 +1,1 @@
-Monitor de tiempo de uso con banners de consciencia
+Monitor your app usage with awareness banners and detailed statistics
