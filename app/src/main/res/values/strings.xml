@@ -1,49 +1,272 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- App name -->
+    <!-- =========================================== -->
+    <!-- APP NAME                                    -->
+    <!-- =========================================== -->
     <string name="app_name">Apps Usage Monitor</string>
     
-    <!-- Accessibility service -->
+    <!-- =========================================== -->
+    <!-- ACCESIBILIDAD                               -->
+    <!-- =========================================== -->
     <string name="accessibility_service_description">Monitoriza el uso de aplicaciones para mostrar recordatorios de tiempo</string>
     
-    <!-- Main Activity -->
+    <!-- =========================================== -->
+    <!-- ACTIVIDAD PRINCIPAL Y NAVEGACIÓN            -->
+    <!-- =========================================== -->
     <string name="settings_title">Configuración</string>
     <string name="monitored_apps_title">Apps a Monitorear</string>
     <string name="show_banner_label">Mostrar Banner de Tiempo</string>
     <string name="banner_interval_label">Mostrar cada (minutos)</string>
     <string name="banner_duration_label">Duración del banner (segundos)</string>
     
-    <!-- Banner text -->
-    <string name="banner_session_time">Sesión: %s</string>
-    <string name="banner_today_total">Hoy: %s</string>
-    
-    <!-- Toasts and messages -->
-    <string name="service_started">Servicio de monitoreo iniciado</string>
-    <string name="permission_required">Permisos requeridos</string>
-    <string name="select_apps">Seleccionar apps a monitorear</string>
-    <string name="no_apps_selected">No hay apps seleccionadas para monitorear</string>
-    
-    <!-- Navegación -->
     <string name="navigation_drawer_open">Abrir navegación</string>
     <string name="navigation_drawer_close">Cerrar navegación</string>
     
-    <!-- Dashboard -->
-    <string name="dashboard_title">Dashboard</string>
-    <string name="quick_access">Acceso Rápido</string>
-    <string name="today_summary">Resumen de Hoy</string>
-    <string name="view_details">Ver detalles completos</string>
-    
-    <!-- Navegación fragments -->
     <string name="stats_title">Estadísticas</string>
     <string name="monitor_title">Monitoreo</string>
     <string name="tools_title">Herramientas</string>
-    
-    <!-- Otros items del menú -->
     <string name="permissions_title">Permisos</string>
     <string name="test_banners_title">Test Banners</string>
     <string name="about_title">Acerca de</string>
     
-    <!-- Textos adicionales útiles -->
+    <string name="nav_tools">Herramientas</string>
+    <string name="nav_permissions_toast">Los permisos se configuran desde Dashboard</string>
+    <string name="nav_test_toast">Test banner - en desarrollo</string>
+    <string name="nav_about_toast">Apps Usage Monitor v1.0</string>
+    
+    <!-- =========================================== -->
+    <!-- DIÁLOGOS GENERALES                          -->
+    <!-- =========================================== -->
+    <string name="dialog_yes">Sí</string>
+    <string name="dialog_no">No</string>
+    <string name="dialog_exit_title">Salir</string>
+    <string name="dialog_exit_message">¿Estás seguro de que quieres salir de la aplicación?</string>
+    <string name="dialog_info_title">Información</string>
+    <string name="dialog_recovery_message">Se ha recuperado de un error. Se ha cargado el Dashboard.</string>
+    
+    <!-- =========================================== -->
+    <!-- FRAGMENT: MONITOR                           -->
+    <!-- =========================================== -->
+    <string name="monitor_banners_title">🔔 Configuración de Banners</string>
+    <string name="monitor_enable_banners">Activar banners</string>
+    <string name="monitor_banner_status_off">⭕ Desactivado</string>
+    <string name="monitor_usage_stats_off">⚠️ Modo preciso desactivado</string>
+    <string name="monitor_usage_stats_on">✅ Modo preciso activado (recomendado)</string>
+    <string name="monitor_tiktok_demo">Demo TikTok</string>
+    <string name="monitor_demo_status_off">⭕ Demo desactivada</string>
+    <string name="monitor_demo_status_on">✅ Demo activada</string>
+    <string name="monitor_test_banner">🧪 Probar Banner</string>
+    <string name="monitor_permissions">🔐 Permisos</string>
+    <string name="monitor_apps_title">📱 Apps Monitoreadas</string>
+    <string name="monitor_apps_count">%d/%d apps seleccionadas</string>
+    <string name="monitor_select_apps">📝 Seleccionar</string>
+    <string name="monitor_selected_apps_label">Apps seleccionadas:</string>
+    <string name="monitor_app_added">✓ %s monitoreada</string>
+    <string name="monitor_app_removed">✗ %s removida</string>
+    
+    <!-- =========================================== -->
+    <!-- FRAGMENT: DASHBOARD                         -->
+    <!-- =========================================== -->
+    <string name="dashboard_title">🏠 Dashboard</string>
+    <string name="dashboard_change_theme">Cambiar tema</string>
+    <string name="dashboard_service_status_label">Estado del servicio</string>
+    <string name="dashboard_monitored_count">%d apps monitoreadas</string>
+    <string name="dashboard_start_service">▶️ Iniciar Servicio</string>
+    <string name="dashboard_stop_service">⏹️ Detener Servicio</string>
+    <string name="dashboard_quick_settings_title">⚙️ Acceso Rápido a Configuración</string>
+    <string name="dashboard_quick_monitor">📱 Elegir Apps</string>
+    <string name="dashboard_quick_banners">🔔 Configurar Banners</string>
+    <string name="dashboard_quick_actions_title">⚡ Acciones Rápidas</string>
+    <string name="dashboard_quick_permissions">🔧 Permisos</string>
+    <string name="dashboard_quick_status">🛡️ Estado</string>
+    <string name="dashboard_quick_settings">⚙️ Ajustes</string>
+    <string name="dashboard_quick_stats">📊 Tiempos</string>
+    <string name="dashboard_footer_suggestions">¿Tienes sugerencias? Escríbeme a</string>
+    <string name="dashboard_footer_like_app">¿Te sirve esta herramienta? </string>
+    <string name="dashboard_footer_buy_coffee">Invítame un café ☕</string>
+    <string name="dashboard_footer_version">v1.0.0</string>
+    <string name="dashboard_service_active">✅ Servicio activo</string>
+    <string name="dashboard_service_stopped">⭕ Servicio detenido</string>
+    
+    <!-- =========================================== -->
+    <!-- FRAGMENT: STATS                             -->
+    <!-- =========================================== -->
+    <string name="stats_time_range_today">📅 Estadísticas - Hoy</string>
+    <string name="stats_total_label">⏱️ Total</string>
+    <string name="stats_apps_label">📊 Apps</string>
+    <string name="stats_refresh">↻ Recargar</string>
+    <string name="stats_export">📤 Exportar</string>
+    <string name="stats_details">📋 Detalles</string>
+    <string name="stats_chart_title">📊 Distribución de Uso (Hoy)</string>
+    <string name="stats_calculating">Calculando…</string>
+    <string name="stats_loading">Cargando…</string>
+    <string name="stats_no_data">No hay datos de uso hoy</string>
+    <string name="stats_error">Error al cargar datos</string>
+    
+    <!-- =========================================== -->
+    <!-- FRAGMENT: SETTINGS                          -->
+    <!-- =========================================== -->
+    <string name="settings_general_title">⚙️ Configuración General</string>
+    <string name="settings_dark_mode">Tema oscuro</string>
+    <string name="settings_theme_light">☀️ Claro</string>
+    <string name="settings_theme_dark">🌙 Oscuro</string>
+    <string name="settings_banner_frequency_label">Frecuencia de los banners:</string>
+    <string name="settings_banner_behavior_info">⏱️ El banner permanece visible hasta que lo cierres con un click</string>
+    <string name="settings_notifications_title">🔔 Notificaciones</string>
+    <string name="settings_auto_start">Inicio automático</string>
+    <string name="settings_auto_start_manual">⭕ Manual</string>
+    <string name="settings_auto_start_auto">✅ Automático</string>
+    <string name="settings_battery_opt">Optimización batería</string>
+    <string name="settings_battery_on">✅ Activa</string>
+    <string name="settings_battery_off">⚠️ Inactiva</string>
+    <string name="settings_vibration">Vibración</string>
+    <string name="settings_vibration_on">✅ Activa</string>
+    <string name="settings_vibration_off">🔇 Sin vibración</string>
+    <string name="settings_sound">Sonido</string>
+    <string name="settings_sound_on">🔔 Activo</string>
+    <string name="settings_sound_off">🔇 Silencio</string>
+    <string name="settings_reports_title">📊 Reportes</string>
+    <string name="settings_daily_export">Exportación diaria automática</string>
+    <string name="settings_export_auto">✅ Automática</string>
+    <string name="settings_export_manual">⭕ Manual</string>
+    <string name="settings_save">💾 Guardar</string>
+    <string name="settings_reset">🔄 Restablecer</string>
+    <string name="settings_last_update">Última actualización: %s</string>
+    <string name="settings_saved_dialog_title">⚙️ Configuraciones Guardadas</string>
+    <string name="settings_reset_dialog_title">Restablecer Configuraciones</string>
+    <string name="settings_reset_dialog_message">¿Estás seguro de querer restablecer todas las configuraciones?</string>
+    
+    <!-- =========================================== -->
+    <!-- SPINNER: INTERVALOS DE BANNER               -->
+    <!-- =========================================== -->
+    <string-array name="banner_interval_labels">
+        <item>10 segundos (DEMO)</item>
+        <item>1 minuto</item>
+        <item>2 minutos</item>
+        <item>3 minutos</item>
+        <item>5 minutos</item>
+        <item>10 minutos</item>
+        <item>15 minutos</item>
+        <item>20 minutos</item>
+        <item>30 minutos</item>
+        <item>45 minutos</item>
+        <item>60 minutos</item>
+    </string-array>
+    
+    <integer-array name="banner_interval_values">
+        <item>-1</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>5</item>
+        <item>10</item>
+        <item>15</item>
+        <item>20</item>
+        <item>30</item>
+        <item>45</item>
+        <item>60</item>
+    </integer-array>
+    
+    <!-- =========================================== -->
+    <!-- BANNER OVERLAY                              -->
+    <!-- =========================================== -->
+    <string name="banner_app_label"> %s</string>
+    <string name="banner_today_prefix">Hoy: %s</string>
+    <string name="banner_session_time">Sesión: %s</string>
+    <string name="banner_today_total">Hoy: %s</string>
+    
+    <!-- =========================================== -->
+    <!-- DIALOG: SELECCIÓN DE APPS                   -->
+    <!-- =========================================== -->
+    <string name="dialog_select_apps_title">📱 Seleccionar Apps</string>
+    <string name="dialog_select_all">✓ Todas</string>
+    <string name="dialog_deselect_all">✗ Ninguna</string>
+    <string name="dialog_cancel">Cancelar</string>
+    <string name="dialog_confirm">Confirmar</string>
+    <string name="dialog_apps_selected_count">%d apps seleccionadas</string>
+    
+    <!-- =========================================== -->
+    <!-- DIALOG: PERMISOS                            -->
+    <!-- =========================================== -->
+    <string name="permission_dialog_title">Configuración de Permisos</string>
+    <string name="permission_usage_stats_instructions">🔍 Busca \'%s\' en la lista</string>
+    <string name="error_overlay_permission">❌ Necesitas permiso de overlay</string>
+    
+    <!-- =========================================== -->
+    <!-- DIALOG: EXPORTAR                            -->
+    <!-- =========================================== -->
+    <string name="export_dialog_title">📤 Exportar Estadísticas</string>
+    <string name="export_csv">CSV</string>
+    <string name="export_json">JSON</string>
+    
+    <!-- =========================================== -->
+    <!-- DIALOG: DETALLES DE USO                     -->
+    <!-- =========================================== -->
+    <string name="details_dialog_title">📊 Detalles de Uso</string>
+    
+    <!-- =========================================== -->
+    <!-- DIALOG: RESUMEN DEL SISTEMA                 -->
+    <!-- =========================================== -->
+    <string name="summary_dialog_title">📱 Resumen del Sistema</string>
+    
+    <!-- =========================================== -->
+    <!-- DIALOG: CONFIRMACIÓN DE GUARDADO            -->
+    <!-- =========================================== -->
+    <string name="settings_saved_summary">⚙️ CONFIGURACIONES GUARDADAS:\n\n• Tema: %s\n• Intervalo: %s\n• Inicio automático: %s\n• Optimización batería: %s\n• Vibración: %s\n• Sonido: %s\n• Exportación automática: %s\n\n✅ El banner permanece visible hasta que lo cierres manualmente</string>
+    
+    <!-- =========================================== -->
+    <!-- TEST BANNERS                                -->
+    <!-- =========================================== -->
+    <string name="test_banner_shown">✅ Banner mostrado (15s)</string>
+    <string name="log_test_banner">🧪 Mostrando banner de prueba</string>
+    <string name="log_custom_banner">📨 Mostrando banner personalizado:</string>
+    
+    <!-- =========================================== -->
+    <!-- SPLASH ACTIVITY                             -->
+    <!-- =========================================== -->
+    <string name="splash_author">by Gonzalo Benites</string>
+    
+    <!-- =========================================== -->
+    <!-- NAVIGATION HEADER                           -->
+    <!-- =========================================== -->
+    <string name="nav_header_subtitle">Monitorea tu tiempo conscientemente</string>
+    <string name="nav_header_author">by Gonzalo Benites</string>
+    <string name="nav_header_version">v1.2.2</string>
+    
+    <!-- =========================================== -->
+    <!-- ITEM: STAT LEGEND                           -->
+    <!-- =========================================== -->
+    <string name="legend_app_name_placeholder">App Name</string>
+    <string name="legend_app_time_placeholder">0m</string>
+    <string name="legend_app_percentage_placeholder">0%%</string>
+    
+    <!-- =========================================== -->
+    <!-- ITEM: STAT                                  -->
+    <!-- =========================================== -->
+    <string name="item_stat_app_placeholder">📱 WhatsApp</string>
+    <string name="item_stat_time_placeholder">1h 22m</string>
+    <string name="item_stat_details_placeholder">8 sesiones hoy</string>
+    
+    <!-- =========================================== -->
+    <!-- ITEM: REAL STAT                             -->
+    <!-- =========================================== -->
+    <string name="item_real_stat_app_placeholder">Nombre de la App</string>
+    <string name="item_real_stat_sessions_placeholder">%d sesiones</string>
+    
+    <!-- =========================================== -->
+    <!-- ITEM: SIMPLE APP                            -->
+    <!-- =========================================== -->
+    <string name="item_simple_app_placeholder">Nombre de la App</string>
+    <string name="item_app_icon_desc">App icon</string>
+    
+    <!-- =========================================== -->
+    <!-- FRAGMENT: SIMPLE                            -->
+    <!-- =========================================== -->
+    <string name="simple_fragment_placeholder">%s\n\n(En desarrollo - Próximamente)</string>
+    
+    <!-- =========================================== -->
+    <!-- TEXTOS COMUNES Y UTILIDADES                 -->
+    <!-- =========================================== -->
     <string name="start">Iniciar</string>
     <string name="stop">Detener</string>
     <string name="pause">Pausar</string>
@@ -53,31 +276,47 @@
     <string name="delete">Eliminar</string>
     <string name="refresh">Actualizar</string>
     <string name="export">Exportar</string>
-    <string name="import_data">Importar</string>  <!-- ¡CORREGIDO! -->
+    <string name="import_data">Importar</string>
     <string name="clear">Limpiar</string>
     <string name="reset">Reiniciar</string>
     
-    <!-- Estados del servicio -->
     <string name="service_active">Servicio activo</string>
     <string name="service_inactive">Servicio inactivo</string>
     <string name="service_paused">Servicio pausado</string>
     
-    <!-- Mensajes informativos -->
     <string name="no_data_available">No hay datos disponibles</string>
     <string name="loading">Cargando…</string>
     <string name="error_occurred">Ocurrió un error</string>
+    <string name="error_open_link">No se puede abrir el enlace</string>
     <string name="success">Éxito</string>
     
-    <!-- Configuración -->
+    <!-- =========================================== -->
+    <!-- CONFIGURACIÓN GENERAL                       -->
+    <!-- =========================================== -->
     <string name="enable_dark_mode">Modo oscuro</string>
     <string name="enable_notifications">Notificaciones</string>
     <string name="enable_vibration">Vibración</string>
     <string name="enable_sound">Sonido</string>
     <string name="auto_start">Inicio automático</string>
     
-    <!-- Acerca de -->
+    <!-- =========================================== -->
+    <!-- ACERCA DE                                   -->
+    <!-- =========================================== -->
     <string name="app_version">Versión %s</string>
     <string name="app_description">Monitor de uso de aplicaciones para controlar tu tiempo en cada app</string>
     <string name="developer">Desarrollador: Gonzalo Benites</string>
     <string name="privacy_policy">Política de privacidad</string>
+    
+    <!-- =========================================== -->
+    <!-- SERVICIO Y TOASTS                           -->
+    <!-- =========================================== -->
+    <string name="service_started">Servicio de monitoreo iniciado</string>
+    <string name="permission_required">Permisos requeridos</string>
+    <string name="select_apps">Seleccionar apps a monitorear</string>
+    <string name="no_apps_selected">No hay apps seleccionadas para monitorear</string>
+    
+    <!-- Quick Access -->
+    <string name="quick_access">Acceso Rápido</string>
+    <string name="today_summary">Resumen de Hoy</string>
+    <string name="view_details">Ver detalles completos</string>
 </resources>

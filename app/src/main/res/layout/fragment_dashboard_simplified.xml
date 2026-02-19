@@ -12,6 +12,7 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- Tarjeta Principal: Dashboard -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -35,7 +36,7 @@
                         android:id="@+id/tvDashboardTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🏠 Dashboard"
+                        android:text="@string/dashboard_title"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:textColor="?android:attr/textColorPrimary"
@@ -50,7 +51,7 @@
                         android:layout_centerVertical="true"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:src="@android:drawable/ic_menu_compass"
-                        android:contentDescription="Cambiar tema"
+                        android:contentDescription="@string/dashboard_change_theme"
                         android:padding="12dp"
                         android:tint="?attr/colorAccent"/>
                 </RelativeLayout>
@@ -70,7 +71,7 @@
                         android:id="@+id/tvServiceStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Estado del servicio"
+                        android:text="@string/dashboard_service_status_label"
                         android:textSize="16sp"
                         android:textColor="?android:attr/textColorPrimary"/>
                 </LinearLayout>
@@ -90,7 +91,7 @@
                         android:id="@+id/tvMonitoredAppsCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0 apps monitoreadas"
+                        android:text="@string/dashboard_monitored_count"
                         android:textSize="16sp"
                         android:textColor="?android:attr/textColorPrimary"/>
                 </LinearLayout>
@@ -99,7 +100,7 @@
                     android:id="@+id/btnToggleService"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="▶️ Iniciar Servicio"
+                    android:text="@string/dashboard_start_service"
                     android:textSize="16sp"
                     android:padding="12dp"
                     android:backgroundTint="?attr/colorPrimary"
@@ -107,6 +108,7 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
+        <!-- Tarjeta: Acceso Rápido a Configuración -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -124,7 +126,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="⚙️ Acceso Rápido a Configuración"
+                    android:text="@string/dashboard_quick_settings_title"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="?android:attr/textColorPrimary"
@@ -134,7 +136,7 @@
                     android:id="@+id/btnQuickMonitor"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="📱 Elegir Apps"
+                    android:text="@string/dashboard_quick_monitor"
                     android:layout_marginBottom="12dp"
                     android:backgroundTint="?attr/colorPrimary"/>
 
@@ -142,11 +144,12 @@
                     android:id="@+id/btnQuickBannerSettings"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="🔔 Configurar Banners"
+                    android:text="@string/dashboard_quick_banners"
                     android:backgroundTint="?attr/colorAccent"/>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
+        <!-- Tarjeta: Acciones Rápidas -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -164,7 +167,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="⚡ Acciones Rápidas"
+                    android:text="@string/dashboard_quick_actions_title"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp"/>
@@ -179,13 +182,13 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginEnd="8dp"
-                        android:text="🔧 Permisos"/>
+                        android:text="@string/dashboard_quick_permissions"/>
                     <Button
                         android:id="@+id/btnQuickSummary"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="🛡️ Estado"/>
+                        android:text="@string/dashboard_quick_status"/>
                 </LinearLayout>
 
                 <LinearLayout
@@ -199,88 +202,89 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginEnd="8dp"
-                        android:text="⚙️ Ajustes"/>
+                        android:text="@string/dashboard_quick_settings"/>
                     <Button
                         android:id="@+id/btnGoToStats"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="📊 Tiempos"/>
+                        android:text="@string/dashboard_quick_stats"/>
                 </LinearLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
+        <!-- Footer -->
         <LinearLayout
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:gravity="center_horizontal"
-    android:paddingTop="24dp"
-    android:paddingBottom="16dp">
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="0.5dp"
-        android:background="#33AAAAAA"
-        android:layout_marginBottom="12dp"
-        android:layout_marginHorizontal="20dp"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="¿Tienes sugerencias? Escríbeme a"
-        android:textSize="13sp"
-        android:textColor="?android:attr/textColorSecondary" />
-
-    <TextView
-        android:id="@+id/tvEmail"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="benitesgonzalogaston@gmail.com"
-        android:textSize="13sp"
-        android:textColor="#E57373"
-        android:paddingTop="2dp"
-        android:background="?android:attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true"/>
-
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="8dp"
-        android:gravity="center_vertical">
-
-        <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="¿Te sirve esta herramienta? "
-            android:textSize="13sp"
-            android:textColor="?android:attr/textColorSecondary" />
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="24dp"
+            android:paddingBottom="16dp">
 
-        <TextView
-            android:id="@+id/btnBuyCoffee"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Invítame un café ☕"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:textColor="#E57373"
-            android:background="?android:attr/selectableItemBackground"
-            android:clickable="true"
-            android:focusable="true"/>
-    </LinearLayout>
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0.5dp"
+                android:background="#33AAAAAA"
+                android:layout_marginBottom="12dp"
+                android:layout_marginHorizontal="20dp"/>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="v1.0.0"
-        android:textSize="10sp"
-        android:alpha="0.5"
-        android:layout_marginTop="12dp"
-        android:textColor="?android:attr/textColorSecondary" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/dashboard_footer_suggestions"
+                android:textSize="13sp"
+                android:textColor="?android:attr/textColorSecondary" />
 
-</LinearLayout>
+            <TextView
+                android:id="@+id/tvEmail"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="benitesgonzalogaston@gmail.com"
+                android:textSize="13sp"
+                android:textColor="#E57373"
+                android:paddingTop="2dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"/>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/dashboard_footer_like_app"
+                    android:textSize="13sp"
+                    android:textColor="?android:attr/textColorSecondary" />
+
+                <TextView
+                    android:id="@+id/btnBuyCoffee"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/dashboard_footer_buy_coffee"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#E57373"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"/>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/dashboard_footer_version"
+                android:textSize="10sp"
+                android:alpha="0.5"
+                android:layout_marginTop="12dp"
+                android:textColor="?android:attr/textColorSecondary" />
+
+        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>

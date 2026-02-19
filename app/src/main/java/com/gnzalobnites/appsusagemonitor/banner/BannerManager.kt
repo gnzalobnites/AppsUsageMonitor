@@ -80,7 +80,7 @@ class BannerManager(private val context: Context) {
         // Registrar receiver
         context.registerReceiver(appExitReceiver, IntentFilter("APP_EXIT_DETECTED"))
         
-        Log.d("BannerManager", "✅ Inicializado con componentes separados")
+        Log.d("BannerManager", context.getString(R.string.log_test_banner))
     }
 
     // ======================================================
@@ -383,13 +383,14 @@ class BannerManager(private val context: Context) {
             }
             activity.startActivity(intent)
             Toast.makeText(context, 
-                "🔍 Busca '${activity.getString(R.string.app_name)}' en la lista", 
+                context.getString(R.string.permission_usage_stats_instructions, 
+                    context.getString(R.string.app_name)), 
                 Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             try {
                 activity.startActivity(Intent(Settings.ACTION_SETTINGS))
             } catch (e2: Exception) {
-                Toast.makeText(context, "No se pudo abrir configuración", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.error_open_link), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -398,7 +399,7 @@ class BannerManager(private val context: Context) {
     // MÉTODOS DE PRUEBA
     // ======================================================
 
-    fun showTestBanner(testMessage: String = "🧪 BANNER DE PRUEBA") {
+    fun showTestBanner(testMessage: String = context.getString(R.string.log_test_banner)) {
         testUtils.showTestBanner(testMessage) {
             // Banner cerrado
         }

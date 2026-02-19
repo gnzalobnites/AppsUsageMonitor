@@ -1,9 +1,6 @@
 package com.gnzalobnites.appsusagemonitor.fragments
 
-// Agrega ESTE import
 import com.gnzalobnites.appsusagemonitor.banner.BannerManager
-
-// El resto del código permanece igual
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -201,14 +198,17 @@ class DashboardFragment : Fragment() {
             
             updateThemeButtonIcon()
             
-            val themeMessage = if (newIsDark) "🌙 Tema oscuro activado" else "☀️ Tema claro activado"
+            val themeMessage = if (newIsDark) 
+                getString(R.string.settings_theme_dark) 
+            else 
+                getString(R.string.settings_theme_light)
             Toast.makeText(requireContext(), themeMessage, Toast.LENGTH_SHORT).show()
             
             requireActivity().recreate()
             
         } catch (e: Exception) {
             Log.e(TAG, "💥 toggleTheme ERROR: ${e.message}", e)
-            Toast.makeText(requireContext(), "Error al cambiar tema", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.error_occurred), Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -218,10 +218,10 @@ class DashboardFragment : Fragment() {
             
             if (isDarkMode) {
                 btnThemeToggle.setImageResource(R.drawable.ic_light_mode)
-                btnThemeToggle.contentDescription = "Cambiar a tema claro"
+                btnThemeToggle.contentDescription = getString(R.string.settings_theme_light)
             } else {
                 btnThemeToggle.setImageResource(R.drawable.ic_dark_mode)
-                btnThemeToggle.contentDescription = "Cambiar a tema oscuro"
+                btnThemeToggle.contentDescription = getString(R.string.settings_theme_dark)
             }
         } catch (e: Exception) {
             Log.e(TAG, "💥 updateThemeButtonIcon ERROR: ${e.message}", e)
@@ -272,36 +272,36 @@ class DashboardFragment : Fragment() {
             val usageStatsPerm = bannerManager.hasUsageStatsPermission()
             
             val message = StringBuilder().apply {
-                append("📋 ESTADO DE PERMISOS:\n\n")
+                append(getString(R.string.permission_dialog_title) + ":\n\n")
                 append("• Permiso Overlay: ")
-                append(if(overlayPerm) "✅ CONCEDIDO" else "❌ FALTA")
+                append(if(overlayPerm) "✅ " + getString(R.string.dialog_yes) else "❌ " + getString(R.string.dialog_no))
                 append("\n")
                 append("• Servicio Accesibilidad: ")
-                append(if(accessibilityPerm) "✅ ACTIVADO" else "❌ FALTA")
+                append(if(accessibilityPerm) "✅ " + getString(R.string.dialog_yes) else "❌ " + getString(R.string.dialog_no))
                 append("\n")
                 append("• Datos de Uso (precisión): ")
-                append(if(usageStatsPerm) "✅ CONCEDIDO" else "⚠️ RECOMENDADO")
+                append(if(usageStatsPerm) "✅ " + getString(R.string.dialog_yes) else "⚠️ " + getString(R.string.dialog_no))
                 append("\n\n")
                 
                 when {
                     !overlayPerm && !accessibilityPerm -> 
-                        append("Necesitas ambos permisos básicos para que la app funcione.")
+                        append(getString(R.string.error_overlay_permission))
                     !overlayPerm -> 
-                        append("Necesitas el permiso de overlay para mostrar banners.")
+                        append("❌ " + getString(R.string.error_overlay_permission))
                     !accessibilityPerm -> 
-                        append("Necesitas activar el servicio de accesibilidad.")
+                        append(getString(R.string.permission_required))
                     else -> 
-                        append("✅ Todos los permisos básicos están concedidos.\n\nRecomendamos activar 'Datos de Uso' para mayor precisión.")
+                        append(getString(R.string.monitor_usage_stats_off))
                 }
             }
             
             AlertDialog.Builder(requireContext())
-                .setTitle("Configuración de Permisos")
+                .setTitle(getString(R.string.permission_dialog_title))
                 .setMessage(message.toString())
-                .setPositiveButton("Configurar") { _, _ ->
+                .setPositiveButton(getString(R.string.settings_save)) { _, _ ->
                     showPermissionOptionsDialog(overlayPerm, accessibilityPerm, usageStatsPerm)
                 }
-                .setNegativeButton("Cancelar", null)
+                .setNegativeButton(getString(R.string.dialog_cancel), null)
                 .show()
                 
         } catch (e: Exception) {
@@ -318,33 +318,33 @@ class DashboardFragment : Fragment() {
         val actions = mutableListOf<() -> Unit>()
         
         if (!overlayPerm) {
-            options.add("🔲 Permiso Overlay")
+            options.add("🔲 " + getString(R.string.permission_dialog_title))
             actions.add { requestOverlayPermission() }
         }
         
         if (!accessibilityPerm) {
-            options.add("♿ Servicio Accesibilidad")
+            options.add("♿ " + getString(R.string.permissions_title))
             actions.add { requestAccessibilityPermission() }
         }
         
         if (!usageStatsPerm) {
-            options.add("📊 Datos de Uso (recomendado)")
+            options.add("📊 " + getString(R.string.monitor_usage_stats_off))
             actions.add { requestUsageStatsPermission() }
         }
         
         if (options.isEmpty()) {
-            Toast.makeText(requireContext(), "✅ Todos los permisos están configurados", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "✅ " + getString(R.string.success), Toast.LENGTH_SHORT).show()
             return
         }
         
         val items = options.toTypedArray()
         
         AlertDialog.Builder(requireContext())
-            .setTitle("Selecciona permiso a configurar")
+            .setTitle(getString(R.string.permissions_title))
             .setItems(items) { _, which ->
                 actions[which].invoke()
             }
-            .setNegativeButton("Cancelar", null)
+            .setNegativeButton(getString(R.string.dialog_cancel), null)
             .show()
     }
     
@@ -358,7 +358,7 @@ class DashboardFragment : Fragment() {
             )
             startActivity(intent)
             Toast.makeText(requireContext(), 
-                "Activa 'Mostrar sobre otras apps'", 
+                getString(R.string.error_overlay_permission), 
                 Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Log.e(TAG, "💥 requestOverlayPermission ERROR: ${e.message}", e)
@@ -372,7 +372,7 @@ class DashboardFragment : Fragment() {
             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
             startActivity(intent)
             Toast.makeText(requireContext(), 
-                "Busca 'Apps Usage Monitor' en Servicios instalados", 
+                getString(R.string.permission_usage_stats_instructions, "Apps Usage Monitor"), 
                 Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Log.e(TAG, "💥 requestAccessibilityPermission ERROR: ${e.message}", e)
@@ -399,7 +399,7 @@ class DashboardFragment : Fragment() {
             handler.postDelayed({
                 try {
                     checkServiceStatus()
-                    Toast.makeText(requireContext(), "✅ Servicio iniciado", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.service_started), Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
                     Log.e(TAG, "❌ Error en callback de inicio: ${e.message}")
                 }
@@ -407,7 +407,7 @@ class DashboardFragment : Fragment() {
             
         } catch (e: Exception) {
             Log.e(TAG, "💥 startService ERROR: ${e.message}", e)
-            Toast.makeText(requireContext(), "❌ Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "❌ ${getString(R.string.error_occurred)}: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -419,11 +419,11 @@ class DashboardFragment : Fragment() {
             requireContext().stopService(intent)
             
             updateServiceStatusUI(false)
-            Toast.makeText(requireContext(), "⏹️ Servicio detenido", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.service_inactive), Toast.LENGTH_SHORT).show()
             
         } catch (e: Exception) {
             Log.e(TAG, "💥 stopService ERROR: ${e.message}", e)
-            Toast.makeText(requireContext(), "❌ Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "❌ ${getString(R.string.error_occurred)}: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -448,14 +448,14 @@ class DashboardFragment : Fragment() {
             val errorRed = context.resources.getColor(R.color.error_red, context.theme)
             
             if (isRunning) {
-                tvServiceStatus.text = "✅ Servicio activo"
+                tvServiceStatus.text = getString(R.string.dashboard_service_active)
                 tvServiceStatus.setTextColor(successGreen)
-                btnToggleService.text = "⏹️ Detener Servicio"
+                btnToggleService.text = getString(R.string.dashboard_stop_service)
                 btnToggleService.setBackgroundColor(errorRed)
             } else {
-                tvServiceStatus.text = "⭕ Servicio detenido"
+                tvServiceStatus.text = getString(R.string.dashboard_service_stopped)
                 tvServiceStatus.setTextColor(errorRed)
-                btnToggleService.text = "▶️ Iniciar Servicio"
+                btnToggleService.text = getString(R.string.dashboard_start_service)
                 btnToggleService.setBackgroundColor(successGreen)
             }
         } catch (e: Exception) {
@@ -466,7 +466,7 @@ class DashboardFragment : Fragment() {
     private fun updateMonitoredAppsCount() {
         try {
             val count = viewModel.monitoredApps.value?.size ?: 0
-            tvMonitoredAppsCount.text = "$count apps monitoreadas"
+            tvMonitoredAppsCount.text = getString(R.string.dashboard_monitored_count, count)
         } catch (e: Exception) {
             Log.e(TAG, "💥 updateMonitoredAppsCount ERROR: ${e.message}", e)
         }
@@ -481,23 +481,23 @@ class DashboardFragment : Fragment() {
             val usageStatsPerm = bannerManager.hasUsageStatsPermission()
             
             val summary = StringBuilder().apply {
-                append("📱 RESUMEN DEL SISTEMA\n\n")
-                append("• Apps monitoreadas: ${monitoredApps.size}\n")
-                append("• Banners: ")
-                append(if (bannerEnabled) "✅ ACTIVADOS" else "⭕ DESACTIVADOS")
+                append(getString(R.string.summary_dialog_title) + "\n\n")
+                append("• " + getString(R.string.dashboard_monitored_count, monitoredApps.size) + "\n")
+                append("• " + getString(R.string.monitor_enable_banners) + ": ")
+                append(if (bannerEnabled) "✅ " + getString(R.string.dialog_yes) else "⭕ " + getString(R.string.dialog_no))
                 append("\n")
-                append("• Servicio: ")
-                append(if (isServiceRunning()) "✅ ACTIVO" else "⭕ INACTIVO")
+                append("• " + getString(R.string.service_active) + ": ")
+                append(if (isServiceRunning()) "✅ " + getString(R.string.service_active) else "⭕ " + getString(R.string.service_inactive))
                 append("\n")
-                append("• Modo preciso (UsageStats): ")
-                append(if (usageStatsPerm) "✅ ACTIVADO" else "⚠️ NO (recomendado)")
+                append("• " + getString(R.string.monitor_usage_stats_on) + ": ")
+                append(if (usageStatsPerm) "✅ " + getString(R.string.dialog_yes) else "⚠️ " + getString(R.string.dialog_no))
                 append("\n\n")
                 
                 if (monitoredApps.isEmpty()) {
-                    append("⚠️ No hay apps monitoreadas\n")
-                    append("Ve a 'Monitor' para agregar apps")
+                    append("⚠️ " + getString(R.string.no_apps_selected) + "\n")
+                    append(getString(R.string.select_apps))
                 } else {
-                    append("Apps monitoreadas:\n")
+                    append(getString(R.string.monitor_selected_apps_label) + "\n")
                     var count = 0
                     val iterator = monitoredApps.iterator()
                     while (iterator.hasNext() && count < 5) {
@@ -507,16 +507,16 @@ class DashboardFragment : Fragment() {
                         count++
                     }
                     if (monitoredApps.size > 5) {
-                        append("  ... y ${monitoredApps.size - 5} más")
+                        append(getString(R.string.dialog_apps_selected_count, monitoredApps.size - 5))
                     }
                 }
             }
             
             AlertDialog.Builder(requireContext())
-                .setTitle("Resumen del Sistema")
+                .setTitle(getString(R.string.summary_dialog_title))
                 .setMessage(summary.toString())
-                .setPositiveButton("OK", null)
-                .setNeutralButton("Ir a Monitor") { _, _ ->
+                .setPositiveButton(getString(R.string.dialog_yes), null)
+                .setNeutralButton(getString(R.string.monitor_title)) { _, _ ->
                     navigateToMonitor()
                 }
                 .show()
@@ -540,7 +540,7 @@ class DashboardFragment : Fragment() {
         try {
             val activity = activity
             if (activity is com.gnzalobnites.appsusagemonitor.MainNavActivity) {
-                activity.loadFragment(MonitorFragment(), "Monitoreo")
+                activity.loadFragment(MonitorFragment(), getString(R.string.monitor_title))
             }
         } catch (e: Exception) {
             Log.e(TAG, "💥 navigateToMonitor ERROR: ${e.message}", e)
@@ -551,7 +551,7 @@ class DashboardFragment : Fragment() {
         try {
             val activity = activity
             if (activity is com.gnzalobnites.appsusagemonitor.MainNavActivity) {
-                activity.loadFragment(SettingsFragment(), "Configuración")
+                activity.loadFragment(SettingsFragment(), getString(R.string.settings_title))
             }
         } catch (e: Exception) {
             Log.e(TAG, "💥 navigateToSettings ERROR: ${e.message}", e)
@@ -562,7 +562,7 @@ class DashboardFragment : Fragment() {
         try {
             val activity = activity
             if (activity is com.gnzalobnites.appsusagemonitor.MainNavActivity) {
-                activity.loadFragment(StatsFragment(), "Estadísticas")
+                activity.loadFragment(StatsFragment(), getString(R.string.stats_title))
             }
         } catch (e: Exception) {
             Log.e(TAG, "💥 navigateToStats ERROR: ${e.message}", e)
@@ -594,12 +594,12 @@ class DashboardFragment : Fragment() {
         try {
             val intent = Intent(Intent.ACTION_SENDTO).apply {
                 data = Uri.parse("mailto:benitesgonzalogaston@gmail.com")
-                putExtra(Intent.EXTRA_SUBJECT, "Sugerencia para Apps Usage Monitor")
+                putExtra(Intent.EXTRA_SUBJECT, getString(R.string.dashboard_footer_suggestions))
             }
             startActivity(intent)
         } catch (e: Exception) {
             Log.e(TAG, "Error enviando email: ${e.message}")
-            Toast.makeText(requireContext(), "No hay app de correo instalada", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.error_open_link), Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -610,7 +610,7 @@ class DashboardFragment : Fragment() {
             startActivity(intent)
         } catch (e: Exception) {
             Log.e(TAG, "Error abriendo enlace: ${e.message}")
-            Toast.makeText(requireContext(), "No se puede abrir el enlace", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.error_open_link), Toast.LENGTH_SHORT).show()
         }
     }
     
