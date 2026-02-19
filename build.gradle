@@ -1,15 +1,14 @@
 buildscript {
-    ext.kotlin_version = '1.3.72'
+    ext.kotlin_version = '1.6.21'  // Actualizado para compatibilidad
     
     repositories {
         google()
-        jcenter() // JCenter sigue siendo necesario para algunas dependencias antiguas
-        mavenCentral()
+        mavenCentral()  // Reemplaza a jcenter()
     }
     
     dependencies {
-        // ACTUALIZADO: Plugin de Android Gradle 4.2.2 (compatible con Gradle 7.6.4)
-        classpath 'com.android.tools.build:gradle:4.2.2'
+        // ACTUALIZADO: Plugin de Android Gradle 7.4.2 (compatible con Java 21)
+        classpath 'com.android.tools.build:gradle:7.4.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -17,7 +16,6 @@ buildscript {
 allprojects {
     repositories {
         google()
-        jcenter()
         mavenCentral()
         maven { url "https://jitpack.io" }
     }
