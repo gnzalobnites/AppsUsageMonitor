@@ -35,14 +35,16 @@ class BannerScheduler(
         }
         
         val intervalMs = userPreferences.getBannerIntervalMs()
-        val safeIntervalMs = if (intervalMs < 1000) 5000L else intervalMs
+        // Asegurar un mínimo de 5 segundos para evitar problemas
+        val safeIntervalMs = if (intervalMs < 5000) 5000L else intervalMs
         
         Log.d("BannerScheduler", "📅 Programando banner en ${safeIntervalMs/1000} seg")
         
         showBannerRunnable?.let { handler.removeCallbacks(it) }
         showBannerRunnable = Runnable {
-            Log.d("BannerScheduler", "🔔 EJECUTANDO banner")
+            Log.d("BannerScheduler", "🔔 EJECUTANDO banner programado")
             onShowBanner()
+            nextBannerScheduled = false
         }
         
         handler.postDelayed(showBannerRunnable!!, safeIntervalMs)
@@ -51,10 +53,12 @@ class BannerScheduler(
     }
     
     fun bannerShown() {
+        Log.d("BannerScheduler", "✅ Banner mostrado, marcando como no programado")
         nextBannerScheduled = false
     }
     
     fun cancelAll() {
+        Log.d("BannerScheduler", "🛑 Cancelando todos los banners programados")
         showBannerRunnable?.let { handler.removeCallbacks(it) }
         showBannerRunnable = null
         nextBannerScheduled = false

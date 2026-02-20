@@ -1,0 +1,1040 @@
+=== LISTADO DE ARCHIVOS EN BANNER ===
+total 63
+drwx------. 2 test test  3452 Feb 20 00:49 .
+drwx------. 4 test test  3452 Feb 19 23:55 ..
+-rw-------. 1 test test  5052 Feb 16 15:48 BannerForegroundMonitor.kt
+-rw-------. 1 test test 14131 Feb 20 00:36 BannerManager.kt
+-rw-------. 1 test test  1018 Feb 14 13:40 BannerModels.kt
+-rw-------. 1 test test  2292 Feb 20 00:35 BannerScheduler.kt
+-rw-------. 1 test test  1222 Feb 14 13:39 BannerState.kt
+-rw-------. 1 test test  4715 Feb 19 14:07 BannerTestUtils.kt
+-rw-------. 1 test test  5913 Feb 20 00:35 BannerUIController.kt
+-rw-------. 1 test test  1018 Feb 20 00:49 SessionInfo.kt
+
+=== CONTENIDO DE LOS ARCHIVOS ===
+
+========================================
+ARCHIVO: app/src/main/java/com/gnzalobnites/appsusagemonitor/banner/BannerForegroundMonitor.kt
+========================================
+package com.gnzalobnites.appsusagemonitor.banner
+
+import android.app.AppOpsManager
+import android.app.usage.UsageStatsManager
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+
+class BannerForegroundMonitor(
+    private val context: Context,
+    private val onAppExit: () -> Unit
+) {
+    private val handler = Handler(Looper.getMainLooper())
+    private var checkRunnable: Runnable? = null
+    private val CHECK_INTERVAL_MS = 500L // Más frecuente para detectar salida rápido
+    
+    private lateinit var usageStatsManager: UsageStatsManager
+    private var currentPackageName: String? = null
+    private var wasInForeground = true
+    
+    fun initialize() {
+        this.usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+    }
+    
+    fun startMonitoring(packageName: String) {
+        stopMonitoring()
+        currentPackageName = packageName
+        wasInForeground = true
+        
+        checkRunnable = object : Runnable {
+            override fun run() {
+                val wasInForegroundBefore = wasInForeground
+                wasInForeground = checkIfInForeground()
+                
+                // Si antes estaba en foreground y ahora no → SALIÓ DE LA APP
+                if (wasInForegroundBefore && !wasInForeground) {
+                    Log.d("ForegroundMonitor", "🚪 Usuario SALIÓ de: $packageName")
+                    
+                    // Enviar broadcast inmediato
+                    val intent = Intent("APP_EXIT_DETECTED").apply {
+                        putExtra("packageName", packageName)
+                        putExtra("timestamp", System.currentTimeMillis())
+                    }
+                    context.sendBroadcast(intent)
+                    
+                    // Llamar al callback
+                    onAppExit()
+                    
+                    // Detener monitoreo
+                    stopMonitoring()
+                } else {
+                    // Seguir monitoreando
+                    handler.postDelayed(this, CHECK_INTERVAL_MS)
+                }
+            }
+        }
+        
+        handler.post(checkRunnable!!)
+        Log.d("ForegroundMonitor", "👁️ Monitoreo iniciado para: $packageName")
+    }
+    
+    fun stopMonitoring() {
+        checkRunnable?.let { handler.removeCallbacks(it) }
+        checkRunnable = null
+        currentPackageName = null
+    }
+    
+    private fun checkIfInForeground(): Boolean {
+        val pkg = currentPackageName ?: return true
+        
+        if (!hasUsageStatsPermission()) {
+            // Sin permiso, asumimos que sigue en foreground para no cerrar falsamente
+            return true
+        }
+        
+        return try {
+            val currentTime = System.currentTimeMillis()
+            val stats = usageStatsManager.queryUsageStats(
+                UsageStatsManager.INTERVAL_BEST,
+                currentTime - 2000,
+                currentTime
+            )
+            
+            if (stats.isNullOrEmpty()) return true
+            
+            // Ordenar por último uso (más reciente primero)
+            val sorted = stats.sortedByDescending { it.lastTimeUsed }
+            val topApp = sorted.firstOrNull()
+            
+            val isInForeground = topApp?.packageName == pkg
+            Log.d("ForegroundMonitor", "🔍 $pkg en foreground: $isInForeground (top: ${topApp?.packageName})")
+            
+            isInForeground
+            
+        } catch (e: Exception) {
+            Log.e("ForegroundMonitor", "Error: ${e.message}")
+            true
+        }
+    }
+    
+    fun isAppInForeground(packageName: String): Boolean {
+        if (!hasUsageStatsPermission()) return true
+        
+        return try {
+            val currentTime = System.currentTimeMillis()
+            val stats = usageStatsManager.queryUsageStats(
+                UsageStatsManager.INTERVAL_BEST,
+                currentTime - 1000,
+                currentTime
+            )
+            
+            if (stats.isNullOrEmpty()) return true
+            
+            val topApp = stats.sortedByDescending { it.lastTimeUsed }.firstOrNull()
+            topApp?.packageName == packageName
+            
+        } catch (e: Exception) {
+            Log.e("ForegroundMonitor", "Error: ${e.message}")
+            true
+        }
+    }
+    
+    fun hasUsageStatsPermission(): Boolean {
+        return try {
+            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                appOps.checkOpNoThrow(
+                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    android.os.Process.myUid(),
+                    context.packageName
+                )
+            } else {
+                AppOpsManager.MODE_DEFAULT
+            }
+            mode == AppOpsManager.MODE_ALLOWED
+        } catch (e: Exception) {
+            false
+        }
+    }
+}
+
+========================================
+ARCHIVO: app/src/main/java/com/gnzalobnites/appsusagemonitor/banner/BannerManager.kt
+========================================
+package com.gzalobnites.appsusagemonitor.banner
+
+import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.graphics.PixelFormat
+import android.os.Build
+import android.provider.Settings
+import android.util.Log
+import android.view.Gravity
+import android.view.MotionEvent
+import android.view.WindowManager
+import android.widget.Toast
+import androidx.core.content.ContextCompat
+import com.gnzalobnites.appsusagemonitor.AppDatabase
+import com.gnzalobnites.appsusagemonitor.R
+import com.gnzalobnites.appsusagemonitor.UserPreferences
+import kotlinx.coroutines.*
+
+class BannerManager(private val context: Context) {
+
+    private lateinit var userPreferences: UserPreferences
+    private lateinit var database: AppDatabase
+    private lateinit var uiController: BannerUIController
+    private lateinit var scheduler: BannerScheduler
+    private lateinit var foregroundMonitor: BannerForegroundMonitor
+    private lateinit var testUtils: BannerTestUtils
+
+    private var bannerState = BannerState.HIDDEN
+    private var currentSession: SessionInfo? = null
+    private var windowManager: WindowManager? = null
+    private var isBannerAddedToWindow = false
+
+    private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var updateJob: Job? = null
+
+    private val appExitReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "APP_EXIT_DETECTED") {
+                handleAppExit()
+            }
+        }
+    }
+
+    // ======================================================
+    // INICIALIZACIÓN
+    // ======================================================
+    fun initialize(userPrefs: UserPreferences, db: AppDatabase) {
+        this.userPreferences = userPrefs
+        this.database = db
+        this.windowManager = ContextCompat.getSystemService(context, WindowManager::class.java)
+
+        uiController = BannerUIController(context).apply {
+            createBannerView()
+            bannerView?.setOnTouchListener { v, event ->
+                if (event.action == MotionEvent.ACTION_OUTSIDE) {
+                    false
+                } else {
+                    // Siempre procesamos clics cuando el banner está visible
+                    bannerState != BannerState.HIDDEN
+                }
+            }
+        }
+
+        scheduler = BannerScheduler(userPreferences) { showBanner() }
+        foregroundMonitor = BannerForegroundMonitor(context) { handleAppExit() }.also { it.initialize() }
+        testUtils = BannerTestUtils(context).apply { initialize(windowManager!!) }
+
+        // Registrar receiver con flags según versión de Android
+        try {
+            val intentFilter = IntentFilter("APP_EXIT_DETECTED")
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.registerReceiver(
+                    appExitReceiver,
+                    intentFilter,
+                    Context.RECEIVER_NOT_EXPORTED
+                )
+            } else {
+                context.registerReceiver(appExitReceiver, intentFilter)
+            }
+            Log.d("BannerManager", "✅ BroadcastReceiver registrado")
+        } catch (e: Exception) {
+            Log.e("BannerManager", "❌ Error registrando receiver: ${e.message}")
+        }
+
+        Log.d("BannerManager", "✅ Inicializado.")
+    }
+
+    // ======================================================
+    // GESTIÓN DE SESIÓN
+    // ======================================================
+    fun startSession(packageName: String) {
+        Log.d("BannerManager", "🚀 INICIANDO SESIÓN para: $packageName")
+        val appName = getAppName(packageName)
+        currentSession = SessionInfo(packageName, System.currentTimeMillis(), appName)
+        bannerState = BannerState.HIDDEN
+        foregroundMonitor.startMonitoring(packageName)
+
+        if (userPreferences.showBanner) {
+            scheduler.scheduleNextBanner(bannerState, true)
+        }
+    }
+
+    fun endSession() {
+        Log.d("BannerManager", "⏹️ FINALIZANDO SESIÓN")
+        foregroundMonitor.stopMonitoring()
+        scheduler.cancelAll()
+        removeBannerFromWindow()
+        currentSession = null
+        bannerState = BannerState.HIDDEN
+    }
+
+    // ======================================================
+    // MOSTRAR/OCULTAR BANNER
+    // ======================================================
+    private fun showBanner() {
+        val session = currentSession ?: return
+        if (!foregroundMonitor.isAppInForeground(session.packageName)) {
+            Log.d("BannerManager", "⏭️ App no en foreground")
+            return
+        }
+        if (bannerState != BannerState.HIDDEN) return
+
+        try {
+            if (!isBannerAddedToWindow) {
+                val params = createBannerParams()
+                windowManager?.addView(uiController.bannerView, params)
+                isBannerAddedToWindow = true
+            }
+
+            // Configurar en modo minimizado (esperando)
+            uiController.setupWaitingUI(session) { onBannerClicked() }
+            bannerState = BannerState.VISIBLE_WAITING
+            scheduler.bannerShown()
+            startLiveUpdates()
+            
+            Log.d("BannerManager", "✅ Banner mostrado en modo minimizado")
+
+        } catch (e: Exception) {
+            Log.e("BannerManager", "❌ Error mostrando banner: ${e.message}")
+            bannerState = BannerState.HIDDEN
+        }
+    }
+
+    private fun onBannerClicked() {
+        Log.d("BannerManager", "👆 Banner clickeado - Estado actual: $bannerState")
+        
+        when (bannerState) {
+            BannerState.VISIBLE_WAITING -> {
+                // PRIMER CLICK: expandir
+                Log.d("BannerManager", "➡️ Expandiendo banner (primer click)")
+                expandBanner()
+            }
+            BannerState.VISIBLE_EXPANDED -> {
+                // SEGUNDO CLICK: cerrar
+                Log.d("BannerManager", "➡️ Cerrando banner (segundo click)")
+                closeBannerAndScheduleNext()
+            }
+            else -> {
+                Log.d("BannerManager", "⚠️ Click en estado inesperado: $bannerState")
+            }
+        }
+    }
+
+    private fun expandBanner() {
+        managerScope.launch {
+            val session = currentSession ?: return@launch
+            val timeStats = getCurrentTimeStats()
+            
+            // Expandir el banner
+            uiController.expandBanner(timeStats, session.appName)
+            bannerState = BannerState.VISIBLE_EXPANDED
+            
+            Log.d("BannerManager", "🔄 Banner expandido")
+        }
+    }
+
+    private fun closeBannerAndScheduleNext() {
+        Log.d("BannerManager", "🔴 Cerrando banner y programando siguiente")
+        
+        // Animar cierre
+        uiController.hideWithAnimation {
+            // Después de la animación, ocultar completamente
+            bannerState = BannerState.HIDDEN
+            
+            // Programar el próximo banner si la sesión sigue activa
+            if (currentSession != null) {
+                scheduler.scheduleNextBanner(bannerState, true)
+            }
+            
+            Log.d("BannerManager", "✅ Banner cerrado, próximo programado")
+        }
+        
+        stopLiveUpdates()
+    }
+
+    private fun removeBannerFromWindow() {
+        try {
+            if (isBannerAddedToWindow) {
+                uiController.bannerView?.let { view ->
+                    windowManager?.removeView(view)
+                }
+                isBannerAddedToWindow = false
+                Log.d("BannerManager", "🗑️ Banner quitado del window manager")
+            }
+        } catch (e: Exception) {
+            Log.e("BannerManager", "Error al quitar banner: ${e.message}")
+            isBannerAddedToWindow = false
+        }
+    }
+
+    private fun handleAppExit() {
+        Log.d("BannerManager", "👋 Usuario salió - OCULTANDO BANNER")
+        removeBannerFromWindow()
+        endSession()
+        context.sendBroadcast(Intent("BANNER_HIDDEN"))
+    }
+
+    // ======================================================
+    // WINDOW PARAMS
+    // ======================================================
+    private fun createBannerParams(): WindowManager.LayoutParams {
+        return WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                WindowManager.LayoutParams.TYPE_PHONE
+            },
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.END
+            y = 100
+        }
+    }
+
+    // ======================================================
+    // ACTUALIZACIONES EN VIVO
+    // ======================================================
+    private val UPDATE_INTERVAL_MS = 1000L
+
+    private fun startLiveUpdates() {
+        stopLiveUpdates()
+        
+        updateJob = managerScope.launch {
+            while (bannerState != BannerState.HIDDEN && currentSession != null) {
+                try {
+                    val session = currentSession ?: break
+                    val timeStats = getCurrentTimeStats()
+                    
+                    when (bannerState) {
+                        BannerState.VISIBLE_EXPANDED -> {
+                            uiController.updateExpandedContent(timeStats, session.appName)
+                        }
+                        BannerState.VISIBLE_WAITING -> {
+                            uiController.updateMinimizedContent(timeStats, session.appName)
+                        }
+                        else -> {}
+                    }
+                    
+                    delay(UPDATE_INTERVAL_MS)
+                    
+                } catch (e: Exception) {
+                    Log.e("BannerManager", "Error en live updates: ${e.message}")
+                    break
+                }
+            }
+        }
+    }
+
+    private fun stopLiveUpdates() {
+        updateJob?.cancel()
+        updateJob = null
+    }
+
+    // ======================================================
+    // UTILIDADES
+    // ======================================================
+    private suspend fun getCurrentTimeStats(): TimeStats {
+        val session = currentSession ?: return TimeStats(0, 0)
+        val todayTotal = getTodayTotal(session.packageName)
+        return TimeStats(session.getDuration(), todayTotal)
+    }
+
+    private suspend fun getTodayTotal(packageName: String): Long {
+        return withContext(Dispatchers.IO) {
+            try {
+                val now = System.currentTimeMillis()
+                val calendar = java.util.Calendar.getInstance().apply {
+                    timeInMillis = now
+                    set(java.util.Calendar.HOUR_OF_DAY, 0)
+                    set(java.util.Calendar.MINUTE, 0)
+                    set(java.util.Calendar.SECOND, 0)
+                    set(java.util.Calendar.MILLISECOND, 0)
+                }
+                val todayMidnight = calendar.timeInMillis
+                database.usageDao().getAppTimeToday(packageName, todayMidnight, now)
+            } catch (e: Exception) {
+                Log.e("BannerManager", "Error DB: ${e.message}")
+                0L
+            }
+        }
+    }
+
+    private fun getAppName(packageName: String): String {
+        return try {
+            val pm = context.packageManager
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            pm.getApplicationLabel(appInfo).toString()
+        } catch (e: Exception) {
+            packageName
+        }
+    }
+
+    // ======================================================
+    // PERMISOS Y PRUEBAS
+    // ======================================================
+    fun hasUsageStatsPermission(): Boolean = foregroundMonitor.hasUsageStatsPermission()
+
+    fun requestUsageStatsPermission(activity: Activity) {
+        try {
+            val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            activity.startActivity(intent)
+            Toast.makeText(context,
+                context.getString(R.string.permission_usage_stats_instructions,
+                    context.getString(R.string.app_name)),
+                Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            try {
+                activity.startActivity(Intent(Settings.ACTION_SETTINGS))
+            } catch (e2: Exception) {
+                Toast.makeText(context, context.getString(R.string.error_open_link), Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun showTestBanner(testMessage: String = context.getString(R.string.log_test_banner)) {
+        testUtils.showTestBanner(testMessage) { /* Banner cerrado */ }
+    }
+    
+    fun showTikTokBanner(message: String, durationSeconds: Int) = showTestBanner(message)
+    fun forceStopTestBanner() = testUtils.hideTestBanner()
+    fun setNinjaMode(enabled: Boolean) { Log.d("BannerManager", "Modo premium ${if (enabled) "activado" else "desactivado"}") }
+
+    // ======================================================
+    // LIMPIEZA
+    // ======================================================
+    fun cleanup() {
+        try {
+            context.unregisterReceiver(appExitReceiver)
+        } catch (e: Exception) {
+            Log.e("BannerManager", "Error unregistering receiver: ${e.message}")
+        }
+        
+        foregroundMonitor.stopMonitoring()
+        scheduler.cancelAll()
+        stopLiveUpdates()
+        removeBannerFromWindow()
+        testUtils.hideTestBanner()
+        managerScope.cancel()
+    }
+}
+
+========================================
+ARCHIVO: app/src/main/java/com/gnzalobnites/appsusagemonitor/banner/BannerModels.kt
+========================================
+package com.gnzalobnites.appsusagemonitor.banner
+
+/**
+ * Información de la sesión actual
+ */
+data class SessionInfo(
+    val packageName: String,
+    val startTime: Long,
+    val appName: String = ""
+) {
+    fun getDuration(): Long = System.currentTimeMillis() - startTime
+}
+
+/**
+ * Estadísticas de tiempo
+ */
+data class TimeStats(
+    val sessionTime: Long,
+    val todayTotal: Long,
+    val formattedSessionTime: String = formatTime(sessionTime),
+    val formattedTodayTotal: String = formatTime(todayTotal)
+) {
+    companion object {
+        fun formatTime(milliseconds: Long): String {
+            val totalSeconds = milliseconds / 1000
+            val hours = totalSeconds / 3600
+            val minutes = (totalSeconds % 3600) / 60
+            val seconds = totalSeconds % 60
+            
+            return if (hours > 0) {
+                String.format("%d:%02d:%02d", hours, minutes, seconds)
+            } else {
+                String.format("%02d:%02d", minutes, seconds)
+            }
+        }
+    }
+}
+
+========================================
+ARCHIVO: app/src/main/java/com/gnzalobnites/appsusagemonitor/banner/BannerScheduler.kt
+========================================
+package com.gnzalobnites.appsusagemonitor.banner
+
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import com.gnzalobnites.appsusagemonitor.UserPreferences
+
+class BannerScheduler(
+    private val userPreferences: UserPreferences,
+    private val onShowBanner: () -> Unit
+) {
+    private val handler = Handler(Looper.getMainLooper())
+    private var showBannerRunnable: Runnable? = null
+    private var nextBannerScheduled = false
+    
+    fun scheduleNextBanner(currentState: BannerState, hasActiveSession: Boolean): Boolean {
+        if (!userPreferences.showBanner) {
+            Log.d("BannerScheduler", "❌ Banner desactivado")
+            return false
+        }
+        
+        if (!hasActiveSession) {
+            Log.d("BannerScheduler", "❌ No hay sesión activa")
+            return false
+        }
+        
+        if (currentState != BannerState.HIDDEN) {
+            Log.d("BannerScheduler", "⚠️ Estado actual: $currentState, no se programa")
+            return false
+        }
+        
+        if (nextBannerScheduled) {
+            Log.d("BannerScheduler", "⚠️ Ya hay banner programado")
+            return false
+        }
+        
+        val intervalMs = userPreferences.getBannerIntervalMs()
+        // Asegurar un mínimo de 5 segundos para evitar problemas
+        val safeIntervalMs = if (intervalMs < 5000) 5000L else intervalMs
+        
+        Log.d("BannerScheduler", "📅 Programando banner en ${safeIntervalMs/1000} seg")
+        
+        showBannerRunnable?.let { handler.removeCallbacks(it) }
+        showBannerRunnable = Runnable {
+            Log.d("BannerScheduler", "🔔 EJECUTANDO banner programado")
+            onShowBanner()
+            nextBannerScheduled = false
+        }
+        
+        handler.postDelayed(showBannerRunnable!!, safeIntervalMs)
+        nextBannerScheduled = true
+        return true
+    }
+    
+    fun bannerShown() {
+        Log.d("BannerScheduler", "✅ Banner mostrado, marcando como no programado")
+        nextBannerScheduled = false
+    }
+    
+    fun cancelAll() {
+        Log.d("BannerScheduler", "🛑 Cancelando todos los banners programados")
+        showBannerRunnable?.let { handler.removeCallbacks(it) }
+        showBannerRunnable = null
+        nextBannerScheduled = false
+    }
+}
+
+========================================
+ARCHIVO: app/src/main/java/com/gnzalobnites/appsusagemonitor/banner/BannerState.kt
+========================================
+package com.gnzalobnites.appsusagemonitor.banner
+
+/**
+ * Estados posibles del banner
+ */
+enum class BannerState {
+    HIDDEN,           // Oculto, esperando próximo intervalo
+    VISIBLE_WAITING,  // Visible, esperando que usuario interactúe
+    VISIBLE_EXPANDED  // Expandido por el usuario
+}
+
+/**
+ * Configuración visual del banner
+ */
+data class BannerVisualConfig(
+    val accentColor: Int,
+    val backgroundColor: Int,
+    val textColorPrimary: Int,
+    val textColorSecondary: Int
+)
+
+/**
+ * Mensajes motivacionales predefinidos
+ */
+object MotivationalMessages {
+    val messages = listOf(
+        "⏳ El tiempo es tu recurso más valioso",
+        "👀 Sé consciente de dónde inviertes tu tiempo",
+        "💡 ¿Estás usando este tiempo como realmente quieres?",
+        "🎯 Cada minuto cuenta hacia tus objetivos",
+        "🔄 Considera si necesitas un cambio de actividad",
+        "📱 ¿Esta app te acerca a tus metas?",
+        "🌟 Tu atención vale oro - ¿Dónde la pones?",
+        "⚡ Este momento es una elección - ¿La estás haciendo consciente?",
+        "🔔 Recordatorio: tú controlas tu tiempo",
+        "🌱 Pequeños cambios en el uso diario crean grandes resultados"
+    )
+}
+
+========================================
+ARCHIVO: app/src/main/java/com/gnzalobnites/appsusagemonitor/banner/BannerTestUtils.kt
+========================================
+package com.gnzalobnites.appsusagemonitor.banner
+
+import android.content.Context
+import android.graphics.PixelFormat
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
+import android.util.Log
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.MotionEvent
+import android.view.View
+import android.view.WindowManager
+import android.widget.ImageView
+import android.widget.TextView
+import android.widget.Toast
+import com.gnzalobnites.appsusagemonitor.R
+
+class BannerTestUtils(private val context: Context) {
+    
+    private var windowManager: WindowManager? = null
+    private var testBannerView: View? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private var hideRunnable: Runnable? = null
+    
+    fun initialize(windowManager: WindowManager) {
+        this.windowManager = windowManager
+    }
+    
+    fun showTestBanner(
+        testMessage: String,
+        onBannerClosed: () -> Unit
+    ) {
+        if (!Settings.canDrawOverlays(context)) {
+            Toast.makeText(context, "Sin permiso de overlay", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        Log.d("BannerTest", "🧪 Mostrando banner de prueba")
+        
+        try {
+            hideTestBanner()
+            
+            val inflater = LayoutInflater.from(context)
+            testBannerView = inflater.inflate(R.layout.banner_overlay, null)
+            
+            testBannerView?.apply {
+                // Configuración de texto para modo prueba
+                findViewById<TextView>(R.id.sessionTimeText)?.text = "🧪 MODO PRUEBA"
+                findViewById<TextView>(R.id.todayTotalText)?.visibility = View.GONE
+                findViewById<TextView>(R.id.motivationalMessage)?.apply {
+                    visibility = View.VISIBLE
+                    text = testMessage
+                    setTextColor(android.graphics.Color.WHITE)
+                }
+                findViewById<TextView>(R.id.appNameLabel)?.visibility = View.GONE
+                
+                // Configuración del icono (Estilo Notification Badge)
+                findViewById<ImageView>(R.id.ninjaIcon)?.apply {
+                    visibility = View.VISIBLE
+                    setImageResource(R.drawable.ic_time_alert) // Asegura el nuevo recurso
+                    alpha = 1.0f         // Máximo brillo
+                    clearColorFilter()   // Sin tintes que alteren el naranja/rojo
+                }
+                
+                setOnClickListener {
+                    Log.d("BannerTest", "🖱️ Banner cerrado por usuario")
+                    hideTestBanner()
+                    onBannerClosed()
+                }
+                
+                setOnTouchListener { v, event ->
+                    if (event.action == MotionEvent.ACTION_OUTSIDE) {
+                        false 
+                    } else {
+                        v.onTouchEvent(event)
+                    }
+                }
+            }
+            
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                } else {
+                    WindowManager.LayoutParams.TYPE_PHONE
+                },
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                y = 300
+            }
+            
+            windowManager?.addView(testBannerView, params)
+            
+            hideRunnable?.let { handler.removeCallbacks(it) }
+            hideRunnable = Runnable {
+                if (testBannerView != null) {
+                    hideTestBanner()
+                    onBannerClosed()
+                }
+            }
+            handler.postDelayed(hideRunnable!!, 15000)
+            
+        } catch (e: Exception) {
+            Log.e("BannerTest", "Error: ${e.message}")
+        }
+    }
+    
+    fun hideTestBanner() {
+        try {
+            hideRunnable?.let { handler.removeCallbacks(it) }
+            hideRunnable = null
+            
+            testBannerView?.let { view ->
+                windowManager?.removeView(view)
+                testBannerView = null
+            }
+        } catch (e: Exception) {
+            testBannerView = null
+        }
+    }
+}
+
+
+========================================
+ARCHIVO: app/src/main/java/com/gnzalobnites/appsusagemonitor/banner/BannerUIController.kt
+========================================
+package com.gnzalobnites.appsusagemonitor.banner
+
+import android.content.Context
+import android.view.LayoutInflater
+import android.view.View
+import android.view.animation.OvershootInterpolator
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.cardview.widget.CardView
+import com.gnzalobnites.appsusagemonitor.R
+import java.util.*
+
+class BannerUIController(private val context: Context) {
+
+    var bannerView: View? = null
+    private var messageIndex = 0
+    private var isAnimating = false
+
+    fun createBannerView(): View {
+        val inflater = LayoutInflater.from(context)
+        bannerView = inflater.inflate(R.layout.banner_overlay, null).apply {
+            tag = BannerViewReferences(
+                clickableArea = findViewById(R.id.clickableArea),
+                sessionTimeText = findViewById(R.id.sessionTimeText),
+                appNameLabel = findViewById(R.id.appNameLabel),
+                todayTotalText = findViewById(R.id.todayTotalText),
+                motivationalMessage = findViewById(R.id.motivationalMessage),
+                ninjaIcon = findViewById(R.id.ninjaIcon),
+                expandedContent = findViewById(R.id.expandedContent),
+                bannerRootCard = findViewById(R.id.bannerRootCard)
+            )
+        }
+        applyBaseStyling()
+        return bannerView!!
+    }
+
+    fun setupWaitingUI(sessionInfo: SessionInfo, onBannerClick: () -> Unit) {
+        bannerView?.apply {
+            val refs = tag as BannerViewReferences
+            
+            // Configurar textos
+            refs.sessionTimeText?.text = TimeStats.formatTime(sessionInfo.getDuration())
+            refs.appNameLabel?.text = " ${sessionInfo.appName}"
+            
+            // Asegurar que el contenido expandido esté OCULTO
+            refs.expandedContent?.visibility = View.GONE
+            refs.todayTotalText?.visibility = View.GONE
+            refs.motivationalMessage?.visibility = View.GONE
+            
+            refs.ninjaIcon?.visibility = View.VISIBLE
+            refs.ninjaIcon?.alpha = 1.0f
+            
+            // Configurar click listener
+            refs.clickableArea?.setOnClickListener {
+                if (!isAnimating) {
+                    onBannerClick()
+                }
+            }
+        }
+    }
+
+    fun expandBanner(timeStats: TimeStats, appName: String) {
+        if (isAnimating) return
+        isAnimating = true
+        
+        bannerView?.apply {
+            val refs = tag as BannerViewReferences
+            
+            // Mostrar el contenido expandido con animación
+            refs.expandedContent?.let { expanded ->
+                expanded.visibility = View.VISIBLE
+                expanded.alpha = 0f
+                expanded.scaleY = 0.8f
+                
+                expanded.animate()
+                    ?.alpha(1f)
+                    ?.scaleY(1f)
+                    ?.setDuration(300)
+                    ?.setInterpolator(OvershootInterpolator(1.2f))
+                    ?.withEndAction {
+                        isAnimating = false
+                    }
+                    ?.start()
+            }
+            
+            updateExpandedContent(timeStats, appName)
+        }
+    }
+
+    fun updateExpandedContent(timeStats: TimeStats, appName: String) {
+        bannerView?.apply {
+            val refs = tag as BannerViewReferences
+            
+            refs.sessionTimeText?.text = timeStats.formattedSessionTime
+            refs.appNameLabel?.text = " $appName"
+            
+            refs.todayTotalText?.apply {
+                visibility = View.VISIBLE
+                text = "Hoy: ${timeStats.formattedTodayTotal}"
+            }
+            
+            refs.motivationalMessage?.apply {
+                visibility = View.VISIBLE
+                if (Random().nextInt(10) == 0) {
+                    text = getRandomMotivationalMessage()
+                }
+            }
+            
+            refs.ninjaIcon?.visibility = View.VISIBLE
+        }
+    }
+
+    fun updateMinimizedContent(timeStats: TimeStats, appName: String) {
+        bannerView?.apply {
+            val refs = tag as BannerViewReferences
+            
+            refs.sessionTimeText?.text = timeStats.formattedSessionTime
+            refs.appNameLabel?.text = " $appName"
+            
+            // Asegurar que el contenido expandido esté OCULTO
+            refs.expandedContent?.visibility = View.GONE
+            refs.todayTotalText?.visibility = View.GONE
+            refs.motivationalMessage?.visibility = View.GONE
+        }
+    }
+
+    fun hideWithAnimation(onComplete: () -> Unit) {
+        if (isAnimating) return
+        isAnimating = true
+        
+        bannerView?.animate()
+            ?.alpha(0f)
+            ?.scaleX(0.8f)
+            ?.scaleY(0.8f)
+            ?.setDuration(300)
+            ?.withEndAction {
+                // Restauramos alpha y escala para la próxima vez
+                bannerView?.alpha = 1f
+                bannerView?.scaleX = 1f
+                bannerView?.scaleY = 1f
+                isAnimating = false
+                onComplete()
+            }
+            ?.start()
+    }
+
+    private fun applyBaseStyling() {
+        bannerView?.findViewById<CardView>(R.id.bannerRootCard)?.apply {
+            cardElevation = 8f
+            radius = 24f
+        }
+    }
+
+    private fun getRandomMotivationalMessage(): String {
+        messageIndex = (messageIndex + 1) % MotivationalMessages.messages.size
+        return MotivationalMessages.messages[messageIndex]
+    }
+
+    private data class BannerViewReferences(
+        val clickableArea: LinearLayout?,
+        val sessionTimeText: TextView?,
+        val appNameLabel: TextView?,
+        val todayTotalText: TextView?,
+        val motivationalMessage: TextView?,
+        val ninjaIcon: ImageView?,
+        val expandedContent: View?,
+        val bannerRootCard: CardView?
+    )
+}
+
+========================================
+ARCHIVO: app/src/main/java/com/gnzalobnites/appsusagemonitor/banner/SessionInfo.kt
+========================================
+package com.gnzalobnites.appsusagemonitor.banner
+
+/**
+ * Información de la sesión actual
+ */
+data class SessionInfo(
+    val packageName: String,
+    val startTime: Long,
+    val appName: String = ""
+) {
+    fun getDuration(): Long = System.currentTimeMillis() - startTime
+}
+
+/**
+ * Estadísticas de tiempo
+ */
+data class TimeStats(
+    val sessionTime: Long,
+    val todayTotal: Long,
+    val formattedSessionTime: String = formatTime(sessionTime),
+    val formattedTodayTotal: String = formatTime(todayTotal)
+) {
+    companion object {
+        fun formatTime(milliseconds: Long): String {
+            val totalSeconds = milliseconds / 1000
+            val hours = totalSeconds / 3600
+            val minutes = (totalSeconds % 3600) / 60
+            val seconds = totalSeconds % 60
+            
+            return if (hours > 0) {
+                String.format("%d:%02d:%02d", hours, minutes, seconds)
+            } else {
+                String.format("%02d:%02d", minutes, seconds)
+            }
+        }
+    }
+}
+
+=== FIN DEL REPORTE ===

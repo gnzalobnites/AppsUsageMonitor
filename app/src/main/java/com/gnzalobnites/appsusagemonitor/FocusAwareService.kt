@@ -358,41 +358,45 @@ class FocusAwareService : AccessibilityService() {
         }
     }
 
-    private fun endCurrentSession() {
-        val currentTime = System.currentTimeMillis()
-        
-        // Evitar múltiples terminaciones rápidas
-        if ((currentTime - lastSessionEndTime) < MIN_SESSION_END_INTERVAL_MS) {
-            Log.d(TAG, "⏱️ Evitando terminación rápida consecutiva")
-            return
-        }
-        
-        activeSession?.let { session ->
-            if (session.endTime == null) {
-                val duration = currentTime - session.startTime
-                val updatedSession = session.copy(endTime = currentTime)
-                
-                serviceScope.launch {
-                    try {
-                        Log.d(TAG, "⏹️ Finalizando sesión para: ${session.packageName} (duración: ${duration}ms)")
-                        
-                        withContext(Dispatchers.IO) {
-                            database.usageDao().update(updatedSession)
-                        }
-                        
-                        activeSession = null
-                        lastSessionEndTime = currentTime
-                        bannerManager.endSession()
-                        
-                        Log.d(TAG, "✅ Sesión FINALIZADA y guardada")
-                        
-                    } catch (e: Exception) {
-                        Log.e(TAG, "❌ Error finalizando sesión: ${e.message}", e)
+    // En FocusAwareService.kt, asegúrate de que endCurrentSession() sea robusto:
+
+private fun endCurrentSession() {
+    val currentTime = System.currentTimeMillis()
+    
+    // Evitar múltiples terminaciones rápidas
+    if ((currentTime - lastSessionEndTime) < MIN_SESSION_END_INTERVAL_MS) {
+        Log.d(TAG, "⏱️ Evitando terminación rápida consecutiva")
+        return
+    }
+    
+    activeSession?.let { session ->
+        if (session.endTime == null) {
+            val duration = currentTime - session.startTime
+            val updatedSession = session.copy(endTime = currentTime)
+            
+            serviceScope.launch {
+                try {
+                    Log.d(TAG, "⏹️ Finalizando sesión para: ${session.packageName} (duración: ${duration}ms)")
+                    
+                    withContext(Dispatchers.IO) {
+                        database.usageDao().update(updatedSession)
                     }
+                    
+                    activeSession = null
+                    lastSessionEndTime = currentTime
+                    
+                    // IMPORTANTE: Llamar a endSession() del BannerManager
+                    bannerManager.endSession()
+                    
+                    Log.d(TAG, "✅ Sesión FINALIZADA y guardada")
+                    
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Error finalizando sesión: ${e.message}", e)
                 }
             }
         }
     }
+}
 
     private fun updateViewModel(packageName: String) {
         val currentSessionDuration = if (activeSession != null) {
