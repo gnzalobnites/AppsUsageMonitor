@@ -55,10 +55,11 @@
 
 ### 📲 Desde tiendas de aplicaciones
 
-| Tienda | Enlace |
-|--------|--------|
-| **F-Droid** | [![F-Droid](https://img.shields.io/badge/F--Droid-1.2.4-blue)](https://f-droid.org/packages/com.gnzalobnites.appsusagemonitor/) |
-| **APKPure** | [![APKPure](https://img.shields.io/badge/APKPure-1.2.4-orange)](https://apkpure.net/apps-usage-monitor/com.gnzalobnites.appsusagemonitor) |
+| Plataforma | Enlace |
+|------------|--------|
+| **GitHub** | [app-release.apk](https://github.com/gnzalobnites/AppsUsageMonitor/releases/download/v1.2.4/app-release.apk) |
+| **F-Droid** | Próximamente (pendiente de aprobación) |
+| **APKPure** | [Apps Usage Monitor en APKPure](https://apkpure.net/apps-usage-monitor/com.gnzalobnites.appsusagemonitor) |
 
 ### 🔧 Requisitos
 
