@@ -50,6 +50,16 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
+
+    // CONFIGURACIÓN EXPLÍCITA PARA KAPT
+    kapt {
+        useBuildCache = false
+        javacOptions {
+            option("-XaddExports", "jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED")
+            option("-XaddExports", "jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED")
+            option("-XaddExports", "jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED")
+        }
+    }
 }
 
 dependencies {
