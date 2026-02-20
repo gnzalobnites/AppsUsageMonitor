@@ -4,12 +4,14 @@ pluginManagement {
             content {
                 includeGroupByRegex('com\\.android.*')
                 includeGroupByRegex('androidx.*')
+                includeGroupByRegex('com\\.google.*') // Agrega esta línea
             }
         }
         mavenCentral()
         gradlePluginPortal()
     }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
