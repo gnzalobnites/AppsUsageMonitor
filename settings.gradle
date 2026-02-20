@@ -1,8 +1,13 @@
 pluginManagement {
     repositories {
-        gradlePluginPortal()
-        google() // Asegura que google() esté ANTES que mavenCentral
+        google {
+            content {
+                includeGroupByRegex('com\\.android.*')
+                includeGroupByRegex('androidx.*')
+            }
+        }
         mavenCentral()
+        gradlePluginPortal()
     }
 }
 dependencyResolutionManagement {
@@ -14,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = 'AppsUsageMonitor'
+rootProject.name = "AppsUsageMonitor"
 include ':app'
