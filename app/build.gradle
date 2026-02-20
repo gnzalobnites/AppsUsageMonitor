@@ -50,11 +50,6 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
-    
-    // Configuración de kapt
-    kapt {
-        freezeArgs = false
-    }
 }
 
 dependencies {
