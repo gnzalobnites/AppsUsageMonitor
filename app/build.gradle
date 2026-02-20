@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace 'com.gnzalobnites.appsusagemonitor'
-    compileSdk 34
+    compileSdk 33 // CAMBIADO DE 34 A 33
 
     defaultConfig {
         applicationId "com.gnzalobnites.appsusagemonitor"
         minSdk 23
-        targetSdk 34
+        targetSdk 33 // CAMBIADO DE 34 A 33 (para mantener consistencia)
         versionCode 7
         versionName "1.2.4"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -51,7 +51,7 @@ android {
         jvmTarget = '17'
     }
 
-    // CONFIGURACIÓN EXPLÍCITA PARA KAPT
+    // Configuración de kapt (la que ya funciona)
     kapt {
         useBuildCache = false
         javacOptions {
