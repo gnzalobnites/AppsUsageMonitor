@@ -37,3 +37,5 @@ Apps Usage Monitor es una aplicación Android que ayuda a los usuarios a ser má
 1. Clona el repositorio:
 ```bash
 git clone https://github.com/TU_USUARIO/AppsUsageMonitor.git
+
+ 
