@@ -52,10 +52,12 @@ android {
         jvmTarget = '17'
     }
 
-    // Configuración para kapt con Java 21
+    // ======================================================
+    // CONFIGURACIÓN ESPECÍFICA PARA KAPT CON JAVA 21
+    // ======================================================
     kapt {
         javacOptions {
-            // Estos argumentos permiten que kapt acceda a las clases internas de javac
+            // Exportamos los paquetes internos de javac que necesita kapt
             option("-XaddExports", "jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED")
             option("-XaddExports", "jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED")
             option("-XaddExports", "jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED")
