@@ -77,3 +77,9 @@ res.sh
 res.txt
 todo_codigo_kotlin.txt
 todo_codigo_xml.txt
+
+# IDE específico y archivos de respaldo
+.cctgo/
+.androidide/
+*.bak
+*~
