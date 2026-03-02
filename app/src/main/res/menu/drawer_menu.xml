@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <item
+        android:id="@+id/homeFragment"
+        android:icon="@drawable/ic_home"
+        android:title="Inicio" />
+    
+    <item
+        android:id="@+id/appSelectionFragment"
+        android:icon="@drawable/ic_apps"
+        android:title="Seleccionar Apps" />
+    
+    <item
+        android:id="@+id/statisticsFragment"
+        android:icon="@drawable/ic_stats"
+        android:title="Estadísticas" />
+    
+    <item
+        android:id="@+id/settingsFragment"
+        android:icon="@drawable/ic_settings"
+        android:title="Configuración" />
+    
+    
+    <item
+        android:id="@+id/aboutFragment"
+        android:icon="@drawable/ic_info"
+        android:title="Acerca de" />
+    
+</menu>

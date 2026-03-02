@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/expanded_container"
+    android:layout_width="250dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/glass_morphism_background"
+    android:elevation="8dp">
+
+    <TextView
+        android:id="@+id/current_session_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/current_session_label"
+        android:textSize="12sp"
+        android:textColor="#FFFFFF"
+        android:alpha="0.8"
+        android:shadowColor="#000000"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="2"/>
+
+    <TextView
+        android:id="@+id/current_session_time"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/current_session_time_format"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:shadowColor="#000000"
+        android:shadowDx="2"
+        android:shadowDy="2"
+        android:shadowRadius="3"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/total_today_label"
+        android:textSize="12sp"
+        android:textColor="#FFFFFF"
+        android:alpha="0.7"
+        android:shadowColor="#000000"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="2"/>
+
+    <TextView
+        android:id="@+id/total_today_time"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/total_today_time_format"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:shadowColor="#000000"
+        android:shadowDx="2"
+        android:shadowDy="2"
+        android:shadowRadius="3"
+        android:layout_marginBottom="16dp"/>
+
+    <Button
+        android:id="@+id/close_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/close"
+        android:backgroundTint="#44FFFFFF"
+        android:textColor="#FFFFFF"
+        android:alpha="0.9"
+        android:shadowColor="#000000"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="2"/>
+
+</LinearLayout>

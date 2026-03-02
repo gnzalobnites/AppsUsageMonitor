@@ -4,7 +4,7 @@ pluginManagement {
             content {
                 includeGroupByRegex('com\\.android.*')
                 includeGroupByRegex('androidx.*')
-                includeGroupByRegex('com\\.google.*') // Agrega esta línea
+                includeGroupByRegex('com\\.google.*')
             }
         }
         mavenCentral()

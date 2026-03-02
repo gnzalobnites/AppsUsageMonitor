@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<org.appdevforall.codeonthego.layouteditor.editor.palette.layouts.LinearLayoutDesign
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:orientation="vertical"
+	android:padding="16dp"
+	android:minHeight="400dp">
+
+	<org.appdevforall.codeonthego.layouteditor.editor.palette.text.TextViewDesign
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="@string/select_apps_dialog_title"
+		android:textSize="20sp"
+		android:textStyle="bold"
+		android:layout_marginBottom="16dp"
+		android:textColor="?attr/colorPrimary" />
+
+	<org.appdevforall.codeonthego.layouteditor.editor.palette.text.TextViewDesign
+		android:id="@+id/tv_empty_message"
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		android:layout_weight="1"
+		android:text="@string/loading_apps"
+		android:textSize="16sp"
+		android:gravity="center"
+		android:visibility="visible"
+		android:textColor="?android:attr/textColorSecondary" />
+
+	<org.appdevforall.codeonthego.layouteditor.editor.palette.containers.RecyclerViewDesign
+		android:id="@+id/recyclerView_dialog_apps"
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		android:layout_weight="1"
+		app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+		android:clipToPadding="false"
+		android:paddingBottom="8dp"
+		android:visibility="gone" />
+
+	<org.appdevforall.codeonthego.layouteditor.editor.palette.text.TextViewDesign
+		android:id="@+id/tv_selected_count"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="@string/dialog_apps_selected_count"
+		android:textSize="14sp"
+		android:layout_marginVertical="8dp"
+		android:textColor="?android:attr/textColorSecondary" />
+
+	<org.appdevforall.codeonthego.layouteditor.editor.palette.layouts.LinearLayoutDesign
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:gravity="center_horizontal"
+		android:layout_marginTop="8dp">
+
+		<org.appdevforall.codeonthego.layouteditor.editor.palette.buttons.ButtonDesign
+			android:id="@+id/btn_select_all"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:layout_marginEnd="4dp"
+			android:text="@string/select_all"
+			android:enabled="false"
+			style="@style/Widget.AppCompat.Button.Borderless" />
+
+		<org.appdevforall.codeonthego.layouteditor.editor.palette.buttons.ButtonDesign
+			android:id="@+id/btn_deselect_all"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:layout_marginStart="4dp"
+			android:text="@string/deselect_all"
+			android:enabled="false"
+			style="@style/Widget.AppCompat.Button.Borderless" />
+
+	</org.appdevforall.codeonthego.layouteditor.editor.palette.layouts.LinearLayoutDesign>
+
+	<org.appdevforall.codeonthego.layouteditor.editor.palette.layouts.LinearLayoutDesign
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:gravity="center_horizontal"
+		android:layout_marginTop="8dp">
+
+		<org.appdevforall.codeonthego.layouteditor.editor.palette.buttons.ButtonDesign
+			android:id="@+id/btn_cancel_selection"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:layout_marginEnd="4dp"
+			android:text="@string/dialog_cancel"
+			style="@style/Widget.AppCompat.Button.Borderless" />
+
+		<org.appdevforall.codeonthego.layouteditor.editor.palette.buttons.ButtonDesign
+			android:id="@+id/btn_confirm_selection"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:layout_marginStart="4dp"
+			android:text="@string/dialog_confirm"
+			android:enabled="false"
+			android:backgroundTint="?attr/colorPrimary" />
+
+	</org.appdevforall.codeonthego.layouteditor.editor.palette.layouts.LinearLayoutDesign>
+
+</org.appdevforall.codeonthego.layouteditor.editor.palette.layouts.LinearLayoutDesign>

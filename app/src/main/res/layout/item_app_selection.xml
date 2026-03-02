@@ -1,62 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout 
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/appItemContainer"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:orientation="horizontal"
     android:padding="12dp"
-    android:background="?android:attr/selectableItemBackground">
+    android:gravity="center_vertical"
+    android:background="?attr/colorSurface"
+    android:layout_margin="4dp"
+    android:elevation="2dp">
 
     <ImageView
-        android:id="@+id/appIcon"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:contentDescription="@string/item_app_icon_desc"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        android:id="@+id/app_icon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="12dp"
+        android:contentDescription="@null"/>
+
+    <TextView
+        android:id="@+id/app_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textSize="16sp"
+        android:textColor="?attr/colorOnSurface"
+        android:gravity="center_vertical"/>
 
     <CheckBox
-        android:id="@+id/appCheckBox"
+        android:id="@+id/app_checkbox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:buttonTint="?attr/colorAccent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        android:buttonTint="?attr/colorPrimary"/>
 
-    <TextView
-        android:id="@+id/appName"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
-        android:layout_marginEnd="8dp"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:textStyle="bold"
-        android:textSize="16sp"
-        android:textColor="?android:attr/textColorPrimary"
-        android:text="@string/item_simple_app_placeholder"
-        app:layout_constraintStart_toEndOf="@id/appIcon"
-        app:layout_constraintEnd_toStartOf="@id/appCheckBox"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/appPackage"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
-        android:layout_marginTop="4dp"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:textSize="12sp"
-        android:textColor="?android:attr/textColorSecondary"
-        android:text="com.example.package"
-        app:layout_constraintStart_toEndOf="@id/appIcon"
-        app:layout_constraintEnd_toStartOf="@id/appCheckBox"
-        app:layout_constraintTop_toBottomOf="@id/appName"
-        app:layout_constraintBottom_toBottomOf="parent" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

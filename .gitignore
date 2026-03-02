@@ -1,85 +1,37 @@
-# Created by https://www.toptal.com/developers/gitignore/api/android
-# Edit at https://www.toptal.com/developers/gitignore?templates=android
-
-### Android ###
-# Built application files
+# Archivos de compilación y binarios
 *.apk
+*.aar
 *.ap_
 *.aab
-
-# Files for the ART/Dalvik VM
 *.dex
-
-# Java class files
 *.class
+/bin/
+/gen/
+/out/
 
-# Generated files
-bin/
-gen/
-out/
-
-# Gradle files
+# IMPORTANTÍSIMO: Ignorar carpetas de construcción y caché
 .gradle/
 build/
-*/build/
-gradle-app.setting
+app/build/
 
-# Local configuration file (sdk path, etc)
+# Configuración local (SDK path)
 local.properties
 
-# Proguard folder
-proguard/
-
-# Log Files
+# Archivos de logs
 *.log
 
-# Android Studio Navigation editor temp files
-.navigation/
-
-# Android Studio captures folder
-captures/
-
-# IntelliJ
+# Archivos de configuración de IntelliJ/Android Studio
 *.iml
 .idea/
-.idea/workspace.xml
-.idea/tasks.xml
-.idea/gradle.xml
-.idea/assetWizardSettings.xml
-.idea/dictionaries
-.idea/libraries
-.idea/caches
+.navigation/
+captures/
+.externalNativeBuild
+.cxx/
 
-# Keystore files
-*.jks
-*.keystore
+# Evitar archivos temporales de AndroidIDE si lo deseas
+# .androidide/
 
-# Google Services (optional)
-google-services.json
+# Keystores (descomentar si vas a firmar la app)
+# *.jks
+# *.keystore
 
-# Android Profiling
-*.hprof
-
-# macOS
-.DS_Store
-
-# End of https://www.toptal.com/developers/gitignore/api/androidkeystore.properties
-*.jks
-keystore.properties
-
-# Archivos varios
-compilar.sh
-kotlin.sh
-kotlin_temas.sh
-layouts.sh
-layouts.txt
-res.sh
-res.txt
-todo_codigo_kotlin.txt
-todo_codigo_xml.txt
-
-# IDE específico y archivos de respaldo
-.cctgo/
-.androidide/
-*.bak
-*~

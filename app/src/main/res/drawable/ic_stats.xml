@@ -5,19 +5,7 @@
     android:viewportWidth="24"
     android:viewportHeight="24"
     android:tint="?attr/colorControlNormal">
-    
-    <!-- Gráfico de barras -->
     <path
-        android:fillColor="#FF4081"
-        android:pathData="M4,9h3v10H4z" />
-    <path
-        android:fillColor="#3F51B5"
-        android:pathData="M9,13h3v6H9z" />
-    <path
-        android:fillColor="#2196F3"
-        android:pathData="M14,6h3v13h-3z" />
-    <path
-        android:fillColor="#4CAF50"
-        android:pathData="M19,10h3v9h-3z" />
-    
+        android:fillColor="@android:color/white"
+        android:pathData="M5,9.2h3V19H5V9.2z M10.6,5h2.8v14h-2.8V5z M16.2,13H19v6h-2.8V13z" />
 </vector>

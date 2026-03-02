@@ -36,7 +36,7 @@ class SplashActivity : AppCompatActivity() {
     }
     
     private fun navigateToMainActivity() {
-        val intent = Intent(this, MainNavActivity::class.java)
+        val intent = Intent(this, MainActivity::class.java)
         startActivity(intent)
         
         // Finalizar esta actividad para que no se pueda volver atrás
