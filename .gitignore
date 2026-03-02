@@ -32,6 +32,6 @@ captures/
 # .androidide/
 
 # Keystores (descomentar si vas a firmar la app)
-# *.jks
-# *.keystore
+*.jks
+*.keystore
 
