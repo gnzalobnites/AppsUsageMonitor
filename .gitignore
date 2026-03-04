@@ -38,4 +38,4 @@ captures/
 # Secretos y llaves de firma
 keystore.properties
 release.properties
-*.properties
+
