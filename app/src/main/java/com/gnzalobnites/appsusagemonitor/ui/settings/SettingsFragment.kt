@@ -35,7 +35,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 // Forzar re-aplicación del tema después del reinicio
                 Handler(Looper.getMainLooper()).postDelayed({
                     applyTheme(currentTheme)
-                }, 100)
+                }, 500)
             }
         }
     }

@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<org.appdevforall.codeonthego.layouteditor.editor.palette.layouts.ConstraintLayoutDesign
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="?android:attr/windowBackground">
+
+	<org.appdevforall.codeonthego.layouteditor.editor.palette.containers.NestedScrollViewDesign
+		android:id="@+id/scrollView"
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		app:layout_constraintBottom_toTopOf="@+id/container_buttons"
+		app:layout_constraintTop_toTopOf="parent">
+
+		<org.appdevforall.codeonthego.layouteditor.editor.palette.layouts.LinearLayoutDesign
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"
+			android:padding="16dp"
+			android:paddingBottom="0dp"
+			android:gravity="center_horizontal">
+
+			<com.github.mikephil.charting.charts.PieChart
+				android:id="@+id/chart_usage"
+				android:layout_width="match_parent"
+				android:layout_height="300dp"
+				android:layout_marginTop="16dp" />
+
+			<org.appdevforall.codeonthego.layouteditor.editor.palette.text.TextViewDesign
+				android:id="@+id/tv_total_time"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="24dp"
+				android:textSize="20sp"
+				android:textStyle="bold"
+				android:textColor="?attr/colorOnSurface"
+				android:text="@string/total_time_format_placeholder" />
+
+		</org.appdevforall.codeonthego.layouteditor.editor.palette.layouts.LinearLayoutDesign>
+
+	</org.appdevforall.codeonthego.layouteditor.editor.palette.containers.NestedScrollViewDesign>
+
+	<org.appdevforall.codeonthego.layouteditor.editor.palette.layouts.LinearLayoutDesign
+		android:id="@+id/container_buttons"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="vertical"
+		android:paddingHorizontal="16dp"
+		android:paddingTop="8dp"
+		android:paddingBottom="16dp"
+		app:layout_constraintBottom_toTopOf="@+id/container_footer">
+
+		<org.appdevforall.codeonthego.layouteditor.editor.palette.buttons.ButtonDesign
+			android:id="@+id/btn_select_apps"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:text="@string/select_apps"
+			android:textAllCaps="false"
+			app:icon="@drawable/ic_add"
+			style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+		<org.appdevforall.codeonthego.layouteditor.editor.palette.buttons.ButtonDesign
+			android:id="@+id/btn_service_control"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="8dp"
+			android:text="@string/start_monitoring"
+			android:textAllCaps="false"
+			android:backgroundTint="?attr/colorPrimary"
+			android:textColor="?attr/colorOnPrimary" />
+
+	</org.appdevforall.codeonthego.layouteditor.editor.palette.layouts.LinearLayoutDesign>
+
+	<org.appdevforall.codeonthego.layouteditor.editor.palette.layouts.LinearLayoutDesign
+		android:id="@+id/container_footer"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="vertical"
+		android:gravity="center"
+		android:paddingHorizontal="16dp"
+		android:paddingBottom="16dp"
+		app:layout_constraintBottom_toBottomOf="parent">
+
+		<org.appdevforall.codeonthego.layouteditor.editor.palette.widgets.ViewDesign
+			android:layout_width="match_parent"
+			android:layout_height="0.5dp"
+			android:background="#33AAAAAA"
+			android:layout_marginBottom="12dp"
+			android:layout_marginHorizontal="20dp" />
+
+		<org.appdevforall.codeonthego.layouteditor.editor.palette.text.TextViewDesign
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="@string/dashboard_footer_suggestions"
+			android:textSize="13sp"
+			android:textColor="?android:attr/textColorSecondary" />
+
+		<org.appdevforall.codeonthego.layouteditor.editor.palette.text.TextViewDesign
+			android:id="@+id/tvEmailFooter"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="@string/developer_email"
+			android:textSize="13sp"
+			android:textColor="#E57373"
+			android:paddingTop="2dp"
+			android:background="?android:attr/selectableItemBackground"
+			android:clickable="true"
+			android:focusable="true" />
+
+		<org.appdevforall.codeonthego.layouteditor.editor.palette.layouts.LinearLayoutDesign
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:layout_marginTop="8dp"
+			android:gravity="center_vertical">
+
+			<org.appdevforall.codeonthego.layouteditor.editor.palette.text.TextViewDesign
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:text="@string/like_app_question"
+				android:textSize="13sp"
+				android:textColor="?android:attr/textColorSecondary" />
+
+			<org.appdevforall.codeonthego.layouteditor.editor.palette.text.TextViewDesign
+				android:id="@+id/btnBuyCoffeeFooter"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:text="@string/invite_coffee"
+				android:textSize="13sp"
+				android:textStyle="bold"
+				android:textColor="#E57373"
+				android:background="?android:attr/selectableItemBackground"
+				android:clickable="true"
+				android:focusable="true"
+				android:padding="4dp" />
+
+		</org.appdevforall.codeonthego.layouteditor.editor.palette.layouts.LinearLayoutDesign>
+
+		<org.appdevforall.codeonthego.layouteditor.editor.palette.text.TextViewDesign
+			android:id="@+id/tvVersionFooter"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="@string/version_format_placeholder"
+			android:textSize="10sp"
+			android:alpha="0.5"
+			android:layout_marginTop="12dp"
+			android:textColor="?android:attr/textColorSecondary" />
+
+	</org.appdevforall.codeonthego.layouteditor.editor.palette.layouts.LinearLayoutDesign>
+
+</org.appdevforall.codeonthego.layouteditor.editor.palette.layouts.ConstraintLayoutDesign>

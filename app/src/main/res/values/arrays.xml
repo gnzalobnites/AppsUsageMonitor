@@ -1,9 +1,10 @@
 <resources>
     <string-array name="theme_entries">
-        <item>Claro</item>
-        <item>Oscuro</item>
-        <item>Seguir sistema</item>
+        <item>@string/theme_light</item>
+        <item>@string/theme_dark</item>
+        <item>@string/theme_system</item>
     </string-array>
+
     <string-array name="theme_values">
         <item>light</item>
         <item>dark</item>
@@ -11,9 +12,10 @@
     </string-array>
 
     <string-array name="language_entries">
-        <item>Español</item>
-        <item>English</item>
+        <item>@string/lang_spanish</item>
+        <item>@string/lang_english</item>
     </string-array>
+
     <string-array name="language_values">
         <item>es</item>
         <item>en</item>

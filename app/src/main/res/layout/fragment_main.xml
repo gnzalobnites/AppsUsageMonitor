@@ -103,7 +103,7 @@
             android:id="@+id/tvEmailFooter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/developer_email"
+            android:text="benitesgonzalogaston@gmail.com"
             android:textSize="13sp"
             android:textColor="#E57373"
             android:paddingTop="2dp"

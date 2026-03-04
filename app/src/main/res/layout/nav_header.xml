@@ -1,44 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="180dp"
-    android:background="@color/nav_header_background"
-    android:gravity="bottom"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:theme="@style/ThemeOverlay.AppCompat.Dark">
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="180dp"
+	android:background="@color/nav_header_background"
+	android:orientation="vertical"
+	android:padding="16dp"
+	android:theme="@style/ThemeOverlay.AppCompat.Dark"
+	android:gravity="bottom|center">
 
-    <ImageView
-        android:id="@+id/nav_header_logo"
-        android:layout_width="64dp"
-        android:layout_height="64dp"
-        android:src="@drawable/ic_launcher_foreground"
-        android:contentDescription="@string/app_icon_description" />
+	<ImageView
+		android:id="@+id/nav_header_logo"
+		android:layout_width="64dp"
+		android:layout_height="64dp"
+		android:src="@drawable/ic_launcher_foreground"
+		android:contentDescription="@string/app_icon_description" />
 
-    <TextView
-        android:id="@+id/nav_header_app_name"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/app_name"
-        android:textAppearance="@style/TextAppearance.AppCompat.Body1"
-        android:textStyle="bold"
-        android:textSize="18sp" />
+	<TextView
+		android:id="@+id/nav_header_app_name"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="8dp"
+		android:text="@string/app_name"
+		android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+		android:textStyle="bold"
+		android:textSize="18sp"
+		android:gravity="center_horizontal" />
 
-    <TextView
-        android:id="@+id/nav_header_developer"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/developer_name"
-        android:textSize="14sp"
-        android:alpha="0.8" />
+	<TextView
+		android:id="@+id/nav_header_developer"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="@string/developer_name"
+		android:textSize="14sp"
+		android:alpha="0.8"
+		android:gravity="center_horizontal" />
 
-    <TextView
-        android:id="@+id/nav_header_version"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/nav_header_version_placeholder"
-        android:textSize="12sp"
-        android:alpha="0.6" />
+	<TextView
+		android:id="@+id/nav_header_version"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="@string/nav_header_version_placeholder"
+		android:textSize="12sp"
+		android:alpha="0.6"
+		android:gravity="center_horizontal" />
 
 </LinearLayout>

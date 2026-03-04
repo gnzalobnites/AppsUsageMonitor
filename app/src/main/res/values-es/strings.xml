@@ -242,4 +242,12 @@
     <string name="drawer_statistics">Estadísticas</string>
     <string name="drawer_settings">Configuración</string>
     <string name="drawer_about">Acerca de</string>
+
+
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Oscuro</string>
+    <string name="theme_system">Seguir sistema</string>
+    <string name="lang_spanish">Español</string>
+    <string name="lang_english">Inglés</string>
+
 </resources>
