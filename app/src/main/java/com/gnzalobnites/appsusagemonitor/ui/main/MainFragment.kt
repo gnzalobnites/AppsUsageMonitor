@@ -29,7 +29,6 @@ class MainFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: MainViewModel by viewModels()
     
-    // Colores estables para cada app (se barajan una sola vez)
     private val chartColors by lazy { ColorTemplate.MATERIAL_COLORS.toMutableList().apply { shuffle() } }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -44,7 +43,6 @@ class MainFragment : Fragment() {
         setupButtons()
         setupFooter()
         
-        // Cargar estadísticas reales
         viewModel.loadTodayStats()
     }
 
@@ -65,20 +63,16 @@ class MainFragment : Fragment() {
             setCenterTextSize(18f)
             setCenterTextColor(textColor)
             
-            // Configurar leyenda si está visible
-            legend.isEnabled = false // Deshabilitar leyenda para más espacio
+            legend.isEnabled = false
         }
     }
 
     private fun setupObservers() {
-        // Observer 1 - Estadísticas de uso
         viewModel.usageStats.observe(viewLifecycleOwner) { statsMap: Map<String, Long> ->
             updateChartDisplay(statsMap)
         }
         
-        // Observer 2 - Lista de monitoreo (solo para mensajes cuando no hay datos)
         viewModel.monitoredApps.observe(viewLifecycleOwner) { monitoredList ->
-            // Solo actualizar el mensaje si no hay datos de uso
             if (viewModel.usageStats.value.isNullOrEmpty()) {
                 if (monitoredList.isEmpty()) {
                     binding.tvTotalTime.text = getString(R.string.empty_state_no_apps)
@@ -88,14 +82,12 @@ class MainFragment : Fragment() {
             }
         }
         
-        // Observer 3 - Estado del servicio (ahora actualiza el botón en lugar del FAB)
         viewModel.isServiceRunning.observe(viewLifecycleOwner) { isRunning ->
             updateServiceButtonState(isRunning)
         }
     }
     
     private fun updateChartDisplay(statsMap: Map<String, Long>) {
-        // Verificar si hay datos
         if (statsMap.isEmpty()) {
             binding.chartUsage.visibility = View.GONE
             binding.tvTotalTime.visibility = View.VISIBLE
@@ -103,37 +95,14 @@ class MainFragment : Fragment() {
             return
         }
         
-        // --- CAMBIO IMPORTANTE: Filtrar por el día actual ---
-        val startOfToday = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
-
-        // Filtrar el mapa para incluir solo las apps con uso desde el inicio de hoy.
-        // Nota: Este filtro asume que las claves del mapa son paquetes y los valores son la suma total de duración.
-        // Si 'statsMap' ya viene filtrado por día desde el VM, este paso es redundante pero seguro.
-        // Para este ejemplo, aplicamos el filtro basado en la suposición de que los datos en 'statsMap' son de todo el historial.
-        // Idealmente, el ViewModel debería proveer un mapa que ya sean solo los datos de hoy.
-        // Como no tenemos acceso al VM aquí, asumimos que 'loadTodayStats()' del VM ya hace ese filtro.
-        // Por lo tanto, la lógica de filtrado debe estar en MainViewModel.kt
-        // Pero para adherirnos al plan, haremos el filtro aquí como ejemplo de la intención.
-        // -----------------------------------------------------
-
-        // Por ahora, asumimos que statsMap YA SOLO CONTIENE DATOS DE HOY.
-        // Si no es así, deberías modificar MainViewModel para que así sea.
-        
         val entries = ArrayList<PieEntry>()
         var totalMs = 0L
 
-        // Filtrar aplicaciones con menos de 1 minuto de uso (60000 ms)
         statsMap.filter { it.value > 60000 }.forEach { (name, time) ->
             entries.add(PieEntry(time.toFloat(), name))
             totalMs += time
         }
 
-        // Si no hay datos con más de 1 minuto, mostrar todas
         if (entries.isEmpty() && statsMap.isNotEmpty()) {
             Toast.makeText(requireContext(), R.string.all_apps_less_than_minute, Toast.LENGTH_SHORT).show()
             statsMap.forEach { (name, time) ->
@@ -142,7 +111,6 @@ class MainFragment : Fragment() {
             }
         }
 
-        // Obtener colores del tema para los textos
         val textColor = getThemeColor(MaterialR.attr.colorOnSurface)
         
         val dataSet = PieDataSet(entries, "")
@@ -150,23 +118,20 @@ class MainFragment : Fragment() {
         dataSet.sliceSpace = 3f
         dataSet.selectionShift = 5f
         
-        // Usar blanco para los valores sobre las rebanadas de colores
         dataSet.valueFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
             override fun getFormattedValue(value: Float): String {
                 return formatTime(value.toLong())
             }
         }
         dataSet.valueTextSize = 12f
-        dataSet.setValueTextColor(Color.WHITE) // Siempre blanco sobre colores
+        dataSet.setValueTextColor(Color.WHITE)
         
-        // Solo crear PieData si hay entradas
         if (entries.isNotEmpty()) {
             val pieData = PieData(dataSet)
             pieData.setValueTextSize(12f)
             pieData.setValueTextColor(Color.WHITE)
             binding.chartUsage.data = pieData
             
-            // El texto central usa el color del tema
             binding.chartUsage.setCenterText(getString(R.string.today))
             binding.chartUsage.setCenterTextColor(textColor)
         } else {
@@ -177,20 +142,14 @@ class MainFragment : Fragment() {
         
         binding.chartUsage.invalidate()
         
-        // El TextView total usa color del tema (ya configurado en XML)
         binding.tvTotalTime.text = String.format(getString(R.string.total_time_format), formatTime(totalMs))
     }
 
-    /**
-     * Configura los botones de la interfaz
-     */
     private fun setupButtons() {
-        // 1. Botón Seleccionar Apps (Navegación)
         binding.btnSelectApps.setOnClickListener {
             findNavController().navigate(R.id.appSelectionFragment)
         }
 
-        // 2. Botón Iniciar/Detener Servicio
         binding.btnServiceControl.setOnClickListener {
             val intent = Intent(requireContext(), MonitoringService::class.java)
             
@@ -203,60 +162,47 @@ class MainFragment : Fragment() {
                     Toast.makeText(context, R.string.service_started, Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(context, R.string.permission_usage_stats_required, Toast.LENGTH_LONG).show()
-                    // Opcional: Aquí se podría abrir la pantalla de configuración de permisos
                 }
             }
-            // Forzamos actualización visual inmediata
             isServiceRunning(MonitoringService::class.java)
         }
         
-        // Establecer estado inicial del botón
         updateServiceButtonState(isServiceRunning(MonitoringService::class.java))
     }
 
-    /**
-     * Configura el footer con email, versión y enlace de invitación a café
-     */
     private fun setupFooter() {
-        // 1. Configurar la versión dinámica (forma segura sin BuildConfig)
         val versionText = try {
             val packageInfo = requireContext().packageManager.getPackageInfo(requireContext().packageName, 0)
             getString(R.string.version_format, packageInfo.versionName)
         } catch (e: PackageManager.NameNotFoundException) {
-            getString(R.string.version_format, "1.0.0") // Versión por defecto si falla
+            getString(R.string.version_format_placeholder)
         }
         binding.tvVersionFooter.text = versionText
 
-        // 2. Configurar el click del café
         binding.btnBuyCoffeeFooter.setOnClickListener {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://buymeacoffee.com/gnzbenitesh"))
             startActivity(intent)
         }
         
-        // 3. Configurar el click del email
         binding.tvEmailFooter.setOnClickListener {
             val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                data = Uri.parse("mailto:benitesgonzalogaston@gmail.com")
+                data = Uri.parse("mailto:${getString(R.string.developer_email)}")
                 putExtra(Intent.EXTRA_SUBJECT, getString(R.string.email_subject_suggestions))
             }
             
             try {
                 startActivity(emailIntent)
             } catch (e: Exception) {
-                // Si no hay app de email, mostrar un toast
                 Toast.makeText(requireContext(), R.string.error_no_email_app, Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    /**
-     * Actualiza el texto y color del botón de servicio según el estado
-     */
     private fun updateServiceButtonState(isRunning: Boolean) {
         if (isRunning) {
             binding.btnServiceControl.text = getString(R.string.stop_monitoring)
             binding.btnServiceControl.backgroundTintList = 
-                android.content.res.ColorStateList.valueOf(Color.parseColor("#E57373")) // Rojo suave
+                android.content.res.ColorStateList.valueOf(Color.parseColor("#E57373"))
         } else {
             binding.btnServiceControl.text = getString(R.string.start_monitoring)
             binding.btnServiceControl.backgroundTintList = 
@@ -298,9 +244,6 @@ class MainFragment : Fragment() {
         }
     }
 
-    /**
-     * Helper para obtener colores del tema actual
-     */
     private fun getThemeColor(attr: Int): Int {
         val typedValue = android.util.TypedValue()
         requireContext().theme.resolveAttribute(attr, typedValue, true)
@@ -309,9 +252,7 @@ class MainFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        // Actualizar estado del servicio al reanudar
         isServiceRunning(MonitoringService::class.java)
-        // Recargar estadísticas
         viewModel.loadTodayStats()
     }
 

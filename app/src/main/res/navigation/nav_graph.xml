@@ -9,7 +9,7 @@
     <fragment
         android:id="@+id/homeFragment"
         android:name="com.gnzalobnites.appsusagemonitor.ui.main.MainFragment"
-        android:label="Hoy"
+        android:label="@string/nav_home_label"
         tools:layout="@layout/fragment_main">
         <action
             android:id="@+id/action_main_to_selection"
@@ -22,13 +22,13 @@
     <fragment
         android:id="@+id/appSelectionFragment"
         android:name="com.gnzalobnites.appsusagemonitor.ui.selection.AppSelectionFragment"
-        android:label="Seleccionar Apps"
+        android:label="@string/nav_app_selection_label"
         tools:layout="@layout/fragment_app_selection" />
 
     <fragment
         android:id="@+id/statisticsFragment"
         android:name="com.gnzalobnites.appsusagemonitor.ui.stats.StatisticsFragment"
-        android:label="Estadísticas"
+        android:label="@string/nav_statistics_label"
         tools:layout="@layout/fragment_statistics">
         <argument
             android:name="packageName"
@@ -39,14 +39,13 @@
     <fragment
         android:id="@+id/settingsFragment"
         android:name="com.gnzalobnites.appsusagemonitor.ui.settings.SettingsFragment"
-        android:label="Configuración"
+        android:label="@string/nav_settings_label"
         tools:layout="@layout/fragment_settings" />
 
     <fragment
-    android:id="@+id/aboutFragment"
-    android:name="com.gnzalobnites.appsusagemonitor.ui.about.AboutFragment"
-    android:label="Acerca de"
-    tools:layout="@layout/fragment_about" />
-
+        android:id="@+id/aboutFragment"
+        android:name="com.gnzalobnites.appsusagemonitor.ui.about.AboutFragment"
+        android:label="@string/nav_about_label"
+        tools:layout="@layout/fragment_about" />
 
 </navigation>

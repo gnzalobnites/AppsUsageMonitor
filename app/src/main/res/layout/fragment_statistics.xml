@@ -12,7 +12,7 @@
         android:id="@+id/labelSelectApp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Seleccionar Aplicación:"
+        android:text="@string/statistics_select_app_label"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -49,7 +49,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Semana anterior"
+            android:contentDescription="@string/previous_week_description"
             android:src="@android:drawable/ic_media_previous"
             app:tint="?attr/colorPrimary" />
 
@@ -59,17 +59,17 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="Cargando..."
+            android:text="@string/loading_text"
             android:textSize="16sp"
             android:textStyle="bold"
-            tools:text="24 Feb - 02 Mar" />
+            tools:text="@string/week_range_example" />
 
         <ImageButton
             android:id="@+id/btnNextWeek"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Siguiente semana"
+            android:contentDescription="@string/next_week_description"
             android:src="@android:drawable/ic_media_next"
             app:tint="?attr/colorPrimary" />
     </LinearLayout>

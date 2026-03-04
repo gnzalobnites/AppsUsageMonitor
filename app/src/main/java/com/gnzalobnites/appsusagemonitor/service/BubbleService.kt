@@ -48,10 +48,9 @@ class BubbleService : LifecycleService() {
     private var updateJob: Job? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     
-    // Cache para tiempos de hoy
     private var cachedTotalToday: Long = 0L
     private var lastCacheUpdate: Long = 0L
-    private val CACHE_DURATION = 5000L // Actualizar cada 5 segundos
+    private val CACHE_DURATION = 5000L
     
     private val bubbleParams: WindowManager.LayoutParams by lazy {
         WindowManager.LayoutParams(
@@ -66,11 +65,8 @@ class BubbleService : LifecycleService() {
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
-            // MODIFICADO: Cambiar gravedad a TOP para controlar posición vertical desde arriba
             gravity = Gravity.TOP or Gravity.END
             
-            // MODIFICADO: Calcular posición vertical a 1/4 de la pantalla desde arriba
-            // (punto medio entre el borde superior y el centro)
             val displayMetrics = resources.displayMetrics
             val screenHeight = displayMetrics.heightPixels
             y = screenHeight / 4
@@ -121,7 +117,6 @@ class BubbleService : LifecycleService() {
                 currentInterval = interval
                 sessionStartTime = sessionStart
                 
-                // Inicializar caché
                 if (packageName != null) {
                     currentPackageName = packageName
                     refreshTotalTodayCache(packageName)
@@ -140,7 +135,6 @@ class BubbleService : LifecycleService() {
         return START_STICKY
     }
     
-    // Refrescar el caché del total de hoy desde la BD local
     private fun refreshTotalTodayCache(packageName: String) {
         serviceScope.launch {
             try {
@@ -328,10 +322,8 @@ class BubbleService : LifecycleService() {
             bubbleView?.findViewById<View>(R.id.bubble_container)?.visibility = View.GONE
             isExpanded = true
             
-            // Actualizar inmediatamente al expandir
             updateExpandedViewTimes()
             
-            // Iniciar actualizaciones en tiempo real
             startUpdatingTime()
             
             Log.d(TAG, "Expanded view shown")
@@ -383,7 +375,7 @@ class BubbleService : LifecycleService() {
         updateJob = serviceScope.launch {
             while (isActive) {
                 updateExpandedViewTimes()
-                delay(1000) // Actualizar cada segundo
+                delay(1000)
             }
         }
         Log.d(TAG, "Time updates started")
@@ -401,12 +393,10 @@ class BubbleService : LifecycleService() {
         val now = System.currentTimeMillis()
         val sessionDuration = now - sessionStartTime
         
-        // Refrescar caché periódicamente
         if (now - lastCacheUpdate > CACHE_DURATION) {
             refreshTotalTodayCache(currentPackageName!!)
         }
         
-        // Total es el caché + la sesión actual (para incluir lo que llevamos ahora)
         val totalToday = cachedTotalToday + sessionDuration
 
         try {
@@ -429,7 +419,6 @@ class BubbleService : LifecycleService() {
     }
 
     private fun updateExpandedView(packageName: String) {
-        // Este método se mantiene por compatibilidad
         updateExpandedViewTimes()
     }
 

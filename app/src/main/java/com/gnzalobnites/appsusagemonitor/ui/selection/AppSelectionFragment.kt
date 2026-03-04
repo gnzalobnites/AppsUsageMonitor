@@ -65,12 +65,10 @@ class AppSelectionFragment : Fragment() {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerInterval.adapter = adapter
         
-        // Establecer 1 minuto como valor predeterminado (posición 1)
         binding.spinnerInterval.setSelection(1)
     }
 
     private fun setupRecyclerViews() {
-        // Adaptador para apps instaladas
         appsAdapter = AppListAdapter { appInfo ->
             viewModel.toggleAppSelection(appInfo)
         }
@@ -81,7 +79,6 @@ class AppSelectionFragment : Fragment() {
             setHasFixedSize(true)
         }
 
-        // Adaptador para apps monitoreadas
         monitoredAdapter = MonitoredAppsSimpleAdapter { app ->
             viewModel.removeMonitoredApp(app)
         }
@@ -117,7 +114,6 @@ class AppSelectionFragment : Fragment() {
             binding.buttonAddSelected.text = getString(R.string.add_selected_with_count, selectedCount)
         }
 
-        // Observar apps monitoreadas
         viewModel.monitoredApps.observe(viewLifecycleOwner) { monitoredApps ->
             monitoredAdapter.submitList(monitoredApps)
             

@@ -2,6 +2,8 @@ package com.gnzalobnites.appsusagemonitor.ui.settings
 
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.preference.PreferenceFragmentCompat
@@ -21,13 +23,19 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 applyTheme(theme)
             }
             "language" -> {
-                // Obtener el nuevo código de idioma (ej. "es", "en")
+                // Guardar el tema actual antes de cambiar idioma
+                val currentTheme = sharedPreferences.getString("theme_mode", "system")
+            
                 val langCode = sharedPreferences.getString(key, "es") ?: "es"
-                // Aplicar el idioma usando la API oficial de AppCompat
                 val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(langCode)
+            
+                // Aplicar idioma (esto reiniciará la actividad)
                 AppCompatDelegate.setApplicationLocales(appLocale)
-                // Nota: No es necesario llamar a recreate() aquí.
-                // AppCompatDelegate reiniciará la actividad automáticamente.
+            
+                // Forzar re-aplicación del tema después del reinicio
+                Handler(Looper.getMainLooper()).postDelayed({
+                    applyTheme(currentTheme)
+                }, 100)
             }
         }
     }

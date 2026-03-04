@@ -4,79 +4,79 @@
     <string name="app_name">Apps Usage Monitor</string>
     
     <!-- Accessibility service -->
-    <string name="accessibility_service_description">Este servicio permite monitorear qué aplicaciones estás usando para mostrar notificaciones de tiempo de uso</string>
+    <string name="accessibility_service_description">This service allows monitoring which apps you are using to display usage time notifications</string>
     
     <!-- Navigation titles -->
-    <string name="title_home">Inicio</string>
-    <string name="title_dashboard">Estadísticas</string>
-    <string name="title_notifications">Notificaciones</string>
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Statistics</string>
+    <string name="title_notifications">Notifications</string>
     
     <!-- Buttons - General -->
-    <string name="start_monitoring">Iniciar monitoreo</string>
-    <string name="stop_monitoring">Detener monitoreo</string>
-    <string name="select_apps">Seleccionar aplicaciones</string>
-    <string name="add_selected">Agregar seleccionadas</string>
-    <string name="add_selected_with_count">Agregar seleccionadas (%d)</string>
-    <string name="close">Cerrar</string>
-    <string name="configure_permissions">Configurar permisos</string>
+    <string name="start_monitoring">Start monitoring</string>
+    <string name="stop_monitoring">Stop monitoring</string>
+    <string name="select_apps">Select apps</string>
+    <string name="add_selected">Add selected</string>
+    <string name="add_selected_with_count">Add selected (%d)</string>
+    <string name="close">Close</string>
+    <string name="configure_permissions">Configure permissions</string>
     
     <!-- Messages -->
-    <string name="no_apps_monitored">No hay aplicaciones monitoreadas</string>
-    <string name="permissions_required">Permisos necesarios</string>
-    <string name="permissions_description">Se necesitan permisos de accesibilidad, uso de datos y superposición</string>
-    <string name="select_at_least_one">Selecciona al menos una app</string>
-    <string name="apps_added">Apps agregadas al monitoreo</string>
-    <string name="apps_added_count">%d apps agregadas al monitoreo</string>
+    <string name="no_apps_monitored">No apps being monitored</string>
+    <string name="permissions_required">Permissions required</string>
+    <string name="permissions_description">Accessibility, usage data and overlay permissions are needed</string>
+    <string name="select_at_least_one">Select at least one app</string>
+    <string name="apps_added">Apps added to monitoring</string>
+    <string name="apps_added_count">%d apps added to monitoring</string>
     
     <!-- Time labels -->
-    <string name="current_session_label">Tiempo de uso actual</string>
-    <string name="total_today_label">Total hoy</string>
-    <string name="total_week_label">Semana</string>
-    <string name="daily_usage_title">Uso diario (últimos 7 días)</string>
+    <string name="current_session_label">Current usage time</string>
+    <string name="total_today_label">Total today</string>
+    <string name="total_week_label">Week</string>
+    <string name="daily_usage_title">Daily usage (last 7 days)</string>
     
     <!-- Statistics -->
-    <string name="today">Hoy</string>
-    <string name="week">Semana</string>
+    <string name="today">Today</string>
+    <string name="week">Week</string>
     <string name="minutes_format">%d min</string>
     <string name="hours_minutes_format">%d h %d min</string>
     <string name="less_than_minute">&lt; 1 min</string>
     
     <!-- Selection screen -->
-    <string name="select_interval">Selecciona el intervalo</string>
-    <string name="select_apps_title">Selecciona las aplicaciones</string>
-    <string name="search_apps_hint">Buscar aplicaciones...</string>
-    <string name="monitored_apps_title">Apps en seguimiento</string>
-    <string name="no_monitored_apps">No hay aplicaciones en seguimiento</string>
+    <string name="select_interval">Select interval</string>
+    <string name="select_apps_title">Select applications</string>
+    <string name="search_apps_hint">Search apps...</string>
+    <string name="monitored_apps_title">Monitored apps</string>
+    <string name="no_monitored_apps">No apps being monitored</string>
     
     <!-- Intervals -->
-    <string name="interval_10_seconds">10 segundos</string>
-    <string name="interval_1_minute">1 minuto</string>
-    <string name="interval_5_minutes">5 minutos</string>
-    <string name="interval_15_minutes">15 minutos</string>
-    <string name="interval_30_minutes">30 minutos</string>
-    <string name="interval_1_hour">1 hora</string>
-    <string name="interval_custom">Personalizado</string>
+    <string name="interval_10_seconds">10 seconds</string>
+    <string name="interval_1_minute">1 minute</string>
+    <string name="interval_5_minutes">5 minutes</string>
+    <string name="interval_15_minutes">15 minutes</string>
+    <string name="interval_30_minutes">30 minutes</string>
+    <string name="interval_1_hour">1 hour</string>
+    <string name="interval_custom">Custom</string>
     
     <!-- Interval display formats -->
-    <string name="interval_every_10_seconds">Cada 10 segundos</string>
-    <string name="interval_every_1_minute">Cada 1 minuto</string>
-    <string name="interval_every_5_minutes">Cada 5 minutos</string>
-    <string name="interval_every_15_minutes">Cada 15 minutos</string>
-    <string name="interval_every_30_minutes">Cada 30 minutos</string>
-    <string name="interval_every_1_hour">Cada 1 hora</string>
+    <string name="interval_every_10_seconds">Every 10 seconds</string>
+    <string name="interval_every_1_minute">Every 1 minute</string>
+    <string name="interval_every_5_minutes">Every 5 minutes</string>
+    <string name="interval_every_15_minutes">Every 15 minutes</string>
+    <string name="interval_every_30_minutes">Every 30 minutes</string>
+    <string name="interval_every_1_hour">Every 1 hour</string>
     
     <!-- Bubble and expanded view -->
     <string name="badge_text_default">1</string>
     <string name="current_session_time_format">00:00</string>
     <string name="total_today_time_format">00:00</string>
     <string name="banner_app_label">App:</string>
-    <string name="banner_today_prefix">Hoy: </string>
+    <string name="banner_today_prefix">Today: </string>
     
     <!-- Chart labels -->
-    <string name="chart_usage_label">Tiempo de uso (minutos)</string>
+    <string name="chart_usage_label">Usage time (minutes)</string>
     
     <!-- Chart axis formatters -->
-    <string name="chart_day_format">Día %d</string>
+    <string name="chart_day_format">Day %d</string>
     
     <!-- Package name display -->
     <string name="package_name_format">%s</string>
@@ -87,28 +87,28 @@
     
     <!-- Notifications -->
     <string name="notification_channel_name">Bubble Service</string>
-    <string name="notification_channel_description">Muestra burbujas de monitoreo de apps</string>
-    <string name="notification_title">Monitoreo de Apps Activo</string>
-    <string name="notification_content">Las burbujas de notificación están activas</string>
+    <string name="notification_channel_description">Shows app monitoring bubbles</string>
+    <string name="notification_title">App Monitoring Active</string>
+    <string name="notification_content">Notification bubbles are active</string>
     
     <!-- Permission messages -->
-    <string name="permission_usage_stats_required">Permiso de acceso a uso de datos requerido</string>
-    <string name="permission_usage_stats_instructions">Para un monitoreo preciso, activa el acceso de uso de datos para %s</string>
-    <string name="permission_overlay_required">Permiso de superposición de pantalla requerido</string>
-    <string name="permission_notifications_required">Permiso de notificaciones requerido</string>
+    <string name="permission_usage_stats_required">Usage data access permission required</string>
+    <string name="permission_usage_stats_instructions">For accurate monitoring, enable usage data access for %s</string>
+    <string name="permission_overlay_required">Screen overlay permission required</string>
+    <string name="permission_notifications_required">Notifications permission required</string>
     
     <!-- Error messages -->
-    <string name="error_app_icon_not_found">Icono de aplicación no encontrado</string>
-    <string name="error_loading_apps">Error al cargar las aplicaciones</string>
-    <string name="error_no_permissions">No se tienen los permisos necesarios</string>
-    <string name="error_occurred">Ocurrió un error</string>
-    <string name="error_open_link">No se puede abrir el enlace</string>
-    <string name="error_loading_apps_timeout">Error al cargar aplicaciones. Intente nuevamente.</string>
+    <string name="error_app_icon_not_found">App icon not found</string>
+    <string name="error_loading_apps">Error loading applications</string>
+    <string name="error_no_permissions">Required permissions not granted</string>
+    <string name="error_occurred">An error occurred</string>
+    <string name="error_open_link">Cannot open link</string>
+    <string name="error_loading_apps_timeout">Error loading applications. Please try again.</string>
     
     <!-- Empty states -->
-    <string name="empty_state_no_apps">No hay aplicaciones monitoreadas</string>
-    <string name="empty_state_no_results">No se encontraron resultados</string>
-    <string name="no_apps_installed">No se encontraron aplicaciones instaladas</string>
+    <string name="empty_state_no_apps">No apps being monitored</string>
+    <string name="empty_state_no_results">No results found</string>
+    <string name="no_apps_installed">No installed apps found</string>
     
     <!-- Time units -->
     <string name="unit_minutes">min</string>
@@ -120,63 +120,126 @@
     <string name="time_format_hh_mm">HH:mm</string>
     
     <!-- Additional strings -->
-    <string name="total_time_format">Tiempo total: %s</string>
+    <string name="total_time_format">Total time: %s</string>
     <string name="total_time_format_placeholder">Total: 0h 0m</string>
-    <string name="no_data">Sin datos</string>
+    <string name="no_data">No data</string>
     
     <!-- FAB -->
-    <string name="fab_service_control_description">Controlar servicio de monitoreo</string>
+    <string name="fab_service_control_description">Control monitoring service</string>
 
     <!-- Main Fragment messages -->
-    <string name="no_usage_today">Las apps seleccionadas no tienen uso hoy</string>
-    <string name="no_monitored_apps_data_today">No hay datos de apps monitoreadas hoy</string>
-    <string name="all_apps_less_than_minute">Todas las apps tienen menos de 1 minuto de uso</string>
-    <string name="service_started">Servicio iniciado</string>
-    <string name="service_stopped">Servicio detenido</string>
+    <string name="no_usage_today">Selected apps have no usage today</string>
+    <string name="no_monitored_apps_data_today">No data from monitored apps today</string>
+    <string name="all_apps_less_than_minute">All apps have less than 1 minute of usage</string>
+    <string name="service_started">Service started</string>
+    <string name="service_stopped">Service stopped</string>
 
     <!-- Time formats -->
     <string name="minutes_seconds_format">%d m %d s</string>
     <string name="seconds_format">%d s</string>
 
     <!-- Footer strings -->
-    <string name="like_app_question">¿Te gusta la app? </string>
-    <string name="invite_coffee">¡Invitame un café!</string>
+    <string name="like_app_question">Like the app? </string>
+    <string name="invite_coffee">Buy me a coffee!</string>
     <string name="version_format">v%s</string>
     <string name="version_format_placeholder">v1.0.0</string>
 
     <!-- Email related strings -->
-    <string name="dashboard_footer_suggestions">¿Sugerencias o problemas?</string>
-    <string name="email_subject_suggestions">Sugerencia para Apps Usage Monitor</string>
-    <string name="error_no_email_app">No se encontró una aplicación de correo</string>
+    <string name="dashboard_footer_suggestions">Suggestions or issues?</string>
+    <string name="email_subject_suggestions">Suggestion for Apps Usage Monitor</string>
+    <string name="error_no_email_app">No email app found</string>
 
     <!-- Loading -->
-    <string name="loading_apps">Cargando aplicaciones…</string>
+    <string name="loading_apps">Loading apps…</string>
 
     <!-- Image descriptions -->
-    <string name="item_app_icon_desc">Icono de aplicación</string>
+    <string name="item_app_icon_desc">App icon</string>
     
     <!-- Splash screen -->
     <string name="splash_author">by Gonzalo Gastón Benites</string>
 
     <!-- Dialog selection strings -->
-    <string name="dialog_select_apps_title">Seleccionar aplicaciones</string>
-    <string name="dialog_apps_selected_count">%d seleccionadas</string>
-    <string name="dialog_select_all">Todo</string>
-    <string name="dialog_deselect_all">Ninguno</string>
-    <string name="dialog_cancel">Cancelar</string>
-    <string name="dialog_confirm">Confirmar</string>
-    <string name="select_apps_dialog_title">Elige las apps a monitorear</string>
-    <string name="no_apps_found">No se encontraron aplicaciones</string>
-    <string name="select_all">Seleccionar todas</string>
-    <string name="deselect_all">Deseleccionar todas</string>
+    <string name="dialog_select_apps_title">Select applications</string>
+    <string name="dialog_apps_selected_count">%d selected</string>
+    <string name="dialog_select_all">All</string>
+    <string name="dialog_deselect_all">None</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_confirm">Confirm</string>
+    <string name="select_apps_dialog_title">Choose apps to monitor</string>
+    <string name="no_apps_found">No apps found</string>
+    <string name="select_all">Select all</string>
+    <string name="deselect_all">Deselect all</string>
 
     <!-- New selection screen strings -->
-    <string name="select_apps_button">Seleccionar aplicaciones</string>
-    <string name="selected_apps_info">%d aplicaciones seleccionadas</string>
-    <string name="selected_apps_info_format">%d aplicaciones seleccionadas</string>
-    <string name="monitored_apps_count">Apps monitoreadas: %d</string>
+    <string name="select_apps_button">Select applications</string>
+    <string name="selected_apps_info">%d applications selected</string>
+    <string name="selected_apps_info_format">%d applications selected</string>
+    <string name="monitored_apps_count">Monitored apps: %d</string>
     
     <!-- Log messages -->
-    <string name="log_test_banner">🧪 Banner de prueba</string>
+    <string name="log_test_banner">🧪 Test banner</string>
 
+    <!-- Email and developer -->
+    <string name="developer_email">benitesgonzalogaston@gmail.com</string>
+    <string name="developer_name">Gonzalo Gastón Benites</string>
+
+    <!-- About fragment -->
+    <string name="app_icon_description">App icon</string>
+    <string name="about_version_placeholder">Version 1.2.4</string>
+    <string name="about_developed_by_label">Developed by</string>
+    <string name="contact_email_button">Contact via Email</string>
+    <string name="github_source_button">Source Code (GitHub)</string>
+    <string name="buy_coffee_button">Buy me a coffee ☕</string>
+
+    <!-- Statistics fragment -->
+    <string name="statistics_select_app_label">Select App:</string>
+    <string name="previous_week_description">Previous week</string>
+    <string name="next_week_description">Next week</string>
+    <string name="loading_text">Loading...</string>
+    <string name="week_range_example">Feb 24 - Mar 02</string>
+
+    <!-- Nav header -->
+    <string name="nav_header_version_placeholder">Version 1.0</string>
+
+    <!-- Additional formats -->
+    <string name="nav_header_version_format">Version %s</string>
+    <string name="about_version_format">Version %s</string>
+    <string name="week_range_format">dd MMM</string>
+    <string name="chart_date_format">EEE dd</string>
+
+    <!-- URLs -->
+    <string name="github_url">https://github.com/gnzalobnites/AppsUsageMonitor/tree/dev</string>
+    <string name="buy_me_coffee_url">https://buymeacoffee.com/gnzbenitesh</string>
+
+    <!-- Email subject -->
+    <string name="email_subject_support">Apps Usage Monitor Support</string>
+
+    <!-- Time in minutes (for TimeValueFormatter) -->
+    <!-- Note: These are hard formats because they are universal abbreviations -->
+    <!-- They remain as they are in the code -->
+
+    <!-- ===== NEW STRINGS ADDED ===== -->
+    <!-- Preferences categories -->
+    <string name="pref_category_appearance">Appearance</string>
+    <string name="pref_category_notifications">Notifications</string>
+
+    <!-- Preference titles -->
+    <string name="pref_theme_title">Theme</string>
+    <string name="pref_language_title">Language</string>
+    <string name="pref_persistent_notif_title">Persistent notification</string>
+    <string name="pref_persistent_notif_summary">Keep icon in status bar while monitoring</string>
+
+    <!-- Navigation labels -->
+    <string name="nav_home_label">Today</string>
+    <string name="nav_app_selection_label">Select Apps</string>
+    <string name="nav_statistics_label">Statistics</string>
+    <string name="nav_settings_label">Settings</string>
+    <string name="nav_about_label">About</string>
+
+    <!-- Drawer menu titles -->
+    <string name="drawer_home">Home</string>
+    <string name="drawer_app_selection">Select Apps</string>
+    <string name="drawer_statistics">Statistics</string>
+    <string name="drawer_settings">Settings</string>
+    <string name="drawer_about">About</string>
 </resources>

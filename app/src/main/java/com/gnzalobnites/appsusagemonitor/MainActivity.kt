@@ -1,6 +1,5 @@
 package com.gnzalobnites.appsusagemonitor
 
-
 import android.widget.TextView
 import android.view.View
 import android.os.Build
@@ -30,33 +29,25 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appBarConfiguration: AppBarConfiguration
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 1. Llamar a super.onCreate PRIMERO.
-        //    AppCompatDelegate (versión 1.7.0+) aplicará el tema y la configuración
-        //    regional (idioma) guardados automáticamente antes de inflar la vista.
         super.onCreate(savedInstanceState)
 
-        // 2. Inflar la vista y configurar el resto de la UI.
         binding = ActivityMainBinding.inflate(layoutInflater)
 
-        // Dentro de onCreate después de binding = ActivityMainBinding.inflate(layoutInflater)
         val headerView = binding.navView.getHeaderView(0)
         val tvVersion = headerView.findViewById<TextView>(R.id.nav_header_version)
         try {
             val packageInfo = packageManager.getPackageInfo(packageName, 0)
-            tvVersion.text = "Versión ${packageInfo.versionName}"
+            tvVersion.text = getString(R.string.nav_header_version_format, packageInfo.versionName)
         } catch (e: Exception) {
-            tvVersion.text = "Versión 1.0"
+            tvVersion.text = getString(R.string.nav_header_version_placeholder)
         }
-
 
         setContentView(binding.root)
 
         drawerLayout = binding.drawerLayout
 
-        // Configurar toolbar
         setSupportActionBar(binding.toolbar)
 
-        // Configurar navegación
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
@@ -75,31 +66,20 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
         binding.navView.setupWithNavController(navController)
 
-        // Configuración dinámica de la barra de estado (Modo Claro/Oscuro)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val uiMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
             val isDarkMode = uiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
 
             window.decorView.systemUiVisibility = if (!isDarkMode) {
-                // Iconos oscuros para fondo claro
                 View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
             } else {
-                // Iconos claros para fondo oscuro
                 0
             }
         }
 
-        // Verificar permisos al iniciar
         checkAndRequestPermissions()
     }
 
-    // El método setLocale ya no es necesario. AppCompatDelegate lo maneja.
-
-    /**
-     * Aplica el tema seleccionado por el usuario.
-     * Aunque AppCompat lo aplica automáticamente al inicio, este método puede ser útil
-     * si se necesita cambiar el tema en caliente desde otro lugar.
-     */
     private fun applyTheme(theme: String?) {
         when (theme) {
             "light" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)

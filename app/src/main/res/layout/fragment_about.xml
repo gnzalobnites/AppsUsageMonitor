@@ -16,6 +16,7 @@
             android:layout_width="100dp"
             android:layout_height="100dp"
             android:src="@mipmap/ic_launcher"
+            android:contentDescription="@string/app_icon_description"
             android:layout_marginBottom="16dp" />
 
         <TextView
@@ -30,7 +31,7 @@
             android:id="@+id/textVersion"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Versión 1.2.4"
+            android:text="@string/about_version_placeholder"
             android:alpha="0.7"
             android:layout_marginBottom="32dp" />
 
@@ -49,7 +50,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Desarrollado por"
+                    android:text="@string/about_developed_by_label"
                     android:textSize="12sp"
                     android:textAllCaps="true"
                     android:alpha="0.6" />
@@ -57,7 +58,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Gonzalo Gastón Benites"
+                    android:text="@string/developer_name"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="16dp" />
@@ -73,7 +74,7 @@
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Contactar por Email"
+                    android:text="@string/contact_email_button"
                     android:textAlignment="viewStart"
                     app:icon="@android:drawable/ic_dialog_email" />
 
@@ -82,7 +83,7 @@
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Código Fuente (GitHub)"
+                    android:text="@string/github_source_button"
                     android:textAlignment="viewStart"
                     app:icon="@android:drawable/ic_menu_search" />
 
@@ -92,7 +93,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="Invitame un café ☕"
+                    android:text="@string/buy_coffee_button"
                     android:backgroundTint="#FFDD00"
                     android:textColor="#000000" />
 

@@ -34,7 +34,6 @@ class AppSelectionViewModel(application: Application) : AndroidViewModel(applica
     private val _selectedApps = MutableLiveData<Int>(0)
     val selectedApps: LiveData<Int> = _selectedApps
     
-    // Nuevo: LiveData para apps monitoreadas
     val monitoredApps: LiveData<List<MonitoredApp>> = repository.getMonitoredApps().asLiveData()
     
     private var allApps: List<AppInfo> = listOf()
@@ -92,26 +91,22 @@ class AppSelectionViewModel(application: Application) : AndroidViewModel(applica
             allApps.filter { it.isSelected }.forEach { appInfo ->
                 repository.addAppToMonitor(appInfo.packageName, interval)
             }
-            // Limpiar selección después de agregar
             clearSelection()
         }
     }
     
-    // Nuevo: Limpiar selección
     private fun clearSelection() {
         allApps.forEach { it.isSelected = false }
         _filteredApps.value = allApps
         _selectedApps.value = 0
     }
     
-    // Nuevo: Eliminar app monitoreada
     fun removeMonitoredApp(app: MonitoredApp) {
         viewModelScope.launch {
             repository.deleteMonitoredApp(app)
         }
     }
     
-    // Nuevo: Formatear intervalo para mostrar
     fun formatInterval(interval: Long, context: android.content.Context): String {
         return when (interval) {
             com.gnzalobnites.appsusagemonitor.utils.Constants.INTERVAL_10_SECONDS -> 

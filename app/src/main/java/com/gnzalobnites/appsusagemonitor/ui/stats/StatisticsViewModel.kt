@@ -5,7 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.gnzalobnites.appsusagemonitor.data.database.DailyUsageStats
 import com.gnzalobnites.appsusagemonitor.data.database.UsageSessionDao
-import kotlinx.coroutines.Dispatchers  // <--- ESTE ES EL QUE FALTABA
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.*
@@ -19,14 +19,12 @@ class StatisticsViewModel(
     private val _availableApps = MutableStateFlow<List<String>>(emptyList())
     val availableApps: StateFlow<List<String>> = _availableApps
 
-    // CORREGIDO: weeklyStats ahora es un Flow que puede lanzar corrutinas
     val weeklyStats: Flow<List<DailyUsageStats>> = _selectedPackage
-        .filterNotNull() // Ignorar nulls
+        .filterNotNull()
         .flatMapLatest { packageName ->
-            // flatMapLatest permite lanzar una corrutina por cada cambio
             flow {
                 emit(getStatsFromDatabase(packageName))
-            }.flowOn(Dispatchers.IO) // Ejecutar en hilo de IO
+            }.flowOn(Dispatchers.IO)
         }
 
     init {
@@ -46,11 +44,9 @@ class StatisticsViewModel(
         _selectedPackage.value = packageName
     }
 
-    // CORREGIDO: Esta función ahora es suspend
     private suspend fun getStatsFromDatabase(packageName: String): List<DailyUsageStats> {
         val result = mutableListOf<DailyUsageStats>()
         
-        // Calcular el inicio del rango (7 días atrás desde hoy a las 00:00)
         val calendar = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
@@ -58,8 +54,7 @@ class StatisticsViewModel(
             set(Calendar.MILLISECOND, 0)
         }
         
-        // Generamos los 7 días manualmente
-        for (i in 6 downTo 0) { // i = 6,5,4,3,2,1,0 (de más antiguo a hoy)
+        for (i in 6 downTo 0) {
             val dayCalendar = Calendar.getInstance().apply {
                 timeInMillis = calendar.timeInMillis
                 add(Calendar.DAY_OF_YEAR, -i)
@@ -67,7 +62,6 @@ class StatisticsViewModel(
             val dayStart = dayCalendar.timeInMillis
             val dayEnd = dayStart + (24 * 60 * 60 * 1000)
             
-            // ✅ AHORA SÍ: Llamada suspend dentro de una función suspend
             val totalForDay = try {
                 usageSessionDao.getTotalUsageForDay(packageName, dayStart, dayEnd)
             } catch (e: Exception) {
@@ -80,7 +74,6 @@ class StatisticsViewModel(
         return result
     }
 
-    // Etiqueta para mostrar el rango de fechas (últimos 7 días)
     val weekRangeLabel: Flow<String> = flow {
         val endDate = Date()
         
@@ -93,7 +86,7 @@ class StatisticsViewModel(
         }
         val startDate = Date(startCalendar.timeInMillis)
 
-        val sdf = java.text.SimpleDateFormat("dd MMM", Locale.getDefault())
+        val sdf = java.text.SimpleDateFormat(getApplication<Application>().getString(com.gnzalobnites.appsusagemonitor.R.string.week_range_format), Locale.getDefault())
         emit("${sdf.format(startDate)} - ${sdf.format(endDate)}")
     }
 }

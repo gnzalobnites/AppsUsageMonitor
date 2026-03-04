@@ -64,7 +64,6 @@ class MonitoredAppsAdapter(
 
     object DiffCallback : DiffUtil.ItemCallback<MonitoredApp>() {
         override fun areItemsTheSame(oldItem: MonitoredApp, newItem: MonitoredApp): Boolean {
-            // Usamos packageName como identificador único ya que es la primary key
             return oldItem.packageName == newItem.packageName
         }
 

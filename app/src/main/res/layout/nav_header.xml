@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="180dp"
-    android:background="#2D1B4D"
+    android:background="@color/nav_header_background"
     android:gravity="bottom"
     android:orientation="vertical"
     android:padding="16dp"
@@ -12,7 +12,8 @@
         android:id="@+id/nav_header_logo"
         android:layout_width="64dp"
         android:layout_height="64dp"
-        android:src="@drawable/ic_launcher_foreground" />
+        android:src="@drawable/ic_launcher_foreground"
+        android:contentDescription="@string/app_icon_description" />
 
     <TextView
         android:id="@+id/nav_header_app_name"
@@ -28,7 +29,7 @@
         android:id="@+id/nav_header_developer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Gonzalo Gastón Benites"
+        android:text="@string/developer_name"
         android:textSize="14sp"
         android:alpha="0.8" />
 
@@ -36,7 +37,7 @@
         android:id="@+id/nav_header_version"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Versión 1.0"
+        android:text="@string/nav_header_version_placeholder"
         android:textSize="12sp"
         android:alpha="0.6" />
 

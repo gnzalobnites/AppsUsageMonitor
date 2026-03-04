@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import com.gnzalobnites.appsusagemonitor.R
 import com.gnzalobnites.appsusagemonitor.databinding.FragmentAboutBinding
 
 class AboutFragment : Fragment() {
@@ -23,28 +24,27 @@ class AboutFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Mostrar versión de forma segura usando PackageManager
         try {
             val packageInfo = requireContext().packageManager.getPackageInfo(requireContext().packageName, 0)
-            binding.textVersion.text = "Versión ${packageInfo.versionName}"
+            binding.textVersion.text = getString(R.string.about_version_format, packageInfo.versionName)
         } catch (e: PackageManager.NameNotFoundException) {
-            binding.textVersion.text = "Versión 1.0.0"
+            binding.textVersion.text = getString(R.string.about_version_placeholder)
         }
 
         binding.btnEmail.setOnClickListener {
             val intent = Intent(Intent.ACTION_SENDTO).apply {
-                data = Uri.parse("mailto:benitesgonzalogaston@gmail.com")
-                putExtra(Intent.EXTRA_SUBJECT, "Apps Usage Monitor Support")
+                data = Uri.parse("mailto:${getString(R.string.developer_email)}")
+                putExtra(Intent.EXTRA_SUBJECT, getString(R.string.email_subject_support))
             }
             startActivity(intent)
         }
 
         binding.btnGithub.setOnClickListener {
-            openUrl("https://github.com/gnzalobnites/AppsUsageMonitor/tree/main")
+            openUrl(getString(R.string.github_url))
         }
 
         binding.btnCoffee.setOnClickListener {
-            openUrl("https://buymeacoffee.com/gnzbenitesh")
+            openUrl(getString(R.string.buy_me_coffee_url))
         }
     }
 

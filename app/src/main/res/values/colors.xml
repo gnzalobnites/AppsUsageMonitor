@@ -30,6 +30,8 @@
     <color name="chart_color_4">#FFC107</color>
     <color name="chart_color_5">#9C27B0</color>
 
+    
+    <color name="nav_header_background">#2D1B4D</color>
     <color name="splash_background">#2D1B4D</color>
     
 </resources>

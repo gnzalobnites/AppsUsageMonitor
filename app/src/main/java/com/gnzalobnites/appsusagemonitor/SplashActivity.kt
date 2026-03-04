@@ -10,13 +10,12 @@ import androidx.appcompat.app.AppCompatActivity
 class SplashActivity : AppCompatActivity() {
     
     companion object {
-        private const val SPLASH_DELAY_MS = 1500L // 1.5 segundos
+        private const val SPLASH_DELAY_MS = 1500L
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Configurar pantalla completa (sin barra de estado)
         window.setFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN,
             WindowManager.LayoutParams.FLAG_FULLSCREEN
@@ -24,10 +23,8 @@ class SplashActivity : AppCompatActivity() {
         
         setContentView(R.layout.activity_splash)
         
-        // Ocultar action bar si existe
         supportActionBar?.hide()
         
-        // Mostrar el autor desde strings.xml (opcional - para logs o futura implementación)
         val authorText = getString(R.string.splash_author)
         
         Handler(Looper.getMainLooper()).postDelayed({
@@ -39,14 +36,11 @@ class SplashActivity : AppCompatActivity() {
         val intent = Intent(this, MainActivity::class.java)
         startActivity(intent)
         
-        // Finalizar esta actividad para que no se pueda volver atrás
         finish()
         
-        // Transición suave
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
     
-    // Evitar que el usuario pueda presionar Back durante el splash
     override fun onBackPressed() {
         // No hacer nada durante el splash
     }

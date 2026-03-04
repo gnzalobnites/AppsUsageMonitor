@@ -49,7 +49,6 @@ class StatisticsFragment : Fragment() {
     }
 
     private fun setupListeners() {
-        // Ocultamos los botones de navegación semanal ya que mostramos siempre los últimos 7 días
         binding.btnPreviousWeek.visibility = View.GONE
         binding.btnNextWeek.visibility = View.GONE
 
@@ -101,7 +100,7 @@ class StatisticsFragment : Fragment() {
                 axisMinimum = 0f
                 granularity = 1f
                 setLabelCount(5, false)
-                valueFormatter = TimeValueFormatter() // Ahora esta clase está importada
+                valueFormatter = TimeValueFormatter()
             }
             
             axisRight.isEnabled = false
@@ -113,19 +112,18 @@ class StatisticsFragment : Fragment() {
         val entries = ArrayList<BarEntry>()
         val labels = ArrayList<String>()
         
-        val sdf = SimpleDateFormat("EEE dd", Locale.getDefault())
+        val sdf = SimpleDateFormat(getString(R.string.chart_date_format), Locale.getDefault())
         
         dailyStats.forEachIndexed { index, stat ->
-            // Convertir ms a minutos para el eje Y
             entries.add(BarEntry(index.toFloat(), (stat.totalDuration / 60000f)))
             labels.add(sdf.format(Date(stat.dayTimestamp)))
         }
 
-        val dataSet = BarDataSet(entries, "Uso").apply {
+        val dataSet = BarDataSet(entries, getString(R.string.chart_usage_label)).apply {
             color = Color.parseColor("#2196F3")
             valueTextColor = if (isDarkMode()) Color.WHITE else Color.BLACK
             valueTextSize = 10f
-            valueFormatter = TimeValueFormatter() // Usando el formateador personalizado
+            valueFormatter = TimeValueFormatter()
         }
 
         binding.chartUsage.apply {

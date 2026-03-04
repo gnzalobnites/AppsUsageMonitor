@@ -46,6 +46,7 @@
     <string name="select_apps_title">Selecciona las aplicaciones</string>
     <string name="search_apps_hint">Buscar aplicaciones...</string>
     <string name="monitored_apps_title">Apps en seguimiento</string>
+    <string name="no_monitored_apps">No hay aplicaciones en seguimiento</string>
     
     <!-- Intervals -->
     <string name="interval_10_seconds">10 segundos</string>
@@ -102,10 +103,12 @@
     <string name="error_no_permissions">No se tienen los permisos necesarios</string>
     <string name="error_occurred">Ocurrió un error</string>
     <string name="error_open_link">No se puede abrir el enlace</string>
+    <string name="error_loading_apps_timeout">Error al cargar aplicaciones. Intente nuevamente.</string>
     
     <!-- Empty states -->
     <string name="empty_state_no_apps">No hay aplicaciones monitoreadas</string>
     <string name="empty_state_no_results">No se encontraron resultados</string>
+    <string name="no_apps_installed">No se encontraron aplicaciones instaladas</string>
     
     <!-- Time units -->
     <string name="unit_minutes">min</string>
@@ -147,7 +150,7 @@
     <string name="error_no_email_app">No se encontró una aplicación de correo</string>
 
     <!-- Loading -->
-    <string name="loading_apps">Cargando aplicaciones...</string>
+    <string name="loading_apps">Cargando aplicaciones…</string>
 
     <!-- Image descriptions -->
     <string name="item_app_icon_desc">Icono de aplicación</string>
@@ -176,4 +179,67 @@
     <!-- Log messages -->
     <string name="log_test_banner">🧪 Banner de prueba</string>
 
+    <!-- Email y desarrollador -->
+    <string name="developer_email">benitesgonzalogaston@gmail.com</string>
+    <string name="developer_name">Gonzalo Gastón Benites</string>
+
+    <!-- About fragment -->
+    <string name="app_icon_description">Icono de la aplicación</string>
+    <string name="about_version_placeholder">Versión 1.2.4</string>
+    <string name="about_developed_by_label">Desarrollado por</string>
+    <string name="contact_email_button">Contactar por Email</string>
+    <string name="github_source_button">Código Fuente (GitHub)</string>
+    <string name="buy_coffee_button">Invitame un café ☕</string>
+
+    <!-- Statistics fragment -->
+    <string name="statistics_select_app_label">Seleccionar Aplicación:</string>
+    <string name="previous_week_description">Semana anterior</string>
+    <string name="next_week_description">Siguiente semana</string>
+    <string name="loading_text">Cargando...</string>
+    <string name="week_range_example">24 Feb - 02 Mar</string>
+
+    <!-- Nav header -->
+    <string name="nav_header_version_placeholder">Versión 1.0</string>
+
+    <!-- Formatos adicionales -->
+    <string name="nav_header_version_format">Versión %s</string>
+    <string name="about_version_format">Versión %s</string>
+    <string name="week_range_format">dd MMM</string>
+    <string name="chart_date_format">EEE dd</string>
+
+    <!-- URLs -->
+    <string name="github_url">https://github.com/gnzalobnites/AppsUsageMonitor/tree/dev</string>
+    <string name="buy_me_coffee_url">https://buymeacoffee.com/gnzbenitesh</string>
+
+    <!-- Email subject -->
+    <string name="email_subject_support">Apps Usage Monitor Support</string>
+
+    <!-- Tiempo en minutos (para TimeValueFormatter) -->
+    <!-- Nota: Estos son formatos duros porque son abreviaturas universales -->
+    <!-- Se mantienen como están en el código -->
+
+    <!-- ===== NUEVAS STRINGS AGREGADAS ===== -->
+    <!-- Preferences categories -->
+    <string name="pref_category_appearance">Apariencia</string>
+    <string name="pref_category_notifications">Notificaciones</string>
+
+    <!-- Preference titles -->
+    <string name="pref_theme_title">Tema</string>
+    <string name="pref_language_title">Idioma</string>
+    <string name="pref_persistent_notif_title">Notificación persistente</string>
+    <string name="pref_persistent_notif_summary">Mantener icono en la barra de estado mientras se monitorea</string>
+
+    <!-- Navigation labels -->
+    <string name="nav_home_label">Hoy</string>
+    <string name="nav_app_selection_label">Seleccionar Apps</string>
+    <string name="nav_statistics_label">Estadísticas</string>
+    <string name="nav_settings_label">Configuración</string>
+    <string name="nav_about_label">Acerca de</string>
+
+    <!-- Drawer menu titles -->
+    <string name="drawer_home">Inicio</string>
+    <string name="drawer_app_selection">Seleccionar Apps</string>
+    <string name="drawer_statistics">Estadísticas</string>
+    <string name="drawer_settings">Configuración</string>
+    <string name="drawer_about">Acerca de</string>
 </resources>

@@ -4,27 +4,26 @@
     <item
         android:id="@+id/homeFragment"
         android:icon="@drawable/ic_home"
-        android:title="Inicio" />
+        android:title="@string/drawer_home" />
     
     <item
         android:id="@+id/appSelectionFragment"
         android:icon="@drawable/ic_apps"
-        android:title="Seleccionar Apps" />
+        android:title="@string/drawer_app_selection" />
     
     <item
         android:id="@+id/statisticsFragment"
         android:icon="@drawable/ic_stats"
-        android:title="Estadísticas" />
+        android:title="@string/drawer_statistics" />
     
     <item
         android:id="@+id/settingsFragment"
         android:icon="@drawable/ic_settings"
-        android:title="Configuración" />
-    
+        android:title="@string/drawer_settings" />
     
     <item
         android:id="@+id/aboutFragment"
         android:icon="@drawable/ic_info"
-        android:title="Acerca de" />
+        android:title="@string/drawer_about" />
     
 </menu>
