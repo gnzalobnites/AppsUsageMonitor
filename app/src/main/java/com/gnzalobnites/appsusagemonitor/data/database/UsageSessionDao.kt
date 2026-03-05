@@ -38,13 +38,15 @@ interface UsageSessionDao {
     suspend fun updateSessionEnd(sessionId: Long, endTime: Long, duration: Long)
 
     // Método mejorado que incluye sesiones que comenzaron antes pero terminaron durante el día
+    // y maneja correctamente los límites de tiempo
     @Query("""
         SELECT COALESCE(SUM(duration), 0) FROM usage_sessions 
         WHERE packageName = :packageName 
+        AND startTime < :endOfDay
         AND (
             (startTime >= :startOfDay AND startTime < :endOfDay) OR
-            (endTime >= :startOfDay AND endTime < :endOfDay) OR
-            (startTime < :startOfDay AND endTime >= :endOfDay)
+            (endTime >= :startOfDay AND endTime <= :endOfDay) OR
+            (startTime < :startOfDay AND endTime > :startOfDay)
         )
     """)
     suspend fun getTotalUsageForDay(packageName: String, startOfDay: Long, endOfDay: Long): Long

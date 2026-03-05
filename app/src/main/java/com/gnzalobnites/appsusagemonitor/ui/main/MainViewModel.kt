@@ -53,7 +53,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     
-    // Versión ACTUALIZADA para el gráfico usando solo apps monitoreadas y datos de la BD
+    // Versión CORREGIDA para el gráfico - usa el método mejorado getTotalUsageToday()
     fun loadTodayStats() {
         viewModelScope.launch {
             try {
@@ -69,33 +69,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     return@launch
                 }
                 
-                // 2. Definir el rango de tiempo: desde las 00:00 hasta las 23:59 de hoy
-                val startOfDay = Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }.timeInMillis
-                
-                val endOfDay = Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, 23)
-                    set(Calendar.MINUTE, 59)
-                    set(Calendar.SECOND, 59)
-                    set(Calendar.MILLISECOND, 999)
-                }.timeInMillis
+                // 2. Usar la hora actual como límite superior para evitar datos del día anterior
+                val now = System.currentTimeMillis()
                 
                 // 3. Construir mapas de resultados
                 val usageMap = mutableMapOf<String, Long>()
                 val detailedList = mutableListOf<UsageStat>()
                 
-                // 4. Para cada app monitoreada, obtener el total de uso de hoy desde la BD
+                // 4. Para cada app monitoreada, obtener el total de uso de HOY desde la BD
                 monitoredAppsList.forEach { monitoredApp ->
-                    // Sumar sesiones de HOY para esta app desde la base de datos local
-                    val totalToday = repository.getTotalUsageForDay(
-                        monitoredApp.packageName, 
-                        startOfDay, 
-                        endOfDay
-                    )
+                    // Usar el método mejorado que solo obtiene datos desde las 00:00 hasta ahora
+                    val totalToday = repository.getTotalUsageToday(monitoredApp.packageName)
                     
                     if (totalToday > 0) {
                         val appName = monitoredApp.appName
@@ -106,7 +90,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 packageName = monitoredApp.packageName,
                                 appName = appName,
                                 totalTimeInForeground = totalToday,
-                                lastTimeUsed = System.currentTimeMillis() // o el último tiempo conocido
+                                lastTimeUsed = now
                             )
                         )
                         

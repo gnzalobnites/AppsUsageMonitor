@@ -73,6 +73,11 @@ class AppRepository(private val context: Context) {
         return usageSessionDao.getTotalUsageForDay(packageName, startOfDay, endOfDay) ?: 0L
     }
 
+    /**
+     * Obtiene el tiempo total de uso de HOY para una app específica
+     * Usa la hora actual como límite superior para evitar datos futuros
+     * CORREGIDO: ahora usa endOfDay = now en lugar de endOfDay = fin del día
+     */
     suspend fun getTotalUsageToday(packageName: String): Long {
         val calendar = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
@@ -81,13 +86,12 @@ class AppRepository(private val context: Context) {
             set(Calendar.MILLISECOND, 0)
         }
         val startOfDay = calendar.timeInMillis
-        calendar.add(Calendar.DAY_OF_YEAR, 1)
-        val endOfDay = calendar.timeInMillis
+        val now = System.currentTimeMillis()
         
-        return getTotalUsageForDay(packageName, startOfDay, endOfDay)
+        return getTotalUsageForDay(packageName, startOfDay, now)
     }
     
-    @Deprecated("Usa getTotalUsageToday(packageName) o getTotalUsageForDay(packageName, startOfDay, endOfDay)")
+    @Deprecated("Usa getTotalUsageToday(packageName) que no requiere startOfDay")
     suspend fun getTotalUsageToday(packageName: String, startOfDay: Long): Long {
         val calendar = Calendar.getInstance().apply {
             timeInMillis = startOfDay

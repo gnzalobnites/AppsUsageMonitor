@@ -6,6 +6,8 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -30,6 +32,9 @@ class MainFragment : Fragment() {
     private val viewModel: MainViewModel by viewModels()
     
     private val chartColors by lazy { ColorTemplate.MATERIAL_COLORS.toMutableList().apply { shuffle() } }
+    
+    // Handler para el observer de cambio de día
+    private val dayChangeHandler = Handler(Looper.getMainLooper())
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentMainBinding.inflate(inflater, container, false)
@@ -43,7 +48,11 @@ class MainFragment : Fragment() {
         setupButtons()
         setupFooter()
         
+        // Cargar estadísticas iniciales
         viewModel.loadTodayStats()
+        
+        // NUEVO: Detectar cambio de día y recargar datos automáticamente
+        observeDayChange()
     }
 
     private fun setupChart() {
@@ -250,14 +259,44 @@ class MainFragment : Fragment() {
         return typedValue.data
     }
 
+    /**
+     * NUEVO: Observa el cambio de día y recarga los datos automáticamente a medianoche
+     */
+    private fun observeDayChange() {
+        val calendar = Calendar.getInstance()
+        val midnight = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            add(Calendar.DAY_OF_YEAR, 1)
+        }
+        
+        val timeUntilMidnight = midnight.timeInMillis - System.currentTimeMillis()
+        
+        dayChangeHandler.postDelayed({
+            // Recargar datos a la medianoche
+            viewModel.loadTodayStats()
+            // Repetir el observer para el próximo día
+            observeDayChange()
+        }, timeUntilMidnight)
+    }
+
     override fun onResume() {
         super.onResume()
         isServiceRunning(MonitoringService::class.java)
         viewModel.loadTodayStats()
     }
 
+    override fun onPause() {
+        super.onPause()
+        // Limpiar callbacks pendientes para evitar memory leaks
+        dayChangeHandler.removeCallbacksAndMessages(null)
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
+        dayChangeHandler.removeCallbacksAndMessages(null)
         _binding = null
     }
 }
