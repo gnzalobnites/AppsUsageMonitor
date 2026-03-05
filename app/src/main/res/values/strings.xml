@@ -23,7 +23,7 @@
     <!-- Messages -->
     <string name="no_apps_monitored">No apps being monitored</string>
     <string name="permissions_required">Permissions required</string>
-    <string name="permissions_description">Accessibility, usage data and overlay permissions are needed</string>
+    <string name="permissions_description">Accessibility, usage data, and overlay permissions are needed</string>
     <string name="select_at_least_one">Select at least one app</string>
     <string name="apps_added">Apps added to monitoring</string>
     <string name="apps_added_count">%d apps added to monitoring</string>
@@ -95,7 +95,7 @@
     <string name="permission_usage_stats_required">Usage data access permission required</string>
     <string name="permission_usage_stats_instructions">For accurate monitoring, enable usage data access for %s</string>
     <string name="permission_overlay_required">Screen overlay permission required</string>
-    <string name="permission_notifications_required">Notifications permission required</string>
+    <string name="permission_notifications_required">Notification permission required</string>
     
     <!-- Error messages -->
     <string name="error_app_icon_not_found">App icon not found</string>
@@ -103,7 +103,7 @@
     <string name="error_no_permissions">Required permissions not granted</string>
     <string name="error_occurred">An error occurred</string>
     <string name="error_open_link">Cannot open link</string>
-    <string name="error_loading_apps_timeout">Error loading applications. Please try again.</string>
+    <string name="error_loading_apps_timeout">Error loading apps. Please try again.</string>
     
     <!-- Empty states -->
     <string name="empty_state_no_apps">No apps being monitored</string>
@@ -192,7 +192,7 @@
     <string name="buy_coffee_button">Buy me a coffee ☕</string>
 
     <!-- Statistics fragment -->
-    <string name="statistics_select_app_label">Select App:</string>
+    <string name="statistics_select_app_label">Select Application:</string>
     <string name="previous_week_description">Previous week</string>
     <string name="next_week_description">Next week</string>
     <string name="loading_text">Loading...</string>
@@ -215,10 +215,10 @@
     <string name="email_subject_support">Apps Usage Monitor Support</string>
 
     <!-- Time in minutes (for TimeValueFormatter) -->
-    <!-- Note: These are hard formats because they are universal abbreviations -->
-    <!-- They remain as they are in the code -->
+    <!-- Note: These are hard formats as they are universal abbreviations -->
+    <!-- They remain as in the code -->
 
-    <!-- ===== NEW STRINGS ADDED ===== -->
+    <!-- ===== NEW ADDED STRINGS ===== -->
     <!-- Preferences categories -->
     <string name="pref_category_appearance">Appearance</string>
     <string name="pref_category_notifications">Notifications</string>
@@ -245,8 +245,18 @@
 
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
-    <string name="theme_system">System default</string>
+    <string name="theme_system">Follow system</string>
     <string name="lang_spanish">Spanish</string>
     <string name="lang_english">English</string>
+
+    <!-- ===== NEW ACCESSIBILITY STRINGS ===== -->
+    <string name="accessibility_permission_title">Activate monitoring</string>
+    <string name="accessibility_permission_message">To monitor apps, you need to enable the accessibility service in system settings. Look for "Apps Usage Monitor" in the list and enable it.</string>
+    <string name="stop_monitoring_title">Stop monitoring</string>
+    <string name="stop_monitoring_message">To stop monitoring, you must disable the accessibility service in system settings.</string>
+    <string name="go_to_settings">Go to settings</string>
+    <string name="service_running">Monitoring service active</string>
+
+    <string name="cancel">Cancel</string>
 
 </resources>

@@ -243,11 +243,20 @@
     <string name="drawer_settings">Configuración</string>
     <string name="drawer_about">Acerca de</string>
 
-
     <string name="theme_light">Claro</string>
     <string name="theme_dark">Oscuro</string>
     <string name="theme_system">Seguir sistema</string>
     <string name="lang_spanish">Español</string>
     <string name="lang_english">Inglés</string>
+
+    <!-- ===== NUEVAS STRINGS PARA ACCESIBILIDAD ===== -->
+    <string name="accessibility_permission_title">Activar monitoreo</string>
+    <string name="accessibility_permission_message">Para monitorear las apps, necesitas activar el servicio de accesibilidad en la configuración del sistema. Busca "Apps Usage Monitor" en la lista y actívalo.</string>
+    <string name="stop_monitoring_title">Detener monitoreo</string>
+    <string name="stop_monitoring_message">Para detener el monitoreo, debes desactivar el servicio de accesibilidad en la configuración del sistema.</string>
+    <string name="go_to_settings">Ir a configuración</string>
+    <string name="service_running">Servicio de monitoreo activo</string>
+
+    <string name="cancel">Cancelar</string>
 
 </resources>

@@ -3,6 +3,7 @@ package com.gnzalobnites.appsusagemonitor.ui.main
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
@@ -18,6 +19,7 @@ import androidx.navigation.fragment.findNavController
 import com.gnzalobnites.appsusagemonitor.R
 import com.gnzalobnites.appsusagemonitor.databinding.FragmentMainBinding
 import com.gnzalobnites.appsusagemonitor.service.MonitoringService
+import com.gnzalobnites.appsusagemonitor.utils.AccessibilityHelper
 import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
@@ -35,6 +37,9 @@ class MainFragment : Fragment() {
     
     // Handler para el observer de cambio de día
     private val dayChangeHandler = Handler(Looper.getMainLooper())
+    
+    // Variable para tracking del estado anterior del servicio
+    private var lastServiceState = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentMainBinding.inflate(inflater, container, false)
@@ -48,11 +53,19 @@ class MainFragment : Fragment() {
         setupButtons()
         setupFooter()
         
+        // Verificar estado inicial del servicio de accesibilidad
+        viewModel.checkAccessibilityServiceState()
+        
         // Cargar estadísticas iniciales
         viewModel.loadTodayStats()
         
-        // NUEVO: Detectar cambio de día y recargar datos automáticamente
+        // Detectar cambio de día y recargar datos automáticamente
         observeDayChange()
+        
+        // CORREGIDO: Observer para actualizar el botón automáticamente
+        viewModel.isAccessibilityServiceEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            updateServiceButtonState(isEnabled)
+        }
     }
 
     private fun setupChart() {
@@ -91,8 +104,9 @@ class MainFragment : Fragment() {
             }
         }
         
+        // Mantenemos el observer anterior para compatibilidad
         viewModel.isServiceRunning.observe(viewLifecycleOwner) { isRunning ->
-            updateServiceButtonState(isRunning)
+            // No hacemos nada aquí para evitar duplicación, usamos el nuevo observer
         }
     }
     
@@ -160,23 +174,47 @@ class MainFragment : Fragment() {
         }
 
         binding.btnServiceControl.setOnClickListener {
-            val intent = Intent(requireContext(), MonitoringService::class.java)
+            val isEnabled = viewModel.isAccessibilityServiceEnabled.value ?: false
             
-            if (isServiceRunning(MonitoringService::class.java)) {
-                requireContext().stopService(intent)
-                Toast.makeText(context, R.string.service_stopped, Toast.LENGTH_SHORT).show()
+            if (isEnabled) {
+                // Si está habilitado, mostramos diálogo para desactivar
+                showAccessibilityDisableDialog()
             } else {
-                if (hasUsageStatsPermission()) {
-                    requireContext().startService(intent)
-                    Toast.makeText(context, R.string.service_started, Toast.LENGTH_SHORT).show()
+                // Si no está habilitado, verificamos permiso de uso de datos primero
+                if (!hasUsageStatsPermission()) {
+                    Toast.makeText(
+                        requireContext(), 
+                        R.string.permission_usage_stats_required, 
+                        Toast.LENGTH_LONG
+                    ).show()
                 } else {
-                    Toast.makeText(context, R.string.permission_usage_stats_required, Toast.LENGTH_LONG).show()
+                    // Guiamos al usuario a activar el servicio de accesibilidad
+                    showAccessibilityEnableDialog()
                 }
             }
-            isServiceRunning(MonitoringService::class.java)
         }
-        
-        updateServiceButtonState(isServiceRunning(MonitoringService::class.java))
+    }
+
+    private fun showAccessibilityEnableDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.accessibility_permission_title)
+            .setMessage(R.string.accessibility_permission_message)
+            .setPositiveButton(R.string.go_to_settings) { _, _ ->
+                viewModel.requestAccessibilityPermission()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+    
+    private fun showAccessibilityDisableDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.stop_monitoring_title)
+            .setMessage(R.string.stop_monitoring_message)
+            .setPositiveButton(R.string.go_to_settings) { _, _ ->
+                viewModel.requestAccessibilityPermission()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun setupFooter() {
@@ -207,28 +245,30 @@ class MainFragment : Fragment() {
         }
     }
 
-    private fun updateServiceButtonState(isRunning: Boolean) {
-        if (isRunning) {
+    // CORREGIDO: Actualiza el botón según el estado real y muestra toast solo cuando cambia de OFF a ON
+    private fun updateServiceButtonState(isEnabled: Boolean) {
+        // Mostrar toast solo cuando cambia de desactivado a activado
+        if (isEnabled && !lastServiceState) {
+            Toast.makeText(requireContext(), R.string.service_running, Toast.LENGTH_SHORT).show()
+        }
+        
+        // Actualizar el estado anterior
+        lastServiceState = isEnabled
+        
+        // Actualizar UI del botón
+        if (isEnabled) {
             binding.btnServiceControl.text = getString(R.string.stop_monitoring)
             binding.btnServiceControl.backgroundTintList = 
-                android.content.res.ColorStateList.valueOf(Color.parseColor("#E57373"))
+                ColorStateList.valueOf(Color.parseColor("#E57373"))
         } else {
             binding.btnServiceControl.text = getString(R.string.start_monitoring)
             binding.btnServiceControl.backgroundTintList = 
-                android.content.res.ColorStateList.valueOf(getThemeColor(com.google.android.material.R.attr.colorPrimary))
+                ColorStateList.valueOf(getThemeColor(MaterialR.attr.colorPrimary))
         }
     }
 
     private fun isServiceRunning(serviceClass: Class<*>): Boolean {
-        val manager = requireContext().getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-        for (service in manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (serviceClass.name == service.service.className) {
-                viewModel.setServiceRunning(true)
-                return true
-            }
-        }
-        viewModel.setServiceRunning(false)
-        return false
+        return AccessibilityHelper.isAccessibilityServiceEnabled(requireContext(), serviceClass)
     }
     
     private fun hasUsageStatsPermission(): Boolean {
@@ -260,7 +300,7 @@ class MainFragment : Fragment() {
     }
 
     /**
-     * NUEVO: Observa el cambio de día y recarga los datos automáticamente a medianoche
+     * Observa el cambio de día y recarga los datos automáticamente a medianoche
      */
     private fun observeDayChange() {
         val calendar = Calendar.getInstance()
@@ -284,8 +324,16 @@ class MainFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        isServiceRunning(MonitoringService::class.java)
+        // CORREGIDO: Verificación directa del estado del servicio
+        val enabled = AccessibilityHelper.isAccessibilityServiceEnabled(
+            requireContext(),
+            MonitoringService::class.java
+        )
+        // Actualizamos el ViewModel y la UI
+        viewModel.checkAccessibilityServiceState()
         viewModel.loadTodayStats()
+        // Forzamos actualización de UI por si el LiveData no ha cambiado
+        updateServiceButtonState(enabled)
     }
 
     override fun onPause() {

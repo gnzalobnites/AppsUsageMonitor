@@ -13,6 +13,8 @@ import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
 import com.gnzalobnites.appsusagemonitor.data.repository.AppRepository
 import com.gnzalobnites.appsusagemonitor.data.repository.UsageRepository
 import com.gnzalobnites.appsusagemonitor.data.model.UsageStat
+import com.gnzalobnites.appsusagemonitor.service.MonitoringService
+import com.gnzalobnites.appsusagemonitor.utils.AccessibilityHelper
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -28,9 +30,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Funcionalidad existente: apps monitoreadas
     val monitoredApps: LiveData<List<MonitoredApp>> = repository.getMonitoredApps().asLiveData()
     
-    // Funcionalidad existente: estado del servicio
+    // Funcionalidad existente: estado del servicio (ahora refleja el estado real de accesibilidad)
     private val _isServiceRunning = MutableLiveData(false)
     val isServiceRunning: LiveData<Boolean> = _isServiceRunning
+    
+    // NUEVO: LiveData específico para el estado del servicio de accesibilidad
+    private val _isAccessibilityServiceEnabled = MutableLiveData(false)
+    val isAccessibilityServiceEnabled: LiveData<Boolean> = _isAccessibilityServiceEnabled
     
     // LiveData que el Fragment observará para el gráfico
     private val _usageStats = MutableLiveData<Map<String, Long>>()
@@ -43,8 +49,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Caché para nombres de apps
     private val appNamesCache = mutableMapOf<String, String>()
     
+    // MODIFICADO: Actualiza el estado basado en el estado real del servicio de accesibilidad
+    fun updateServiceState(isEnabled: Boolean) {
+        _isAccessibilityServiceEnabled.value = isEnabled
+        _isServiceRunning.value = isEnabled // Mantener compatibilidad
+    }
+    
+    // NUEVO: Verificar y actualizar el estado del servicio de accesibilidad
+    fun checkAccessibilityServiceState() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val isEnabled = AccessibilityHelper.isAccessibilityServiceEnabled(
+                getApplication(),
+                MonitoringService::class.java
+            )
+            _isAccessibilityServiceEnabled.postValue(isEnabled)
+            _isServiceRunning.postValue(isEnabled)
+        }
+    }
+    
+    // NUEVO: Abrir configuración de accesibilidad
+    fun requestAccessibilityPermission() {
+        AccessibilityHelper.openAccessibilitySettings(getApplication())
+    }
+    
+    // Mantenemos setServiceRunning para compatibilidad pero ahora actualiza ambos LiveData
     fun setServiceRunning(isRunning: Boolean) {
         _isServiceRunning.value = isRunning
+        _isAccessibilityServiceEnabled.value = isRunning
     }
     
     fun stopMonitoringApp(app: MonitoredApp) {
