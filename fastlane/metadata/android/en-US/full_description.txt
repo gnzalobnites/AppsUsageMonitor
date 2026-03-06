@@ -1,0 +1,9 @@
+Monitor the time you spend on your apps with configurable awareness banners. Get detailed statistics, pie charts, and a dynamic theme that adapts to your usage time.
+
+Main features:
+* Configurable awareness banners (DEMO from 10 seconds)
+* Intuitive interaction: 1 click expands, 2nd click closes
+* Detailed statistics with pie charts per app
+* Dynamic theme with colors based on usage time
+* High precision using Android's UsageStatsManager
+* Persistent dark/light theme
