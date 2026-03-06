@@ -11,7 +11,6 @@ He actualizado tu README para reflejar los cambios tras la reescritura completa 
 [![Gradle](https://img.shields.io/badge/Gradle-8.6-purple.svg)](https://gradle.org)
 [![API](https://img.shields.io/badge/API-23%2B-brightgreen.svg)](https://android-arsenal.com/api?level=23)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
-[![F-Droid](https://img.shields.io/f-droid/v/com.gnzalobnites.appsusagemonitor)](https://f-droid.org/packages/com.gnzalobnites.appsusagemonitor/)
 [![APKPure](https://img.shields.io/badge/APKPure-2.0.3-orange)](https://apkpure.net/apps-usage-monitor/com.gnzalobnites.appsusagemonitor)
 
 📋 Descripción
