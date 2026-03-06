@@ -79,7 +79,7 @@ Apps Usage Monitor es una aplicación Android de código abierto que te ayuda a 
 
 | Plataforma | Enlace |
 | --- | --- |
-| GitHub | [AppsUsageMonitor-v2.0.3.apk](https://github.com/gnzalobnites/AppsUsageMonitor/releases/tag/v2.0.3) |
+| GitHub | [AppsUsageMonitor-v2.0.3.apk](https://github.com/gnzalobnites/AppsUsageMonitor/releases/download/v2.0.3/AppsUsageMonitor-v2.0.3.apk) |
 | F-Droid | Próximamente |
 | APKPure | [Apps Usage Monitor en APKPure](https://apkpure.com/p/com.gnzalobnites.appsusagemonitor) |
 
