@@ -6,13 +6,13 @@ He actualizado tu README para reflejar los cambios tras la reescritura completa 
 
 📱 Apps Usage Monitor
 
-https://img.shields.io/badge/Kotlin-1.9.23-blue.svg
-https://img.shields.io/badge/AGP-8.4.0-green.svg
-https://img.shields.io/badge/Gradle-8.6-purple.svg
-https://img.shields.io/badge/API-23%2B-brightgreen.svg
-https://img.shields.io/badge/License-GPL--3.0-blue.svg
-https://img.shields.io/f-droid/v/com.gnzalobnites.appsusagemonitor
-https://img.shields.io/badge/APKPure-2.0.3-orange
+[![Kotlin](https://img.shields.io/badge/Kotlin-1.9.23-blue.svg)](https://kotlinlang.org)
+[![Android Gradle Plugin](https://img.shields.io/badge/AGP-8.4.0-green.svg)](https://developer.android.com/studio/releases/gradle-plugin)
+[![Gradle](https://img.shields.io/badge/Gradle-8.6-purple.svg)](https://gradle.org)
+[![API](https://img.shields.io/badge/API-23%2B-brightgreen.svg)](https://android-arsenal.com/api?level=23)
+[![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
+[![F-Droid](https://img.shields.io/f-droid/v/com.gnzalobnites.appsusagemonitor)](https://f-droid.org/packages/com.gnzalobnites.appsusagemonitor/)
+[![APKPure](https://img.shields.io/badge/APKPure-2.0.3-orange)](https://apkpure.net/apps-usage-monitor/com.gnzalobnites.appsusagemonitor)
 
 📋 Descripción
 
