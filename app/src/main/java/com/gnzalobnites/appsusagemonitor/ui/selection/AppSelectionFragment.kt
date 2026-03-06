@@ -106,6 +106,17 @@ class AppSelectionFragment : Fragment() {
     }
 
     private fun setupObservers() {
+        // Observador para el estado de carga - AHORA USA EL CONTENEDOR COMPLETO
+        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            if (isLoading) {
+                binding.loadingContainer.visibility = View.VISIBLE
+                binding.recyclerViewApps.visibility = View.GONE
+            } else {
+                binding.loadingContainer.visibility = View.GONE
+                binding.recyclerViewApps.visibility = View.VISIBLE
+            }
+        }
+        
         viewModel.filteredApps.observe(viewLifecycleOwner) { apps ->
             appsAdapter.submitList(apps)
         }

@@ -259,4 +259,6 @@
 
     <string name="cancel">Cancelar</string>
 
+<string name="loading_installed_apps">Cargando aplicaciones instaladas...</string>
+
 </resources>

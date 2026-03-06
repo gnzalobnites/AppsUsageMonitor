@@ -34,11 +34,16 @@ class AppSelectionViewModel(application: Application) : AndroidViewModel(applica
     private val _selectedApps = MutableLiveData<Int>(0)
     val selectedApps: LiveData<Int> = _selectedApps
     
+    private val _isLoading = MutableLiveData<Boolean>(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+    
     val monitoredApps: LiveData<List<MonitoredApp>> = repository.getMonitoredApps().asLiveData()
     
     private var allApps: List<AppInfo> = listOf()
     
     fun loadInstalledApps() {
+        _isLoading.value = true
+        
         viewModelScope.launch {
             val apps = withContext(Dispatchers.IO) {
                 val intent = android.content.Intent(android.content.Intent.ACTION_MAIN).apply {
@@ -57,6 +62,7 @@ class AppSelectionViewModel(application: Application) : AndroidViewModel(applica
             allApps = apps
             _installedApps.value = apps
             _filteredApps.value = apps
+            _isLoading.value = false
         }
     }
     
