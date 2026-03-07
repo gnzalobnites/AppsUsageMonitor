@@ -77,6 +77,42 @@ Apps Usage Monitor es una aplicación Android de código abierto que te ayuda a 
 | F-Droid | Próximamente |
 | APKPure | [Apps Usage Monitor en APKPure](https://apkpure.com/p/com.gnzalobnites.appsusagemonitor) |
 
+⚠️ Importante: si usás Android 13 o superior, necesitarás permitir los ajustes restringidos en Ajustes > Aplicaciones > Apps Usage Monitor, luego de solicitar el permiso de accesibilidad para la aplicación y recibir la advertencia de Android por otorgar ese permiso a una aplicación ajena a la Play Store. Una vez recbida la advertencia del sistema, aparecerá un menú de tres puntos en la esquina superior derecha de la pantalla de configuración de la aplicación, que permitirá activar los ajustes restringidos. El procedimiento es el siguiente:
+1. Solicitar el permiso de accesibilidad para la aplicación (luego de presionar "Iniciar monitoreo" en la pantalla principal)
+2. Aparecerá una advertencia del sistema que explicará los riesgos de otorgar tal permiso a una aplicación ajena a la Play Store: cerrarla
+3. Ir a Ajustes > Aplicaciones > Apps Usage Monitor
+4. Permitir los ajustes restringidos desde el menú de tres puntos (⋮) de la esquina superior derecha de la pantalla.
+5. Solicitar nuevamente el permiso de accesibilidad: esta vez, se podrá activar sin problemas.
+
+### 📸 Guía para permisos en Android 13+
+
+Sigue estos pasos para habilitar correctamente el servicio de accesibilidad:
+
+<div align="center">
+  <table>
+    <tr>
+      <td><img src="docs/images/permiso-accesibilidad-1.jpg" width="250" alt="Paso 1: Advertencia inicial"/></td>
+      <td><img src="docs/images/permiso-accesibilidad-2.jpg" width="250" alt="Paso 2: Menú de tres puntos"/></td>
+      <td><img src="docs/images/permiso-accesibilidad-3.jpg" width="250" alt="Paso 3: Activar ajustes restringidos"/></td>
+    </tr>
+    <tr>
+      <td align="center"><b>1. Aparecerá una advertencia. Ciérrala.</b></td>
+      <td align="center"><b>2. Ve a Ajustes > Apps > Apps Usage Monitor y toca el menú ⋮</b></td>
+      <td align="center"><b>3. Activa "Ajustes restringidos"</b></td>
+    </tr>
+    <tr>
+      <td><img src="docs/images/permiso-accesibilidad-4.jpg" width="250" alt="Paso 4: Permiso habilitado"/></td>
+      <td><img src="docs/images/permiso-accesibilidad-5.jpg" width="250" alt="Paso 5: Otorga el permiso"/></td>
+      <td><img src="docs/images/permiso-accesibilidad-6.jpg" width="250" alt="Paso 6: Monitoreo activado"/></td>
+    </tr>
+    <tr>
+      <td align="center"><b>4. Se habilitará el otorgamiento del permiso.</b></td>
+      <td align="center"><b>5. Otórgale el permiso a la app</b></td>
+      <td align="center"><b>6. El monitoreo se activará. </b></td>
+    </tr>
+  </table>
+</div>
+
 🔧 Requisitos
 
 - Android 6.0 (API 23) o superior
