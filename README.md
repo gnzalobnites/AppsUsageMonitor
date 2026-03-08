@@ -1,11 +1,11 @@
-📱 Apps Usage Monitor - Versión 2.0.4
+📱 Apps Usage Monitor - Versión 2.0.5
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.9.23-blue.svg)](https://kotlinlang.org)
 [![Android Gradle Plugin](https://img.shields.io/badge/AGP-8.4.0-green.svg)](https://developer.android.com/studio/releases/gradle-plugin)
 [![Gradle](https://img.shields.io/badge/Gradle-8.6-purple.svg)](https://gradle.org)
 [![API](https://img.shields.io/badge/API-23%2B-brightgreen.svg)](https://android-arsenal.com/api?level=23)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
-[![APKPure](https://img.shields.io/badge/APKPure-2.0.4-orange)](https://apkpure.net/apps-usage-monitor/com.gnzalobnites.appsusagemonitor)
+[![APKPure](https://img.shields.io/badge/APKPure-2.0.5-orange)](https://apkpure.net/apps-usage-monitor/com.gnzalobnites.appsusagemonitor)
 
 📋 Descripción
 
@@ -25,7 +25,7 @@ Apps Usage Monitor es una aplicación Android de código abierto que te ayuda a 
 - 🧠 Detección inteligente: Maneja paquetes del sistema, teclados y gestos para no interrumpir la experiencia
 
 
-🆕 Novedades de la Versión 2.0.4 (Reescritura Completa)
+🆕 Novedades de la Versión 2.0.5 (Reescritura Completa)
 
 - ✅ Arquitectura robusta: Reescritura completa con Room Database para almacenamiento persistente
 - ✅ Banners persistentes: Ahora los banners permanecen visibles y se actualizan en tiempo real
@@ -39,6 +39,7 @@ Apps Usage Monitor es una aplicación Android de código abierto que te ayuda a 
 - ✅ Footer integrado: Enlaces a email, invitación a café y versión directamente en pantalla principal
 - ✅ Correcciones críticas: Solucionados problemas de fugas de memoria, NullPointerException y manejo de ciclos de vida
 - ✅ Implementación de una barra de progreso, para indicar que la aplicación está creando en segundo plano la lista de aplicaciones a seleccionar
+- ✅ Mejora de la función de búsqueda de aplicaciones a seleccionar para su monitoreo
 
 📸 Capturas de Pantalla
 
@@ -73,7 +74,7 @@ Apps Usage Monitor es una aplicación Android de código abierto que te ayuda a 
 
 | Plataforma | Enlace |
 | --- | --- |
-| GitHub | [AppsUsageMonitor-v2.0.4.apk](https://github.com/gnzalobnites/AppsUsageMonitor/releases/tag/v2.0.4) |
+| GitHub | [AppsUsageMonitor-v2.0.5.apk](https://github.com/gnzalobnites/AppsUsageMonitor/releases/tag/v2.0.5) |
 | F-Droid | Próximamente |
 | APKPure | [Apps Usage Monitor en APKPure](https://apkpure.com/p/com.gnzalobnites.appsusagemonitor) |
 
@@ -221,7 +222,7 @@ Desarrollador: Gonzalo Benites
 📊 Comparativa de Versiones
 
 
-| Característica | v1.2.4 |  v2.0.4 (Nueva) |
+| Característica | v1.2.4 |  v2.0.5 (Nueva) |
 | --- | --- | --- |
 | Base de datos | ❌ No persistente | ✅ Room Database |
 | Historial por app | ❌ No | ✅ 7 días |
