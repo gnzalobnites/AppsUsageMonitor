@@ -20,6 +20,11 @@ class AppRepository(private val context: Context) {
     
     suspend fun getMonitoredAppsSync(): List<MonitoredApp> = monitoredAppDao.getMonitoredAppsSync()
 
+    /**
+     * MODIFICADO: Ahora verifica si la app ya existe en la BD.
+     * - Si existe (estaba pausada), solo actualiza su estado a isMonitoring = true.
+     * - Si no existe, la inserta como una nueva app monitoreada.
+     */
     suspend fun addAppToMonitor(packageName: String, interval: Long) {
         val pm = context.packageManager
         val appInfo = try {
@@ -29,13 +34,26 @@ class AppRepository(private val context: Context) {
         }
         val appName = pm.getApplicationLabel(appInfo).toString()
         
-        val app = MonitoredApp(
-            packageName = packageName,
-            appName = appName,
-            isMonitoring = true,
-            selectedInterval = interval
-        )
-        monitoredAppDao.insert(app)
+        // 1. Buscamos si la app ya tiene un registro previo
+        val existingApp = monitoredAppDao.getAppByPackage(packageName)
+        
+        if (existingApp != null) {
+            // 2a. Si ya existe (estaba pausada/desactivada), solo actualizamos el estado y el intervalo
+            val updatedApp = existingApp.copy(
+                isMonitoring = true,
+                selectedInterval = interval
+            )
+            monitoredAppDao.update(updatedApp)
+        } else {
+            // 2b. Solo insertamos si es la primera vez que se monitorea
+            val app = MonitoredApp(
+                packageName = packageName,
+                appName = appName,
+                isMonitoring = true,
+                selectedInterval = interval
+            )
+            monitoredAppDao.insert(app)
+        }
     }
 
     suspend fun updateAppMonitoring(app: MonitoredApp) {

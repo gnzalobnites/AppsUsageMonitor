@@ -1,0 +1,3423 @@
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/MainActivity.kt =====
+package com.gnzalobnites.appsusagemonitor
+
+import android.widget.TextView
+import android.view.View
+import android.os.Build
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Bundle
+import android.provider.Settings
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.navigation.findNavController
+import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.setupActionBarWithNavController
+import androidx.navigation.ui.setupWithNavController
+import com.gnzalobnites.appsusagemonitor.databinding.ActivityMainBinding
+import com.gnzalobnites.appsusagemonitor.utils.PermissionHelper
+
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var appBarConfiguration: AppBarConfiguration
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        binding = ActivityMainBinding.inflate(layoutInflater)
+
+        val headerView = binding.navView.getHeaderView(0)
+        val tvVersion = headerView.findViewById<TextView>(R.id.nav_header_version)
+        try {
+            val packageInfo = packageManager.getPackageInfo(packageName, 0)
+            tvVersion.text = getString(R.string.nav_header_version_format, packageInfo.versionName)
+        } catch (e: Exception) {
+            tvVersion.text = getString(R.string.nav_header_version_placeholder)
+        }
+
+        setContentView(binding.root)
+
+        drawerLayout = binding.drawerLayout
+
+        setSupportActionBar(binding.toolbar)
+
+        val navHostFragment = supportFragmentManager
+            .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        val navController = navHostFragment.navController
+
+        appBarConfiguration = AppBarConfiguration(
+            setOf(
+                R.id.homeFragment,
+                R.id.appSelectionFragment,
+                R.id.statisticsFragment,
+                R.id.settingsFragment,
+                R.id.aboutFragment
+            ),
+            drawerLayout
+        )
+
+        setupActionBarWithNavController(navController, appBarConfiguration)
+        binding.navView.setupWithNavController(navController)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val uiMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+            val isDarkMode = uiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+            window.decorView.systemUiVisibility = if (!isDarkMode) {
+                View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            } else {
+                0
+            }
+        }
+
+        checkAndRequestPermissions()
+    }
+
+    private fun applyTheme(theme: String?) {
+        when (theme) {
+            "light" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+            "dark" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+            else -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        }
+    }
+
+    private fun checkAndRequestPermissions() {
+        if (!PermissionHelper.hasUsageStatsPermission(this)) {
+            val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+            startActivity(intent)
+        }
+
+        if (!PermissionHelper.hasOverlayPermission(this)) {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName")
+            )
+            startActivity(intent)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    PermissionHelper.REQUEST_CODE_NOTIFICATIONS
+                )
+            }
+        }
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        val navController = findNavController(R.id.nav_host_fragment)
+        return androidx.navigation.ui.NavigationUI.navigateUp(navController, appBarConfiguration)
+                || super.onSupportNavigateUp()
+    }
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/SplashActivity.kt =====
+package com.gnzalobnites.appsusagemonitor
+
+import android.content.Intent
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.WindowManager
+import androidx.appcompat.app.AppCompatActivity
+
+class SplashActivity : AppCompatActivity() {
+    
+    companion object {
+        private const val SPLASH_DELAY_MS = 1500L
+    }
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            WindowManager.LayoutParams.FLAG_FULLSCREEN
+        )
+        
+        setContentView(R.layout.activity_splash)
+        
+        supportActionBar?.hide()
+        
+        val authorText = getString(R.string.splash_author)
+        
+        Handler(Looper.getMainLooper()).postDelayed({
+            navigateToMainActivity()
+        }, SPLASH_DELAY_MS)
+    }
+    
+    private fun navigateToMainActivity() {
+        val intent = Intent(this, MainActivity::class.java)
+        startActivity(intent)
+        
+        finish()
+        
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
+    
+    override fun onBackPressed() {
+        // No hacer nada durante el splash
+    }
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/MyApplication.kt =====
+package com.gnzalobnites.appsusagemonitor
+
+import android.app.Application
+import androidx.room.Room
+import com.gnzalobnites.appsusagemonitor.data.database.AppDatabase
+
+class MyApplication : Application() {
+    
+    companion object {
+        lateinit var database: AppDatabase
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        database = AppDatabase.getInstance(this)
+    }
+}
+-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/data/database/AppDatabase.kt =====
+package com.gnzalobnites.appsusagemonitor.data.database
+
+import androidx.room.Database
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
+import android.content.Context
+import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
+import com.gnzalobnites.appsusagemonitor.data.entities.UsageSession
+
+@Database(
+    entities = [MonitoredApp::class, UsageSession::class],
+    version = 1,
+    exportSchema = false
+)
+@TypeConverters(Converters::class)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun monitoredAppDao(): MonitoredAppDao
+    abstract fun usageSessionDao(): UsageSessionDao
+
+    companion object {
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
+        fun getInstance(context: Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "app_usage_database"
+                ).build()
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
+}
+-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/data/database/Converters.kt =====
+package com.gnzalobnites.appsusagemonitor.data.database
+
+import androidx.room.TypeConverter
+import java.util.Date
+
+class Converters {
+    
+    @TypeConverter
+    fun fromTimestamp(value: Long?): Date? {
+        return value?.let { Date(it) }
+    }
+
+    @TypeConverter
+    fun dateToTimestamp(date: Date?): Long? {
+        return date?.time
+    }
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/data/database/MonitoredAppDao.kt =====
+package com.gnzalobnites.appsusagemonitor.data.database
+
+import androidx.room.*
+import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface MonitoredAppDao {
+    @Query("SELECT * FROM monitored_apps ORDER BY appName ASC")
+    fun getAllApps(): Flow<List<MonitoredApp>>
+
+    @Query("SELECT * FROM monitored_apps")
+    suspend fun getAllAppsSync(): List<MonitoredApp>
+
+    @Query("SELECT * FROM monitored_apps WHERE isMonitoring = 1")
+    fun getMonitoredApps(): Flow<List<MonitoredApp>>
+
+    @Query("SELECT * FROM monitored_apps WHERE isMonitoring = 1")
+    suspend fun getMonitoredAppsSync(): List<MonitoredApp>
+
+    @Query("SELECT * FROM monitored_apps WHERE packageName = :packageName")
+    suspend fun getAppByPackage(packageName: String): MonitoredApp?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(app: MonitoredApp)
+
+    @Update
+    suspend fun update(app: MonitoredApp)
+
+    @Delete
+    suspend fun delete(app: MonitoredApp)
+}
+-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/data/database/UsageSessionDao.kt =====
+package com.gnzalobnites.appsusagemonitor.data.database
+
+import androidx.room.*
+import com.gnzalobnites.appsusagemonitor.data.entities.UsageSession
+import kotlinx.coroutines.flow.Flow
+
+// Modelo de datos para estadísticas diarias
+data class DailyUsageStats(
+    val dayTimestamp: Long, // El timestamp del inicio del día
+    val totalDuration: Long // Suma de duración en milisegundos
+)
+
+@Dao
+interface UsageSessionDao {
+    @Query("SELECT * FROM usage_sessions WHERE packageName = :packageName ORDER BY startTime DESC")
+    fun getSessionsForApp(packageName: String): Flow<List<UsageSession>>
+
+    @Query("SELECT * FROM usage_sessions WHERE packageName = :packageName AND startTime >= :startOfDay AND startTime < :endOfDay ORDER BY startTime DESC")
+    suspend fun getSessionsForDay(packageName: String, startOfDay: Long, endOfDay: Long): List<UsageSession>
+
+    @Query("SELECT * FROM usage_sessions WHERE id = :sessionId")
+    suspend fun getSessionById(sessionId: Long): UsageSession?
+
+    @Query("SELECT * FROM usage_sessions WHERE packageName = :packageName AND startTime >= :startOfDay")
+    suspend fun getTodaySessions(packageName: String, startOfDay: Long): List<UsageSession>
+
+    @Query("SELECT SUM(duration) FROM usage_sessions WHERE packageName = :packageName AND startTime >= :startOfDay")
+    suspend fun getTotalUsageToday(packageName: String, startOfDay: Long): Long?
+
+    @Insert
+    suspend fun insert(session: UsageSession): Long
+
+    @Update
+    suspend fun update(session: UsageSession)
+
+    // Versión original - CORREGIDA: requiere duration como parámetro
+    @Query("UPDATE usage_sessions SET endTime = :endTime, duration = :duration WHERE id = :sessionId")
+    suspend fun updateSessionEnd(sessionId: Long, endTime: Long, duration: Long)
+
+    // Método mejorado que incluye sesiones que comenzaron antes pero terminaron durante el día
+    // y maneja correctamente los límites de tiempo
+    @Query("""
+        SELECT COALESCE(SUM(duration), 0) FROM usage_sessions 
+        WHERE packageName = :packageName 
+        AND startTime < :endOfDay
+        AND (
+            (startTime >= :startOfDay AND startTime < :endOfDay) OR
+            (endTime >= :startOfDay AND endTime <= :endOfDay) OR
+            (startTime < :startOfDay AND endTime > :startOfDay)
+        )
+    """)
+    suspend fun getTotalUsageForDay(packageName: String, startOfDay: Long, endOfDay: Long): Long
+
+    // Método adicional para limpiar sesiones antiguas (opcional, útil para mantenimiento)
+    @Query("DELETE FROM usage_sessions WHERE endTime < :cutoffTime AND endTime IS NOT NULL")
+    suspend fun deleteOldSessions(cutoffTime: Long)
+
+    /**
+     * Obtiene el uso diario de una app específica en un rango de tiempo.
+     * La lógica de SQL divide el timestamp por los milisegundos de un día (86400000)
+     * para agrupar todas las sesiones que pertenecen al mismo día.
+     */
+    @Query("""
+        SELECT 
+            (startTime / 86400000) * 86400000 AS dayTimestamp, 
+            SUM(duration) AS totalDuration 
+        FROM usage_sessions 
+        WHERE packageName = :packageName 
+          AND startTime >= :startTimeLimit 
+          AND endTime IS NOT NULL
+        GROUP BY dayTimestamp 
+        ORDER BY dayTimestamp ASC
+    """)
+    fun getWeeklyStatsByApp(packageName: String, startTimeLimit: Long): Flow<List<DailyUsageStats>>
+
+    /**
+     * Obtiene una lista de los nombres de paquetes de apps que tienen registros
+     * Útil para llenar el filtro/spinner de aplicaciones en la pantalla de estadísticas.
+     */
+    @Query("SELECT DISTINCT packageName FROM usage_sessions")
+    suspend fun getAppsWithHistory(): List<String>
+
+    /**
+     * Obtiene las estadísticas de los últimos 7 días para una aplicación específica.
+     * Similar a getWeeklyStatsByApp pero con límite de 7 días y como función suspend.
+     */
+    @Query("""
+        SELECT 
+            (startTime / 86400000) * 86400000 AS dayTimestamp, 
+            SUM(duration) AS totalDuration 
+        FROM usage_sessions 
+        WHERE packageName = :packageName 
+          AND startTime >= :startTimeLimit 
+          AND endTime IS NOT NULL
+        GROUP BY dayTimestamp 
+        ORDER BY dayTimestamp ASC
+        LIMIT 7
+    """)
+    suspend fun getLast7DaysStats(packageName: String, startTimeLimit: Long): List<DailyUsageStats>
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/data/entities/MonitoredApp.kt =====
+package com.gnzalobnites.appsusagemonitor.data.entities
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "monitored_apps")
+data class MonitoredApp(
+    @PrimaryKey
+    val packageName: String,
+    val appName: String,
+    val isMonitoring: Boolean = false,
+    val selectedInterval: Long = 60000L,
+    val lastNotificationTime: Long = 0L,
+    val totalUsageToday: Long = 0L,
+    val createdAt: Long = System.currentTimeMillis()
+)
+-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/data/entities/UsageSession.kt =====
+package com.gnzalobnites.appsusagemonitor.data.entities
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import androidx.room.ForeignKey
+import androidx.room.Index
+
+@Entity(
+    tableName = "usage_sessions",
+    foreignKeys = [
+        ForeignKey(
+            entity = MonitoredApp::class,
+            parentColumns = ["packageName"],
+            childColumns = ["packageName"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index(value = ["packageName"])] // ← Agregar este índice
+)
+data class UsageSession(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val packageName: String,
+    val startTime: Long,
+    val endTime: Long? = null,
+    val duration: Long = 0L
+)-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/data/model/UsageStat.kt =====
+package com.gnzalobnites.appsusagemonitor.data.model
+
+/**
+ * Modelo para representar estadísticas de uso de una app
+ * Utilizado en el gráfico de MainFragment
+ */
+data class UsageStat(
+    val packageName: String,
+    val appName: String,
+    val totalTimeInForeground: Long,
+    val lastTimeUsed: Long
+)-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/data/repository/AppRepository.kt =====
+package com.gnzalobnites.appsusagemonitor.data.repository
+
+import android.content.Context
+import android.content.pm.PackageManager
+import com.gnzalobnites.appsusagemonitor.data.database.AppDatabase
+import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
+import com.gnzalobnites.appsusagemonitor.data.entities.UsageSession
+import kotlinx.coroutines.flow.Flow
+import java.util.Calendar
+
+class AppRepository(private val context: Context) {
+    private val db = AppDatabase.getInstance(context)
+    private val monitoredAppDao = db.monitoredAppDao()
+    private val usageSessionDao = db.usageSessionDao()
+
+    // Usamos getMonitoredApps() que es el método real en tu DAO
+    fun getAllMonitoredApps(): Flow<List<MonitoredApp>> = monitoredAppDao.getMonitoredApps()
+
+    fun getMonitoredApps(): Flow<List<MonitoredApp>> = monitoredAppDao.getMonitoredApps()
+    
+    suspend fun getMonitoredAppsSync(): List<MonitoredApp> = monitoredAppDao.getMonitoredAppsSync()
+
+    suspend fun addAppToMonitor(packageName: String, interval: Long) {
+        val pm = context.packageManager
+        val appInfo = try {
+            pm.getApplicationInfo(packageName, 0)
+        } catch (e: PackageManager.NameNotFoundException) {
+            return
+        }
+        val appName = pm.getApplicationLabel(appInfo).toString()
+        
+        val app = MonitoredApp(
+            packageName = packageName,
+            appName = appName,
+            isMonitoring = true,
+            selectedInterval = interval
+        )
+        monitoredAppDao.insert(app)
+    }
+
+    suspend fun updateAppMonitoring(app: MonitoredApp) {
+        monitoredAppDao.update(app)
+    }
+
+    suspend fun removeAppFromMonitor(app: MonitoredApp) {
+        val updatedApp = app.copy(isMonitoring = false)
+        monitoredAppDao.update(updatedApp)
+    }
+    
+    // Método delete que usa el DAO correctamente
+    suspend fun deleteMonitoredApp(app: MonitoredApp) {
+        monitoredAppDao.delete(app)
+    }
+
+    suspend fun startSession(packageName: String, startTime: Long): Long {
+        val session = UsageSession(
+            packageName = packageName,
+            startTime = startTime
+        )
+        return usageSessionDao.insert(session)
+    }
+
+    suspend fun endSession(sessionId: Long) {
+        val endTime = System.currentTimeMillis()
+        val session = usageSessionDao.getSessionById(sessionId)
+        session?.let {
+            val duration = endTime - it.startTime
+            usageSessionDao.updateSessionEnd(sessionId, endTime, duration)
+        }
+    }
+
+    suspend fun getTotalUsageForDay(packageName: String, startOfDay: Long, endOfDay: Long): Long {
+        return usageSessionDao.getTotalUsageForDay(packageName, startOfDay, endOfDay) ?: 0L
+    }
+
+    /**
+     * Obtiene el tiempo total de uso de HOY para una app específica
+     * Usa la hora actual como límite superior para evitar datos futuros
+     * CORREGIDO: ahora usa endOfDay = now en lugar de endOfDay = fin del día
+     */
+    suspend fun getTotalUsageToday(packageName: String): Long {
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val startOfDay = calendar.timeInMillis
+        val now = System.currentTimeMillis()
+        
+        return getTotalUsageForDay(packageName, startOfDay, now)
+    }
+    
+    @Deprecated("Usa getTotalUsageToday(packageName) que no requiere startOfDay")
+    suspend fun getTotalUsageToday(packageName: String, startOfDay: Long): Long {
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = startOfDay
+        }
+        calendar.add(Calendar.DAY_OF_YEAR, 1)
+        val endOfDay = calendar.timeInMillis
+        return usageSessionDao.getTotalUsageToday(packageName, startOfDay) ?: 0L
+    }
+
+    suspend fun getCurrentSessionDuration(startTime: Long): Long {
+        return System.currentTimeMillis() - startTime
+    }
+
+    suspend fun getAppByPackage(packageName: String): MonitoredApp? {
+        return monitoredAppDao.getAppByPackage(packageName)
+    }
+    
+    suspend fun getSessionsForDay(packageName: String, startOfDay: Long, endOfDay: Long): List<UsageSession> {
+        return usageSessionDao.getSessionsForDay(packageName, startOfDay, endOfDay)
+    }
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/data/repository/UsageRepository.kt =====
+package com.gnzalobnites.appsusagemonitor.data.repository
+
+import android.app.Application
+import android.app.usage.UsageStatsManager
+import android.content.Context
+import android.content.pm.PackageManager
+import com.gnzalobnites.appsusagemonitor.data.model.UsageStat
+import java.util.Calendar
+
+/**
+ * Repositorio para obtener estadísticas de uso del sistema Android
+ * Utiliza UsageStatsManager para consultar el tiempo de uso de apps
+ */
+class UsageRepository(private val application: Application) {
+    
+    private val usageStatsManager = application.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+    private val packageManager = application.packageManager
+    
+    /**
+     * Obtiene estadísticas de uso del día actual
+     * @return Lista de UsageStat ordenada por tiempo de uso (mayor a menor)
+     */
+    fun getTodayUsageStats(): List<UsageStat> {
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val startTime = calendar.timeInMillis
+        val endTime = System.currentTimeMillis()
+        
+        return getUsageStatsInRange(startTime, endTime)
+    }
+    
+    /**
+     * Obtiene estadísticas de uso de ayer
+     * @return Lista de UsageStat ordenada por tiempo de uso
+     */
+    fun getYesterdayUsageStats(): List<UsageStat> {
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            add(Calendar.DAY_OF_YEAR, -1)
+        }
+        val startTime = calendar.timeInMillis
+        
+        calendar.add(Calendar.DAY_OF_YEAR, 1)
+        val endTime = calendar.timeInMillis
+        
+        return getUsageStatsInRange(startTime, endTime)
+    }
+    
+    /**
+     * Obtiene estadísticas de uso de la última semana
+     * @return Lista de UsageStat ordenada por tiempo de uso
+     */
+    fun getWeeklyUsageStats(): List<UsageStat> {
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            add(Calendar.DAY_OF_YEAR, -6)
+        }
+        val startTime = calendar.timeInMillis
+        val endTime = System.currentTimeMillis()
+        
+        return getUsageStatsInRange(startTime, endTime)
+    }
+    
+    /**
+     * Obtiene estadísticas de uso en un rango de tiempo específico
+     * @param startTime Tiempo de inicio en milisegundos
+     * @param endTime Tiempo de fin en milisegundos
+     * @return Lista de UsageStat filtrada y ordenada
+     */
+    fun getUsageStatsInRange(startTime: Long, endTime: Long): List<UsageStat> {
+        // Query al sistema
+        val usageStats = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_DAILY,
+            startTime,
+            endTime
+        )
+        
+        if (usageStats == null || usageStats.isEmpty()) {
+            return emptyList()
+        }
+        
+        // Filtrar solo apps con tiempo > 0 y ordenar por tiempo descendente
+        return usageStats
+            .filter { it.totalTimeInForeground > 0 }
+            .sortedByDescending { it.totalTimeInForeground }
+            .map { stats ->
+                val appName = try {
+                    val appInfo = packageManager.getApplicationInfo(stats.packageName, 0)
+                    packageManager.getApplicationLabel(appInfo).toString()
+                } catch (e: PackageManager.NameNotFoundException) {
+                    // Si no se encuentra, usar el packageName como fallback
+                    stats.packageName
+                }
+                
+                UsageStat(
+                    packageName = stats.packageName,
+                    appName = appName,
+                    totalTimeInForeground = stats.totalTimeInForeground,
+                    lastTimeUsed = stats.lastTimeUsed
+                )
+            }
+    }
+    
+    /**
+     * Obtiene el tiempo total de uso del día para una app específica
+     * @param packageName Nombre del paquete de la app
+     * @return Tiempo total en milisegundos
+     */
+    fun getTotalTimeForAppToday(packageName: String): Long {
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val startTime = calendar.timeInMillis
+        val endTime = System.currentTimeMillis()
+        
+        val stats = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_DAILY,
+            startTime,
+            endTime
+        )
+        
+        return stats?.find { it.packageName == packageName }?.totalTimeInForeground ?: 0L
+    }
+    
+    /**
+     * Obtiene el tiempo total de uso de ayer para una app específica
+     * @param packageName Nombre del paquete de la app
+     * @return Tiempo total en milisegundos
+     */
+    fun getTotalTimeForAppYesterday(packageName: String): Long {
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            add(Calendar.DAY_OF_YEAR, -1)
+        }
+        val startTime = calendar.timeInMillis
+        
+        calendar.add(Calendar.DAY_OF_YEAR, 1)
+        val endTime = calendar.timeInMillis
+        
+        val stats = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_DAILY,
+            startTime,
+            endTime
+        )
+        
+        return stats?.find { it.packageName == packageName }?.totalTimeInForeground ?: 0L
+    }
+    
+    /**
+     * Verifica si hay permisos de uso de datos concedidos
+     * @return true si hay al menos una app con datos, false si no
+     */
+    fun hasUsageStatsPermission(): Boolean {
+        val currentTime = System.currentTimeMillis()
+        val stats = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_DAILY,
+            currentTime - 1000 * 60 * 60 * 24, // Últimas 24 horas
+            currentTime
+        )
+        return stats != null && stats.isNotEmpty()
+    }
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/service/BubbleService.kt =====
+package com.gnzalobnites.appsusagemonitor.service
+
+import android.app.*
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
+import android.content.res.Configuration
+import android.graphics.*
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import android.os.Build
+import android.os.IBinder
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
+import android.util.Log
+import android.view.*
+import android.widget.Button
+import android.widget.TextView
+import androidx.core.app.NotificationCompat
+import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.lifecycleScope
+import com.gnzalobnites.appsusagemonitor.R
+import com.gnzalobnites.appsusagemonitor.data.repository.AppRepository
+import com.gnzalobnites.appsusagemonitor.utils.Constants
+import kotlinx.coroutines.*
+import java.util.*
+
+class BubbleService : LifecycleService() {
+    
+    private lateinit var windowManager: WindowManager
+    private lateinit var appRepository: AppRepository
+    private var bubbleView: View? = null
+    private var expandedView: View? = null
+    private var isExpanded = false
+    private var currentPackageName: String? = null
+    private var currentBadgeCount: Int = 0
+    private var sessionStartTime: Long = System.currentTimeMillis()
+    private var currentInterval: Long = Constants.INTERVAL_1_MINUTE
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var updateExpandedViewRunnable: Runnable? = null
+    private var isBubbleActive = false
+    private var isPersistent = false
+    
+    private var updateHandler = Handler(Looper.getMainLooper())
+    private var updateRunnable: Runnable? = null
+    private var updateJob: Job? = null
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    
+    private var cachedTotalToday: Long = 0L
+    private var lastCacheUpdate: Long = 0L
+    private val CACHE_DURATION = 5000L
+    
+    private val bubbleParams: WindowManager.LayoutParams by lazy {
+        WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else
+                WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or 
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.END
+            
+            val displayMetrics = resources.displayMetrics
+            val screenHeight = displayMetrics.heightPixels
+            y = screenHeight / 4
+            
+            x = 0
+        }
+    }
+
+    private val expandedParams: WindowManager.LayoutParams by lazy {
+        WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else
+                WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        )
+    }
+
+    companion object {
+        private const val TAG = "BubbleService"
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        Log.d(TAG, "BubbleService created")
+        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        appRepository = AppRepository(this)
+        startForegroundService()
+    }
+    
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+        
+        Log.d(TAG, "onStartCommand: action=${intent?.action}")
+        
+        when (intent?.action) {
+            Constants.ACTION_SHOW_BUBBLE -> {
+                val packageName = intent.getStringExtra(Constants.EXTRA_PACKAGE_NAME)
+                val badgeCount = intent.getIntExtra(Constants.EXTRA_BADGE_COUNT, 1)
+                val interval = intent.getLongExtra(Constants.EXTRA_INTERVAL, Constants.INTERVAL_1_MINUTE)
+                val sessionStart = intent.getLongExtra(Constants.EXTRA_SESSION_START_TIME, System.currentTimeMillis())
+                isPersistent = intent.getBooleanExtra(Constants.EXTRA_BUBBLE_PERSISTENT, false)
+                
+                currentInterval = interval
+                sessionStartTime = sessionStart
+                
+                if (packageName != null) {
+                    currentPackageName = packageName
+                    refreshTotalTodayCache(packageName)
+                }
+                
+                showBubble(packageName, badgeCount)
+            }
+            Constants.ACTION_HIDE_BUBBLE -> {
+                Log.d(TAG, "Hiding bubble")
+                hideAllViews()
+                isBubbleActive = false
+                stopUpdatingTime()
+            }
+        }
+        
+        return START_STICKY
+    }
+    
+    private fun refreshTotalTodayCache(packageName: String) {
+        serviceScope.launch {
+            try {
+                val startOfDay = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }.timeInMillis
+                
+                val endOfDay = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 23)
+                    set(Calendar.MINUTE, 59)
+                    set(Calendar.SECOND, 59)
+                    set(Calendar.MILLISECOND, 999)
+                }.timeInMillis
+                
+                cachedTotalToday = appRepository.getTotalUsageForDay(
+                    packageName,
+                    startOfDay,
+                    endOfDay
+                )
+                lastCacheUpdate = System.currentTimeMillis()
+                Log.d(TAG, "Cache refreshed: totalToday=$cachedTotalToday ms")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error refreshing cache", e)
+            }
+        }
+    }
+    
+    private fun startForegroundService() {
+        val channelId = "bubble_service_channel"
+        val notificationId = Constants.NOTIFICATION_ID
+        
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(
+                    channelId,
+                    getString(R.string.notification_channel_name),
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = getString(R.string.notification_channel_description)
+                    setShowBadge(false)
+                }
+                val notificationManager = getSystemService(NotificationManager::class.java)
+                notificationManager.createNotificationChannel(channel)
+            }
+
+            val notification = NotificationCompat.Builder(this, channelId)
+                .setContentTitle(getString(R.string.notification_title))
+                .setContentText(getString(R.string.notification_content))
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                .build()
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(notificationId, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            } else {
+                startForeground(notificationId, notification)
+            }
+            Log.d(TAG, "Foreground service started successfully")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error starting foreground service", e)
+            try {
+                startForeground(notificationId, NotificationCompat.Builder(this, channelId).build())
+            } catch (e2: Exception) {
+                Log.e(TAG, "Fallback also failed", e2)
+            }
+        }
+    }
+
+    private fun showBubble(packageName: String?, badgeCount: Int) {
+        if (packageName == null) {
+            Log.e(TAG, "PackageName is null")
+            return
+        }
+        
+        Log.d(TAG, "Attempting to show bubble for: $packageName, count: $badgeCount, persistent: $isPersistent")
+        
+        if (!Settings.canDrawOverlays(this)) {
+            Log.e(TAG, "No overlay permission")
+            return
+        }
+        
+        if (isBubbleActive && bubbleView != null) {
+            updateBubbleContent(packageName, badgeCount)
+            return
+        }
+        
+        currentPackageName = packageName
+        currentBadgeCount = badgeCount
+        
+        try {
+            createBubbleView(packageName, badgeCount)
+            isBubbleActive = true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing bubble", e)
+        }
+    }
+
+    private fun createBubbleView(packageName: String, badgeCount: Int) {
+        try {
+            bubbleView = LayoutInflater.from(this).inflate(R.layout.bubble_view, null)
+            
+            setupBubbleContent(packageName, badgeCount)
+            
+            bubbleView?.setOnClickListener {
+                Log.d(TAG, "Bubble clicked")
+                if (isExpanded) {
+                    hideExpandedView()
+                } else {
+                    showExpandedView()
+                }
+            }
+
+            windowManager.addView(bubbleView, bubbleParams)
+            Log.d(TAG, "Bubble view added to window manager at position y=${bubbleParams.y}")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating bubble view", e)
+        }
+    }
+
+    private fun setupBubbleContent(packageName: String, badgeCount: Int) {
+        try {
+            val bubbleIcon = bubbleView?.findViewById<View>(R.id.bubble_icon)
+            val badgeText = bubbleView?.findViewById<TextView>(R.id.badge_text)
+            val bubbleContainer = bubbleView?.findViewById<View>(R.id.bubble_container)
+            
+            if (bubbleIcon == null || badgeText == null || bubbleContainer == null) {
+                Log.e(TAG, "Bubble views not found")
+                return
+            }
+            
+            val pm = packageManager
+            val appIcon = pm.getApplicationIcon(packageName)
+            
+            val bitmap = drawableToBitmap(appIcon)
+            val roundedBitmap = getRoundedBitmap(bitmap)
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                bubbleIcon.background = BitmapDrawable(resources, roundedBitmap)
+            } else {
+                bubbleIcon.setBackgroundDrawable(BitmapDrawable(resources, roundedBitmap))
+            }
+            
+            badgeText.text = badgeCount.toString()
+            badgeText.visibility = View.VISIBLE
+            bubbleContainer.visibility = View.VISIBLE
+            
+            Log.d(TAG, "Bubble content setup complete")
+            
+        } catch (e: PackageManager.NameNotFoundException) {
+            Log.e(TAG, getString(R.string.error_app_icon_not_found), e)
+            bubbleView?.findViewById<View>(R.id.bubble_icon)?.setBackgroundColor(Color.GRAY)
+            bubbleView?.findViewById<TextView>(R.id.badge_text)?.text = badgeCount.toString()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting up bubble content", e)
+        }
+    }
+
+    private fun updateBubbleContent(packageName: String, badgeCount: Int) {
+        try {
+            val badgeText = bubbleView?.findViewById<TextView>(R.id.badge_text)
+            badgeText?.text = badgeCount.toString()
+            Log.d(TAG, "Bubble content updated to count: $badgeCount")
+            
+            if (isExpanded && expandedView != null) {
+                updateExpandedViewTimes()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating bubble content", e)
+        }
+    }
+
+    private fun showExpandedView() {
+        try {
+            if (expandedView == null) {
+                createExpandedView()
+            }
+            
+            expandedView?.visibility = View.VISIBLE
+            bubbleView?.findViewById<View>(R.id.bubble_container)?.visibility = View.GONE
+            isExpanded = true
+            
+            updateExpandedViewTimes()
+            
+            startUpdatingTime()
+            
+            Log.d(TAG, "Expanded view shown")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing expanded view", e)
+        }
+    }
+
+    private fun hideExpandedView() {
+        try {
+            expandedView?.visibility = View.GONE
+            bubbleView?.findViewById<View>(R.id.bubble_container)?.visibility = View.VISIBLE
+            isExpanded = false
+            
+            stopUpdatingTime()
+            
+            Log.d(TAG, "Expanded view hidden")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error hiding expanded view", e)
+        }
+    }
+
+    private fun createExpandedView() {
+        try {
+            val contextThemeWrapper = ContextThemeWrapper(this, R.style.Theme_AppsUsageMonitor)
+            expandedView = LayoutInflater.from(contextThemeWrapper).inflate(R.layout.bubble_expanded_view, null)
+        
+            expandedParams.gravity = Gravity.CENTER
+            expandedParams.x = 0
+            expandedParams.y = 0
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                expandedView?.setBackgroundResource(R.drawable.glass_morphism_background)
+            }
+
+            expandedView?.findViewById<Button>(R.id.close_button)?.setOnClickListener {
+                closeCartel()
+            }
+
+            windowManager.addView(expandedView, expandedParams)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating expanded view", e)
+        }
+    }
+
+    private fun startUpdatingTime() {
+        stopUpdatingTime()
+        updateJob = serviceScope.launch {
+            while (isActive) {
+                updateExpandedViewTimes()
+                delay(1000)
+            }
+        }
+        Log.d(TAG, "Time updates started")
+    }
+
+    private fun stopUpdatingTime() {
+        updateJob?.cancel()
+        updateJob = null
+        Log.d(TAG, "Time updates stopped")
+    }
+
+    private fun updateExpandedViewTimes() {
+        if (!isExpanded || expandedView == null || currentPackageName == null) return
+
+        val now = System.currentTimeMillis()
+        val sessionDuration = now - sessionStartTime
+        
+        if (now - lastCacheUpdate > CACHE_DURATION) {
+            refreshTotalTodayCache(currentPackageName!!)
+        }
+        
+        val totalToday = cachedTotalToday + sessionDuration
+
+        try {
+            expandedView?.apply {
+                findViewById<TextView>(R.id.current_session_time)?.text = formatDuration(sessionDuration)
+                findViewById<TextView>(R.id.total_today_time)?.text = formatDuration(totalToday)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating expanded view times", e)
+        }
+    }
+
+    private fun closeCartel() {
+        stopUpdatingTime()
+        hideAllViews()
+        isExpanded = false
+        isBubbleActive = false
+        
+        notifyBubbleClosed()
+    }
+
+    private fun updateExpandedView(packageName: String) {
+        updateExpandedViewTimes()
+    }
+
+    private fun notifyBubbleClosed() {
+        try {
+            val intent = Intent(this, MonitoringService::class.java).apply {
+                action = Constants.ACTION_BUBBLE_CLOSED
+            }
+            startService(intent)
+            Log.d(TAG, "Bubble closed notification sent")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error notifying bubble closed", e)
+        }
+    }
+
+    private fun drawableToBitmap(drawable: Drawable): Bitmap {
+        if (drawable is BitmapDrawable && drawable.bitmap != null) {
+            return drawable.bitmap
+        }
+        
+        val width = drawable.intrinsicWidth.coerceAtLeast(1)
+        val height = drawable.intrinsicHeight.coerceAtLeast(1)
+        
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
+    }
+
+    private fun getRoundedBitmap(bitmap: Bitmap): Bitmap {
+        val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(output)
+        
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+        }
+        
+        canvas.drawCircle(
+            (bitmap.width / 2).toFloat(),
+            (bitmap.height / 2).toFloat(),
+            (bitmap.width / 2).toFloat(),
+            paint
+        )
+        
+        return output
+    }
+
+    private fun formatDuration(duration: Long): String {
+        val seconds = (duration / 1000) % 60
+        val minutes = (duration / (1000 * 60)) % 60
+        val hours = (duration / (1000 * 60 * 60))
+        
+        return when {
+            hours > 0 -> String.format("%02d:%02d:%02d", hours, minutes, seconds)
+            minutes > 0 -> String.format("%02d:%02d", minutes, seconds)
+            else -> String.format("0:%02d", seconds)
+        }
+    }
+
+    private fun hideAllViews() {
+        try {
+            Log.d(TAG, "Hiding all views")
+            
+            stopUpdatingTime()
+            updateExpandedViewRunnable?.let { mainHandler.removeCallbacks(it) }
+            updateExpandedViewRunnable = null
+            
+            if (bubbleView != null) {
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                        if (bubbleView!!.isAttachedToWindow) {
+                            windowManager.removeView(bubbleView)
+                        }
+                    } else {
+                        windowManager.removeView(bubbleView)
+                    }
+                } catch (e: IllegalArgumentException) {
+                    Log.d(TAG, "Bubble view already removed")
+                }
+                bubbleView = null
+            }
+            
+            if (expandedView != null) {
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                        if (expandedView!!.isAttachedToWindow) {
+                            windowManager.removeView(expandedView)
+                        }
+                    } else {
+                        windowManager.removeView(expandedView)
+                    }
+                } catch (e: IllegalArgumentException) {
+                    Log.d(TAG, "Expanded view already removed")
+                }
+                expandedView = null
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error hiding all views", e)
+        } finally {
+            isBubbleActive = false
+            isExpanded = false
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d(TAG, "BubbleService destroyed")
+        stopUpdatingTime()
+        hideAllViews()
+        serviceScope.cancel()
+        mainHandler.removeCallbacksAndMessages(null)
+        updateHandler.removeCallbacksAndMessages(null)
+        stopForeground(STOP_FOREGROUND_REMOVE)
+    }
+
+    override fun onBind(intent: Intent): IBinder? {
+        super.onBind(intent)
+        return null
+    }
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/service/MonitoringService.kt =====
+package com.gnzalobnites.appsusagemonitor.service
+
+import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.Intent
+import android.util.Log
+import android.view.accessibility.AccessibilityEvent
+import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
+import com.gnzalobnites.appsusagemonitor.data.repository.AppRepository
+import com.gnzalobnites.appsusagemonitor.utils.Constants
+import kotlinx.coroutines.*
+
+class MonitoringService : AccessibilityService() {
+    
+    private lateinit var repository: AppRepository
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var currentAppPackage: String? = null
+    private var currentSessionId: Long? = null
+    private var sessionStartTime: Long? = null
+    private var currentMonitoredApp: MonitoredApp? = null
+    private var lastBubbleShowTime: Long = 0L
+    private var isBubbleVisible = false
+    private var nextBubbleJob: Job? = null
+    private var bubbleCloseTime: Long = 0L
+    private var isFirstBubbleScheduled = false
+    private var departureJob: Job? = null
+
+    companion object {
+        private const val TAG = "MonitoringService"
+        private const val DEBUG_TAG = "AppMonitor_Debug"
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        Log.d(TAG, "Service created")
+        repository = AppRepository(this)
+    }
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        Log.d(TAG, "Accessibility service CONNECTED")
+        
+        val info = AccessibilityServiceInfo().apply {
+            eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
+                         AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+            feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
+            notificationTimeout = 100
+        }
+        serviceInfo = info
+        
+        startBubbleService()
+    }
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        val packageName = event.packageName?.toString() ?: return
+
+        when (event.eventType) {
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                Log.d(DEBUG_TAG, ">>> Ventana activa: $packageName")
+                
+                departureJob?.cancel()
+                
+                handleAppChange(packageName)
+            }
+            
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
+                if (packageName == currentAppPackage) {
+                    departureJob?.cancel()
+                }
+            }
+        }
+    }
+
+    private fun handleAppChange(packageName: String) {
+        serviceScope.launch {
+            val monitoredApp = repository.getAppByPackage(packageName)
+            
+            if (monitoredApp?.isMonitoring == true) {
+                departureJob?.cancel()
+                if (currentAppPackage == packageName) return@launch
+                
+                if (currentAppPackage != null) endCurrentSession()
+                startNewSession(packageName, monitoredApp)
+            } else {
+                if (isPackageExempt(packageName)) {
+                    Log.d(DEBUG_TAG, "Paquete exento detectado: $packageName. Manteniendo sesión.")
+                    departureJob?.cancel()
+                    return@launch
+                }
+
+                departureJob?.cancel()
+                departureJob = serviceScope.launch {
+                    delay(500)
+                    
+                    if (currentAppPackage != null) {
+                        Log.w(DEBUG_TAG, "Cerrando sesión tras 500ms. App destino: $packageName")
+                        endCurrentSession()
+                        cleanupCurrentState()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun isPackageExempt(packageName: String): Boolean {
+    return when {
+        packageName == "com.android.systemui" -> true
+        packageName == "android" -> true
+        packageName == this.packageName -> true
+        packageName.contains("inputmethod") || packageName.contains("keyboard") -> true
+        packageName.contains("samsung.android.sidegesture") -> true
+        packageName.contains("samsung.android.app.smartcapture") -> true
+        packageName.contains("samsung.android.honeyboard") -> true
+        else -> false
+    }
+}
+
+    private suspend fun startNewSession(packageName: String, monitoredApp: MonitoredApp) {
+        sessionStartTime = System.currentTimeMillis()
+        currentSessionId = repository.startSession(packageName, sessionStartTime!!)
+        currentMonitoredApp = monitoredApp
+        currentAppPackage = packageName
+        isBubbleVisible = false
+        bubbleCloseTime = 0L
+        isFirstBubbleScheduled = false
+        lastBubbleShowTime = 0L
+        
+        Log.d(TAG, "Session started for $packageName at ${sessionStartTime}")
+        
+        scheduleNextBubble(monitoredApp.selectedInterval)
+    }
+
+    private fun scheduleNextBubble(interval: Long) {
+        nextBubbleJob?.cancel()
+        nextBubbleJob = serviceScope.launch {
+            Log.d(TAG, "Scheduling next bubble in $interval ms")
+            
+            delay(interval)
+            
+            if (currentAppPackage != null && !isBubbleVisible) {
+                showBubble()
+            } else {
+                Log.d(TAG, "Conditions changed, not showing bubble. currentApp: $currentAppPackage, isVisible: $isBubbleVisible")
+            }
+        }
+    }
+
+    private fun showBubble() {
+        if (isBubbleVisible) {
+            Log.d(TAG, "Bubble already visible, not showing another")
+            return
+        }
+        
+        try {
+            Log.d(TAG, "Showing bubble for: ${currentMonitoredApp?.packageName}")
+            
+            val now = System.currentTimeMillis()
+            val intervalsPassed = if (sessionStartTime != null && currentMonitoredApp != null) {
+                ((now - sessionStartTime!!) / currentMonitoredApp!!.selectedInterval).toInt()
+            } else {
+                1
+            }
+            
+            val intent = Intent(this, BubbleService::class.java).apply {
+                action = Constants.ACTION_SHOW_BUBBLE
+                putExtra(Constants.EXTRA_PACKAGE_NAME, currentAppPackage)
+                putExtra(Constants.EXTRA_BADGE_COUNT, intervalsPassed)
+                putExtra(Constants.EXTRA_INTERVAL, currentMonitoredApp?.selectedInterval ?: 0L)
+                putExtra(Constants.EXTRA_SESSION_START_TIME, sessionStartTime ?: System.currentTimeMillis())
+                putExtra(Constants.EXTRA_BUBBLE_PERSISTENT, true)
+            }
+            
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+            
+            lastBubbleShowTime = now
+            isBubbleVisible = true
+            bubbleCloseTime = 0L
+            
+            Log.d(TAG, "Bubble shown at $lastBubbleShowTime")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing bubble", e)
+        }
+    }
+
+    private fun hideBubble() {
+        try {
+            Log.d(TAG, "Hiding bubble")
+            val intent = Intent(this, BubbleService::class.java).apply {
+                action = Constants.ACTION_HIDE_BUBBLE
+            }
+            startService(intent)
+            isBubbleVisible = false
+        } catch (e: Exception) {
+            Log.e(TAG, "Error hiding bubble", e)
+        }
+    }
+
+    private fun cleanupCurrentState() {
+        nextBubbleJob?.cancel()
+        nextBubbleJob = null
+        
+        if (isBubbleVisible) {
+            hideBubble()
+        }
+        
+        currentAppPackage = null
+        currentMonitoredApp = null
+        currentSessionId = null
+        sessionStartTime = null
+        isBubbleVisible = false
+        bubbleCloseTime = 0L
+        isFirstBubbleScheduled = false
+        lastBubbleShowTime = 0L
+    }
+
+    private suspend fun endCurrentSession() {
+        currentSessionId?.let { sessionId ->
+            Log.d(TAG, "Ending session: $sessionId")
+            repository.endSession(sessionId)
+            currentSessionId = null
+            sessionStartTime = null
+        }
+    }
+
+    fun onBubbleClosed() {
+        serviceScope.launch {
+            Log.d(TAG, "Bubble closed by user")
+            
+            bubbleCloseTime = System.currentTimeMillis()
+            isBubbleVisible = false
+            
+            currentMonitoredApp?.let { app ->
+                scheduleNextBubble(app.selectedInterval)
+            }
+        }
+    }
+
+    private fun startBubbleService() {
+        try {
+            Log.d(TAG, "Starting BubbleService")
+            val intent = Intent(this, BubbleService::class.java)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error starting BubbleService", e)
+        }
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            Constants.ACTION_BUBBLE_CLOSED -> {
+                onBubbleClosed()
+            }
+        }
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    override fun onInterrupt() {
+        Log.d(TAG, "Service interrupted")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d(TAG, "Service destroyed")
+        nextBubbleJob?.cancel()
+        departureJob?.cancel()
+        serviceScope.cancel()
+        hideBubble()
+    }
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/ui/about/AboutFragment.kt =====
+package com.gnzalobnites.appsusagemonitor.ui.about
+
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.fragment.app.Fragment
+import com.gnzalobnites.appsusagemonitor.R
+import com.gnzalobnites.appsusagemonitor.databinding.FragmentAboutBinding
+
+class AboutFragment : Fragment() {
+
+    private var _binding: FragmentAboutBinding? = null
+    private val binding get() = _binding!!
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentAboutBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        try {
+            val packageInfo = requireContext().packageManager.getPackageInfo(requireContext().packageName, 0)
+            binding.textVersion.text = getString(R.string.about_version_format, packageInfo.versionName)
+        } catch (e: PackageManager.NameNotFoundException) {
+            binding.textVersion.text = getString(R.string.about_version_placeholder)
+        }
+
+        binding.btnEmail.setOnClickListener {
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("mailto:${getString(R.string.developer_email)}")
+                putExtra(Intent.EXTRA_SUBJECT, getString(R.string.email_subject_support))
+            }
+            startActivity(intent)
+        }
+
+        binding.btnGithub.setOnClickListener {
+            openUrl(getString(R.string.github_url))
+        }
+
+        binding.btnCoffee.setOnClickListener {
+            openUrl(getString(R.string.buy_me_coffee_url))
+        }
+    }
+
+    private fun openUrl(url: String) {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        startActivity(intent)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/ui/adapters/AppListAdapter.kt =====
+package com.gnzalobnites.appsusagemonitor.ui.adapters
+
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.CheckBox
+import android.widget.ImageView
+import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
+import com.gnzalobnites.appsusagemonitor.R
+import com.gnzalobnites.appsusagemonitor.ui.selection.AppInfo
+
+class AppListAdapter(
+    private val onItemClick: (AppInfo) -> Unit
+) : RecyclerView.Adapter<AppListAdapter.AppViewHolder>() {
+
+    private var apps = listOf<AppInfo>()
+
+    fun submitList(list: List<AppInfo>) {
+        apps = list
+        notifyDataSetChanged()
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AppViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_app, parent, false)
+        return AppViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: AppViewHolder, position: Int) {
+        val app = apps[position]
+        holder.bind(app)
+    }
+
+    override fun getItemCount(): Int = apps.size
+
+    inner class AppViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val appIcon: ImageView = itemView.findViewById(R.id.app_icon)
+        private val appName: TextView = itemView.findViewById(R.id.app_name)
+        private val appCheckbox: CheckBox = itemView.findViewById(R.id.app_checkbox)
+
+        fun bind(app: AppInfo) {
+            appName.text = app.appName
+            appIcon.setImageDrawable(app.icon)
+            
+            appCheckbox.setOnCheckedChangeListener(null)
+            appCheckbox.isChecked = app.isSelected
+            
+            appCheckbox.setOnCheckedChangeListener { _, isChecked ->
+                if (isChecked != app.isSelected) {
+                    itemView.post {
+                        onItemClick(app)
+                    }
+                }
+            }
+
+            itemView.setOnClickListener {
+                appCheckbox.isChecked = !appCheckbox.isChecked
+            }
+        }
+    }
+}
+-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/ui/adapters/MonitoredAppsAdapter.kt =====
+package com.gnzalobnites.appsusagemonitor.ui.adapters
+
+import android.content.pm.PackageManager
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
+import com.gnzalobnites.appsusagemonitor.databinding.ItemMonitoredAppBinding
+import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
+import com.gnzalobnites.appsusagemonitor.R
+import com.gnzalobnites.appsusagemonitor.utils.Constants
+
+class MonitoredAppsAdapter(
+    private val onDeleteClick: (MonitoredApp) -> Unit
+) : ListAdapter<MonitoredApp, MonitoredAppsAdapter.ViewHolder>(DiffCallback) {
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val binding = ItemMonitoredAppBinding.inflate(
+            LayoutInflater.from(parent.context), 
+            parent, 
+            false
+        )
+        return ViewHolder(binding)
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        holder.bind(getItem(position))
+    }
+
+    inner class ViewHolder(
+        private val binding: ItemMonitoredAppBinding
+    ) : RecyclerView.ViewHolder(binding.root) {
+
+        fun bind(app: MonitoredApp) {
+            binding.appName.text = app.appName
+            binding.appInterval.text = formatInterval(app.selectedInterval)
+
+            try {
+                val pm = itemView.context.packageManager
+                val icon = pm.getApplicationIcon(app.packageName)
+                binding.appIcon.setImageDrawable(icon)
+            } catch (e: PackageManager.NameNotFoundException) {
+                binding.appIcon.setImageResource(android.R.drawable.sym_def_app_icon)
+            }
+
+            binding.buttonRemove.setOnClickListener {
+                onDeleteClick(app)
+            }
+        }
+
+        private fun formatInterval(interval: Long): String {
+            return when (interval) {
+                Constants.INTERVAL_10_SECONDS -> itemView.context.getString(R.string.interval_every_10_seconds)
+                Constants.INTERVAL_1_MINUTE -> itemView.context.getString(R.string.interval_every_1_minute)
+                Constants.INTERVAL_5_MINUTES -> itemView.context.getString(R.string.interval_every_5_minutes)
+                Constants.INTERVAL_15_MINUTES -> itemView.context.getString(R.string.interval_every_15_minutes)
+                Constants.INTERVAL_30_MINUTES -> itemView.context.getString(R.string.interval_every_30_minutes)
+                Constants.INTERVAL_1_HOUR -> itemView.context.getString(R.string.interval_every_1_hour)
+                else -> itemView.context.getString(R.string.interval_custom)
+            }
+        }
+    }
+
+    object DiffCallback : DiffUtil.ItemCallback<MonitoredApp>() {
+        override fun areItemsTheSame(oldItem: MonitoredApp, newItem: MonitoredApp): Boolean {
+            return oldItem.packageName == newItem.packageName
+        }
+
+        override fun areContentsTheSame(oldItem: MonitoredApp, newItem: MonitoredApp): Boolean {
+            return oldItem == newItem
+        }
+    }
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/ui/adapters/MonitoredAppsSimpleAdapter.kt =====
+package com.gnzalobnites.appsusagemonitor.ui.adapters
+
+import android.content.pm.PackageManager
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
+import com.gnzalobnites.appsusagemonitor.R
+import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
+
+class MonitoredAppsSimpleAdapter(
+    private val onDeleteClick: (MonitoredApp) -> Unit
+) : RecyclerView.Adapter<MonitoredAppsSimpleAdapter.ViewHolder>() {
+
+    private var apps = listOf<MonitoredApp>()
+
+    fun submitList(list: List<MonitoredApp>) {
+        apps = list
+        notifyDataSetChanged()
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_monitored_app_simple, parent, false)
+        return ViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        holder.bind(apps[position])
+    }
+
+    override fun getItemCount(): Int = apps.size
+
+    inner class ViewHolder(itemView: android.view.View) : RecyclerView.ViewHolder(itemView) {
+        private val appIcon: ImageView = itemView.findViewById(R.id.app_icon)
+        private val appName: TextView = itemView.findViewById(R.id.app_name)
+        private val appInterval: TextView = itemView.findViewById(R.id.app_interval)
+        private val btnRemove: android.widget.ImageButton = itemView.findViewById(R.id.button_remove)
+
+        fun bind(app: MonitoredApp) {
+            appName.text = app.appName
+            appInterval.text = formatInterval(app.selectedInterval)
+
+            try {
+                val pm = itemView.context.packageManager
+                val icon = pm.getApplicationIcon(app.packageName)
+                appIcon.setImageDrawable(icon)
+            } catch (e: PackageManager.NameNotFoundException) {
+                appIcon.setImageResource(android.R.drawable.sym_def_app_icon)
+            }
+
+            btnRemove.setOnClickListener {
+                onDeleteClick(app)
+            }
+        }
+
+        private fun formatInterval(interval: Long): String {
+            return when (interval) {
+                com.gnzalobnites.appsusagemonitor.utils.Constants.INTERVAL_10_SECONDS -> 
+                    itemView.context.getString(R.string.interval_every_10_seconds)
+                com.gnzalobnites.appsusagemonitor.utils.Constants.INTERVAL_1_MINUTE -> 
+                    itemView.context.getString(R.string.interval_every_1_minute)
+                com.gnzalobnites.appsusagemonitor.utils.Constants.INTERVAL_5_MINUTES -> 
+                    itemView.context.getString(R.string.interval_every_5_minutes)
+                com.gnzalobnites.appsusagemonitor.utils.Constants.INTERVAL_15_MINUTES -> 
+                    itemView.context.getString(R.string.interval_every_15_minutes)
+                com.gnzalobnites.appsusagemonitor.utils.Constants.INTERVAL_30_MINUTES -> 
+                    itemView.context.getString(R.string.interval_every_30_minutes)
+                com.gnzalobnites.appsusagemonitor.utils.Constants.INTERVAL_1_HOUR -> 
+                    itemView.context.getString(R.string.interval_every_1_hour)
+                else -> itemView.context.getString(R.string.interval_custom)
+            }
+        }
+    }
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/ui/adapters/SessionsAdapter.kt =====
+package com.gnzalobnites.appsusagemonitor.ui.adapters
+
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
+import com.gnzalobnites.appsusagemonitor.R
+import com.gnzalobnites.appsusagemonitor.data.entities.UsageSession
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+class SessionsAdapter : RecyclerView.Adapter<SessionsAdapter.SessionViewHolder>() {
+
+    private var sessions = listOf<UsageSession>()
+
+    fun submitList(list: List<UsageSession>) {
+        sessions = list
+        notifyDataSetChanged()
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SessionViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_session, parent, false)
+        return SessionViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: SessionViewHolder, position: Int) {
+        val session = sessions[position]
+        holder.bind(session)
+    }
+
+    override fun getItemCount(): Int = sessions.size
+
+    inner class SessionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val sessionStart: TextView = itemView.findViewById(R.id.session_start)
+        private val sessionDuration: TextView = itemView.findViewById(R.id.session_duration)
+        private val context = itemView.context
+
+        fun bind(session: UsageSession) {
+            val dateFormat = SimpleDateFormat(context.getString(R.string.time_format_hh_mm), Locale.getDefault())
+            sessionStart.text = dateFormat.format(Date(session.startTime))
+            
+            val duration = if (session.endTime != null) session.duration else 
+                System.currentTimeMillis() - session.startTime
+            sessionDuration.text = formatDuration(duration)
+        }
+
+        private fun formatDuration(duration: Long): String {
+            val seconds = (duration / 1000) % 60
+            val minutes = (duration / (1000 * 60)) % 60
+            val hours = (duration / (1000 * 60 * 60))
+            
+            return if (hours > 0) {
+                String.format(context.getString(R.string.session_time_hours_format), hours, minutes, seconds)
+            } else {
+                String.format(context.getString(R.string.session_time_format), minutes, seconds)
+            }
+        }
+    }
+}
+-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/ui/main/MainFragment.kt =====
+package com.gnzalobnites.appsusagemonitor.ui.main
+
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.res.ColorStateList
+import android.graphics.Color
+import android.net.Uri
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
+import com.gnzalobnites.appsusagemonitor.R
+import com.gnzalobnites.appsusagemonitor.databinding.FragmentMainBinding
+import com.gnzalobnites.appsusagemonitor.service.MonitoringService
+import com.gnzalobnites.appsusagemonitor.utils.AccessibilityHelper
+import com.github.mikephil.charting.data.PieData
+import com.github.mikephil.charting.data.PieDataSet
+import com.github.mikephil.charting.data.PieEntry
+import com.github.mikephil.charting.utils.ColorTemplate
+import com.google.android.material.R as MaterialR
+import java.util.*
+
+class MainFragment : Fragment() {
+    
+    private var _binding: FragmentMainBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: MainViewModel by viewModels()
+    
+    private val chartColors by lazy { ColorTemplate.MATERIAL_COLORS.toMutableList().apply { shuffle() } }
+    
+    // Handler para el observer de cambio de día
+    private val dayChangeHandler = Handler(Looper.getMainLooper())
+    
+    // Variable para tracking del estado anterior del servicio
+    private var lastServiceState = false
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentMainBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupChart()
+        setupObservers()
+        setupButtons()
+        setupFooter()
+        
+        // Verificar estado inicial del servicio de accesibilidad
+        viewModel.checkAccessibilityServiceState()
+        
+        // Cargar estadísticas iniciales
+        viewModel.loadTodayStats()
+        
+        // Detectar cambio de día y recargar datos automáticamente
+        observeDayChange()
+        
+        // CORREGIDO: Observer para actualizar el botón automáticamente
+        viewModel.isAccessibilityServiceEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            updateServiceButtonState(isEnabled)
+        }
+    }
+
+    private fun setupChart() {
+        val textColor = getThemeColor(MaterialR.attr.colorOnSurface)
+        
+        binding.chartUsage.apply {
+            description.isEnabled = false
+            setUsePercentValues(false)
+            setDrawEntryLabels(true)
+            holeRadius = 52f
+            transparentCircleRadius = 57f
+            setHoleColor(Color.TRANSPARENT)
+            animateY(1000)
+            setEntryLabelColor(textColor)
+            setEntryLabelTextSize(12f)
+            centerText = getString(R.string.today)
+            setCenterTextSize(18f)
+            setCenterTextColor(textColor)
+            
+            legend.isEnabled = false
+        }
+    }
+
+    private fun setupObservers() {
+        viewModel.usageStats.observe(viewLifecycleOwner) { statsMap: Map<String, Long> ->
+            updateChartDisplay(statsMap)
+        }
+        
+        viewModel.monitoredApps.observe(viewLifecycleOwner) { monitoredList ->
+            if (viewModel.usageStats.value.isNullOrEmpty()) {
+                if (monitoredList.isEmpty()) {
+                    binding.tvTotalTime.text = getString(R.string.empty_state_no_apps)
+                } else {
+                    binding.tvTotalTime.text = getString(R.string.no_usage_today)
+                }
+            }
+        }
+        
+        // Mantenemos el observer anterior para compatibilidad
+        viewModel.isServiceRunning.observe(viewLifecycleOwner) { isRunning ->
+            // No hacemos nada aquí para evitar duplicación, usamos el nuevo observer
+        }
+    }
+    
+    private fun updateChartDisplay(statsMap: Map<String, Long>) {
+        if (statsMap.isEmpty()) {
+            binding.chartUsage.visibility = View.GONE
+            binding.tvTotalTime.visibility = View.VISIBLE
+            binding.tvTotalTime.text = getString(R.string.no_monitored_apps_data_today)
+            return
+        }
+        
+        val entries = ArrayList<PieEntry>()
+        var totalMs = 0L
+
+        statsMap.filter { it.value > 60000 }.forEach { (name, time) ->
+            entries.add(PieEntry(time.toFloat(), name))
+            totalMs += time
+        }
+
+        if (entries.isEmpty() && statsMap.isNotEmpty()) {
+            Toast.makeText(requireContext(), R.string.all_apps_less_than_minute, Toast.LENGTH_SHORT).show()
+            statsMap.forEach { (name, time) ->
+                entries.add(PieEntry(time.toFloat(), name))
+                totalMs += time
+            }
+        }
+
+        val textColor = getThemeColor(MaterialR.attr.colorOnSurface)
+        
+        val dataSet = PieDataSet(entries, "")
+        dataSet.colors = chartColors
+        dataSet.sliceSpace = 3f
+        dataSet.selectionShift = 5f
+        
+        dataSet.valueFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
+            override fun getFormattedValue(value: Float): String {
+                return formatTime(value.toLong())
+            }
+        }
+        dataSet.valueTextSize = 12f
+        dataSet.setValueTextColor(Color.WHITE)
+        
+        if (entries.isNotEmpty()) {
+            val pieData = PieData(dataSet)
+            pieData.setValueTextSize(12f)
+            pieData.setValueTextColor(Color.WHITE)
+            binding.chartUsage.data = pieData
+            
+            binding.chartUsage.setCenterText(getString(R.string.today))
+            binding.chartUsage.setCenterTextColor(textColor)
+        } else {
+            binding.chartUsage.data = null
+            binding.chartUsage.setCenterText(getString(R.string.no_data))
+            binding.chartUsage.setCenterTextColor(textColor)
+        }
+        
+        binding.chartUsage.invalidate()
+        
+        binding.tvTotalTime.text = String.format(getString(R.string.total_time_format), formatTime(totalMs))
+    }
+
+    private fun setupButtons() {
+        binding.btnSelectApps.setOnClickListener {
+            findNavController().navigate(R.id.appSelectionFragment)
+        }
+
+        binding.btnServiceControl.setOnClickListener {
+            val isEnabled = viewModel.isAccessibilityServiceEnabled.value ?: false
+            
+            if (isEnabled) {
+                // Si está habilitado, mostramos diálogo para desactivar
+                showAccessibilityDisableDialog()
+            } else {
+                // Si no está habilitado, verificamos permiso de uso de datos primero
+                if (!hasUsageStatsPermission()) {
+                    Toast.makeText(
+                        requireContext(), 
+                        R.string.permission_usage_stats_required, 
+                        Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    // Guiamos al usuario a activar el servicio de accesibilidad
+                    showAccessibilityEnableDialog()
+                }
+            }
+        }
+    }
+
+    private fun showAccessibilityEnableDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.accessibility_permission_title)
+            .setMessage(R.string.accessibility_permission_message)
+            .setPositiveButton(R.string.go_to_settings) { _, _ ->
+                viewModel.requestAccessibilityPermission()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+    
+    private fun showAccessibilityDisableDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.stop_monitoring_title)
+            .setMessage(R.string.stop_monitoring_message)
+            .setPositiveButton(R.string.go_to_settings) { _, _ ->
+                viewModel.requestAccessibilityPermission()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun setupFooter() {
+        val versionText = try {
+            val packageInfo = requireContext().packageManager.getPackageInfo(requireContext().packageName, 0)
+            getString(R.string.version_format, packageInfo.versionName)
+        } catch (e: PackageManager.NameNotFoundException) {
+            getString(R.string.version_format_placeholder)
+        }
+        binding.tvVersionFooter.text = versionText
+
+        binding.btnBuyCoffeeFooter.setOnClickListener {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://buymeacoffee.com/gnzbenitesh"))
+            startActivity(intent)
+        }
+        
+        binding.tvEmailFooter.setOnClickListener {
+            val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("mailto:${getString(R.string.developer_email)}")
+                putExtra(Intent.EXTRA_SUBJECT, getString(R.string.email_subject_suggestions))
+            }
+            
+            try {
+                startActivity(emailIntent)
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), R.string.error_no_email_app, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // CORREGIDO: Actualiza el botón según el estado real y muestra toast solo cuando cambia de OFF a ON
+    private fun updateServiceButtonState(isEnabled: Boolean) {
+        // Mostrar toast solo cuando cambia de desactivado a activado
+        if (isEnabled && !lastServiceState) {
+            Toast.makeText(requireContext(), R.string.service_running, Toast.LENGTH_SHORT).show()
+        }
+        
+        // Actualizar el estado anterior
+        lastServiceState = isEnabled
+        
+        // Actualizar UI del botón
+        if (isEnabled) {
+            binding.btnServiceControl.text = getString(R.string.stop_monitoring)
+            binding.btnServiceControl.backgroundTintList = 
+                ColorStateList.valueOf(Color.parseColor("#E57373"))
+        } else {
+            binding.btnServiceControl.text = getString(R.string.start_monitoring)
+            binding.btnServiceControl.backgroundTintList = 
+                ColorStateList.valueOf(getThemeColor(MaterialR.attr.colorPrimary))
+        }
+    }
+
+    private fun isServiceRunning(serviceClass: Class<*>): Boolean {
+        return AccessibilityHelper.isAccessibilityServiceEnabled(requireContext(), serviceClass)
+    }
+    
+    private fun hasUsageStatsPermission(): Boolean {
+        val appOps = requireContext().getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+        val mode = appOps.checkOpNoThrow(
+            android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+            android.os.Process.myUid(),
+            requireContext().packageName
+        )
+        return mode == android.app.AppOpsManager.MODE_ALLOWED
+    }
+
+    private fun formatTime(millis: Long): String {
+        val hours = millis / 3600000
+        val minutes = (millis % 3600000) / 60000
+        val seconds = (millis % 60000) / 1000
+        
+        return when {
+            hours > 0 -> String.format(getString(R.string.hours_minutes_format), hours, minutes)
+            minutes > 0 -> String.format(getString(R.string.minutes_seconds_format), minutes, seconds)
+            else -> String.format(getString(R.string.seconds_format), seconds)
+        }
+    }
+
+    private fun getThemeColor(attr: Int): Int {
+        val typedValue = android.util.TypedValue()
+        requireContext().theme.resolveAttribute(attr, typedValue, true)
+        return typedValue.data
+    }
+
+    /**
+     * Observa el cambio de día y recarga los datos automáticamente a medianoche
+     */
+    private fun observeDayChange() {
+        val calendar = Calendar.getInstance()
+        val midnight = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            add(Calendar.DAY_OF_YEAR, 1)
+        }
+        
+        val timeUntilMidnight = midnight.timeInMillis - System.currentTimeMillis()
+        
+        dayChangeHandler.postDelayed({
+            // Recargar datos a la medianoche
+            viewModel.loadTodayStats()
+            // Repetir el observer para el próximo día
+            observeDayChange()
+        }, timeUntilMidnight)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // CORREGIDO: Verificación directa del estado del servicio
+        val enabled = AccessibilityHelper.isAccessibilityServiceEnabled(
+            requireContext(),
+            MonitoringService::class.java
+        )
+        // Actualizamos el ViewModel y la UI
+        viewModel.checkAccessibilityServiceState()
+        viewModel.loadTodayStats()
+        // Forzamos actualización de UI por si el LiveData no ha cambiado
+        updateServiceButtonState(enabled)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Limpiar callbacks pendientes para evitar memory leaks
+        dayChangeHandler.removeCallbacksAndMessages(null)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        dayChangeHandler.removeCallbacksAndMessages(null)
+        _binding = null
+    }
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/ui/main/MainViewModel.kt =====
+package com.gnzalobnites.appsusagemonitor.ui.main
+
+import android.app.Application
+import android.app.usage.UsageStatsManager
+import android.content.Context
+import android.content.pm.PackageManager
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.asLiveData
+import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
+import com.gnzalobnites.appsusagemonitor.data.repository.AppRepository
+import com.gnzalobnites.appsusagemonitor.data.repository.UsageRepository
+import com.gnzalobnites.appsusagemonitor.data.model.UsageStat
+import com.gnzalobnites.appsusagemonitor.service.MonitoringService
+import com.gnzalobnites.appsusagemonitor.utils.AccessibilityHelper
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.util.Calendar
+
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+    
+    private val context = application.applicationContext
+    private val repository = AppRepository(application)
+    private val usageRepository = UsageRepository(application)
+    private val packageManager = application.packageManager
+    
+    // Funcionalidad existente: apps monitoreadas
+    val monitoredApps: LiveData<List<MonitoredApp>> = repository.getMonitoredApps().asLiveData()
+    
+    // Funcionalidad existente: estado del servicio (ahora refleja el estado real de accesibilidad)
+    private val _isServiceRunning = MutableLiveData(false)
+    val isServiceRunning: LiveData<Boolean> = _isServiceRunning
+    
+    // NUEVO: LiveData específico para el estado del servicio de accesibilidad
+    private val _isAccessibilityServiceEnabled = MutableLiveData(false)
+    val isAccessibilityServiceEnabled: LiveData<Boolean> = _isAccessibilityServiceEnabled
+    
+    // LiveData que el Fragment observará para el gráfico
+    private val _usageStats = MutableLiveData<Map<String, Long>>()
+    val usageStats: LiveData<Map<String, Long>> = _usageStats
+    
+    // NUEVA funcionalidad: estadísticas de uso diario (versión detallada)
+    private val _todayUsageStats = MutableLiveData<List<UsageStat>>()
+    val todayUsageStats: LiveData<List<UsageStat>> = _todayUsageStats
+    
+    // Caché para nombres de apps
+    private val appNamesCache = mutableMapOf<String, String>()
+    
+    // MODIFICADO: Actualiza el estado basado en el estado real del servicio de accesibilidad
+    fun updateServiceState(isEnabled: Boolean) {
+        _isAccessibilityServiceEnabled.value = isEnabled
+        _isServiceRunning.value = isEnabled // Mantener compatibilidad
+    }
+    
+    // NUEVO: Verificar y actualizar el estado del servicio de accesibilidad
+    fun checkAccessibilityServiceState() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val isEnabled = AccessibilityHelper.isAccessibilityServiceEnabled(
+                getApplication(),
+                MonitoringService::class.java
+            )
+            _isAccessibilityServiceEnabled.postValue(isEnabled)
+            _isServiceRunning.postValue(isEnabled)
+        }
+    }
+    
+    // NUEVO: Abrir configuración de accesibilidad
+    fun requestAccessibilityPermission() {
+        AccessibilityHelper.openAccessibilitySettings(getApplication())
+    }
+    
+    // Mantenemos setServiceRunning para compatibilidad pero ahora actualiza ambos LiveData
+    fun setServiceRunning(isRunning: Boolean) {
+        _isServiceRunning.value = isRunning
+        _isAccessibilityServiceEnabled.value = isRunning
+    }
+    
+    fun stopMonitoringApp(app: MonitoredApp) {
+        viewModelScope.launch {
+            repository.removeAppFromMonitor(app)
+        }
+    }
+    
+    // Versión CORREGIDA para el gráfico - usa el método mejorado getTotalUsageToday()
+    fun loadTodayStats() {
+        viewModelScope.launch {
+            try {
+                // 1. Obtener apps monitoreadas desde la DB
+                val monitoredAppsList = withContext(Dispatchers.IO) {
+                    repository.getMonitoredAppsSync()
+                }
+                
+                // Si no hay apps monitoreadas, mostrar mapa vacío
+                if (monitoredAppsList.isEmpty()) {
+                    _usageStats.postValue(emptyMap())
+                    _todayUsageStats.postValue(emptyList())
+                    return@launch
+                }
+                
+                // 2. Usar la hora actual como límite superior para evitar datos del día anterior
+                val now = System.currentTimeMillis()
+                
+                // 3. Construir mapas de resultados
+                val usageMap = mutableMapOf<String, Long>()
+                val detailedList = mutableListOf<UsageStat>()
+                
+                // 4. Para cada app monitoreada, obtener el total de uso de HOY desde la BD
+                monitoredAppsList.forEach { monitoredApp ->
+                    // Usar el método mejorado que solo obtiene datos desde las 00:00 hasta ahora
+                    val totalToday = repository.getTotalUsageToday(monitoredApp.packageName)
+                    
+                    if (totalToday > 0) {
+                        val appName = monitoredApp.appName
+                        usageMap[appName] = totalToday
+                        
+                        detailedList.add(
+                            UsageStat(
+                                packageName = monitoredApp.packageName,
+                                appName = appName,
+                                totalTimeInForeground = totalToday,
+                                lastTimeUsed = now
+                            )
+                        )
+                        
+                        // Guardar en caché por si se necesita después
+                        appNamesCache[monitoredApp.packageName] = appName
+                    }
+                }
+                
+                // 5. Publicar resultados
+                _usageStats.postValue(usageMap)
+                _todayUsageStats.postValue(detailedList)
+                
+            } catch (e: SecurityException) {
+                // Permiso no concedido
+                _usageStats.postValue(emptyMap())
+                _todayUsageStats.postValue(emptyList())
+            } catch (e: Exception) {
+                // Manejar otros errores
+                _usageStats.postValue(emptyMap())
+                _todayUsageStats.postValue(emptyList())
+            }
+        }
+    }
+    
+    // NUEVO: Cargar estadísticas reales de hoy (versión detallada)
+    fun loadTodayUsageStats() {
+        // Reutilizamos loadTodayStats que ya hace lo mismo
+        loadTodayStats()
+    }
+    
+    // NUEVO: Obtener nombre de app del caché
+    fun getAppName(packageName: String): String? {
+        return appNamesCache[packageName]
+    }
+    
+    // NUEVO: Método auxiliar para obtener nombre de app
+    private fun getAppNameFromPackage(packageName: String): String {
+        return try {
+            val appInfo = packageManager.getApplicationInfo(packageName, 0)
+            packageManager.getApplicationLabel(appInfo).toString()
+        } catch (e: PackageManager.NameNotFoundException) {
+            packageName // Fallback al packageName si no se encuentra
+        }
+    }
+    
+    // NUEVO: Verificar si hay apps monitoreadas
+    fun hasMonitoredApps(): Boolean {
+        return monitoredApps.value?.isNotEmpty() == true
+    }
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/ui/selection/AppSelectionFragment.kt =====
+package com.gnzalobnites.appsusagemonitor.ui.selection
+
+import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.LayoutInflater
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
+import android.widget.ArrayAdapter
+import android.widget.Toast
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.gnzalobnites.appsusagemonitor.R
+import com.gnzalobnites.appsusagemonitor.databinding.FragmentAppSelectionBinding
+import com.gnzalobnites.appsusagemonitor.ui.adapters.AppListAdapter
+import com.gnzalobnites.appsusagemonitor.ui.adapters.MonitoredAppsSimpleAdapter
+import com.gnzalobnites.appsusagemonitor.utils.Constants
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+class AppSelectionFragment : Fragment() {
+    
+    private var _binding: FragmentAppSelectionBinding? = null
+    private val binding get() = _binding!!
+    
+    private val viewModel: AppSelectionViewModel by viewModels()
+    private lateinit var appsAdapter: AppListAdapter
+    private lateinit var monitoredAdapter: MonitoredAppsSimpleAdapter
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = FragmentAppSelectionBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        
+        setupSpinner()
+        setupRecyclerViews()
+        setupSearch()
+        setupObservers()
+        setupListeners()
+        
+        // Mostrar contenedor de carga mientras se cargan las apps
+        showLoading(true)
+        viewModel.loadInstalledApps()
+    }
+
+    private fun setupSpinner() {
+        val intervals = listOf(
+            getString(R.string.interval_10_seconds),
+            getString(R.string.interval_1_minute),
+            getString(R.string.interval_5_minutes),
+            getString(R.string.interval_15_minutes),
+            getString(R.string.interval_30_minutes),
+            getString(R.string.interval_1_hour)
+        )
+        
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, intervals)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerInterval.adapter = adapter
+        
+        binding.spinnerInterval.setSelection(1)
+    }
+
+    private fun setupRecyclerViews() {
+        appsAdapter = AppListAdapter { appInfo ->
+            viewModel.toggleAppSelection(appInfo)
+        }
+        
+        binding.recyclerViewApps.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = appsAdapter
+            setHasFixedSize(true)
+        }
+
+        monitoredAdapter = MonitoredAppsSimpleAdapter { app ->
+            viewModel.removeMonitoredApp(app)
+        }
+        
+        binding.recyclerViewMonitoredApps.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = monitoredAdapter
+            setHasFixedSize(true)
+        }
+    }
+
+    private fun setupSearch() {
+        // Detectar el toque en el ícono de la "X" (drawableEnd)
+        binding.editSearch.setOnTouchListener { _, event ->
+            val DRAWABLE_END = 2 // Índice para el drawable de la derecha (end/right)
+            
+            if (event.action == MotionEvent.ACTION_UP) {
+                val endDrawable = binding.editSearch.compoundDrawablesRelative[DRAWABLE_END]
+                if (endDrawable != null) {
+                    // Calcular el área interactiva del ícono
+                    val touchableArea = binding.editSearch.right - binding.editSearch.paddingEnd - endDrawable.intrinsicWidth
+                    
+                    if (event.rawX >= touchableArea) {
+                        binding.editSearch.text.clear() // Borrar texto
+                        
+                        // Opcional: Ocultar teclado al limpiar
+                        binding.editSearch.clearFocus()
+                        val imm = requireContext().getSystemService(InputMethodManager::class.java)
+                        imm.hideSoftInputFromWindow(binding.editSearch.windowToken, 0)
+                        
+                        return@setOnTouchListener true
+                    }
+                }
+            }
+            false
+        }
+
+        // Actualizar el TextWatcher para filtrar apps y mostrar/ocultar la "X"
+        binding.editSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                // Cambiar el ícono dinámicamente usando recursos de Android por defecto
+                binding.editSearch.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                    android.R.drawable.ic_menu_search, // Ícono de inicio (Lupa)
+                    0, 
+                    if (!s.isNullOrEmpty()) android.R.drawable.ic_menu_close_clear_cancel else 0, // Ícono final (X) solo si hay texto
+                    0 
+                )
+
+                // Mostrar loading durante el filtrado si hay texto
+                if (!s.isNullOrEmpty()) {
+                    showLoading(true)
+                } else {
+                    // Si el texto está vacío, mostramos la lista completa
+                    showLoading(false)
+                }
+
+                // Filtrado original con debounce
+                lifecycleScope.launch {
+                    delay(300)
+                    viewModel.filterApps(s?.toString() ?: "")
+                    // Ocultamos loading después del filtrado solo si no estamos en modo búsqueda
+                    if (s.isNullOrEmpty()) {
+                        showLoading(false)
+                    }
+                }
+            }
+
+            override fun afterTextChanged(s: Editable?) {}
+        })
+    }
+
+    private fun setupObservers() {
+        viewModel.filteredApps.observe(viewLifecycleOwner) { apps ->
+            appsAdapter.submitList(apps)
+            // Ocultamos loading cuando llegan los datos
+            showLoading(false)
+        }
+        
+        viewModel.selectedApps.observe(viewLifecycleOwner) { selectedCount ->
+            binding.buttonAddSelected.text = getString(R.string.add_selected_with_count, selectedCount)
+        }
+
+        viewModel.monitoredApps.observe(viewLifecycleOwner) { monitoredApps ->
+            monitoredAdapter.submitList(monitoredApps)
+            
+            if (monitoredApps.isEmpty()) {
+                binding.tvEmptyMonitored.visibility = View.VISIBLE
+                binding.recyclerViewMonitoredApps.visibility = View.GONE
+            } else {
+                binding.tvEmptyMonitored.visibility = View.GONE
+                binding.recyclerViewMonitoredApps.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    private fun setupListeners() {
+        // 1. Ocultar la sección de abajo cuando el buscador tiene el foco (teclado abierto)
+        binding.editSearch.setOnFocusChangeListener { _, hasFocus ->
+            binding.bottomSectionContainer.visibility = if (hasFocus) View.GONE else View.VISIBLE
+        }
+
+        // 2. Al hacer scroll en la lista de búsqueda, ocultamos el teclado y la sección de abajo reaparece
+        binding.recyclerViewApps.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: androidx.recyclerview.widget.RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+                if (newState == androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_DRAGGING && binding.editSearch.hasFocus()) {
+                    binding.editSearch.clearFocus()
+                    val imm = requireContext().getSystemService(InputMethodManager::class.java)
+                    imm.hideSoftInputFromWindow(recyclerView.windowToken, 0)
+                }
+            }
+        })
+
+        binding.buttonAddSelected.setOnClickListener {
+            // Quitar el foco y el teclado al hacer clic en agregar
+            binding.editSearch.clearFocus()
+            val imm = requireContext().getSystemService(InputMethodManager::class.java)
+            imm.hideSoftInputFromWindow(it.windowToken, 0)
+
+            val selectedCount = viewModel.selectedApps.value ?: 0
+            if (selectedCount == 0) {
+                Toast.makeText(requireContext(), R.string.select_at_least_one, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            
+            val interval = when (binding.spinnerInterval.selectedItemPosition) {
+                0 -> Constants.INTERVAL_10_SECONDS
+                1 -> Constants.INTERVAL_1_MINUTE
+                2 -> Constants.INTERVAL_5_MINUTES
+                3 -> Constants.INTERVAL_15_MINUTES
+                4 -> Constants.INTERVAL_30_MINUTES
+                5 -> Constants.INTERVAL_1_HOUR
+                else -> Constants.INTERVAL_1_MINUTE
+            }
+            
+            viewModel.addSelectedAppsToMonitor(interval)
+            Toast.makeText(requireContext(), R.string.apps_added, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showLoading(isLoading: Boolean) {
+        if (isLoading) {
+            binding.loadingContainer.visibility = View.VISIBLE
+            binding.recyclerViewApps.visibility = View.GONE
+        } else {
+            binding.loadingContainer.visibility = View.GONE
+            binding.recyclerViewApps.visibility = View.VISIBLE
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+}
+-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/ui/selection/AppSelectionViewModel.kt =====
+package com.gnzalobnites.appsusagemonitor.ui.selection
+
+import android.app.Application
+import android.content.pm.PackageManager
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.asLiveData
+import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
+import com.gnzalobnites.appsusagemonitor.data.repository.AppRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+data class AppInfo(
+    val packageName: String,
+    val appName: String,
+    val icon: android.graphics.drawable.Drawable?,
+    var isSelected: Boolean = false
+)
+
+class AppSelectionViewModel(application: Application) : AndroidViewModel(application) {
+    
+    private val repository = AppRepository(application)
+    private val packageManager = application.packageManager
+    
+    private val _installedApps = MutableLiveData<List<AppInfo>>()
+    val installedApps: LiveData<List<AppInfo>> = _installedApps
+    
+    private val _filteredApps = MutableLiveData<List<AppInfo>>()
+    val filteredApps: LiveData<List<AppInfo>> = _filteredApps
+    
+    private val _selectedApps = MutableLiveData<Int>(0)
+    val selectedApps: LiveData<Int> = _selectedApps
+    
+    private val _isLoading = MutableLiveData<Boolean>(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+    
+    val monitoredApps: LiveData<List<MonitoredApp>> = repository.getMonitoredApps().asLiveData()
+    
+    private var allApps: List<AppInfo> = listOf()
+    
+    fun loadInstalledApps() {
+        _isLoading.value = true
+        
+        viewModelScope.launch {
+            val apps = withContext(Dispatchers.IO) {
+                val intent = android.content.Intent(android.content.Intent.ACTION_MAIN).apply {
+                    addCategory(android.content.Intent.CATEGORY_LAUNCHER)
+                }
+                val resolveInfos = packageManager.queryIntentActivities(intent, 0)
+                
+                resolveInfos.map { resolveInfo ->
+                    AppInfo(
+                        packageName = resolveInfo.activityInfo.packageName,
+                        appName = resolveInfo.loadLabel(packageManager).toString(),
+                        icon = resolveInfo.loadIcon(packageManager)
+                    )
+                }.sortedBy { it.appName }
+            }
+            allApps = apps
+            _installedApps.value = apps
+            _filteredApps.value = apps
+            _isLoading.value = false
+        }
+    }
+    
+    fun filterApps(query: String) {
+        if (query.isEmpty()) {
+            _filteredApps.value = allApps
+        } else {
+            val filtered = allApps.filter { 
+                it.appName.contains(query, ignoreCase = true) 
+            }
+            _filteredApps.value = filtered
+        }
+    }
+    
+    fun toggleAppSelection(appInfo: AppInfo) {
+        val index = allApps.indexOfFirst { it.packageName == appInfo.packageName }
+        if (index != -1) {
+            allApps[index].isSelected = !allApps[index].isSelected
+            
+            val filteredList = _filteredApps.value?.toMutableList()
+            filteredList?.find { it.packageName == appInfo.packageName }?.isSelected = allApps[index].isSelected
+            
+            _filteredApps.value = filteredList ?: emptyList()
+            
+            val selectedCount = allApps.count { it.isSelected }
+            _selectedApps.value = selectedCount
+        }
+    }
+    
+    fun addSelectedAppsToMonitor(interval: Long) {
+        viewModelScope.launch {
+            allApps.filter { it.isSelected }.forEach { appInfo ->
+                repository.addAppToMonitor(appInfo.packageName, interval)
+            }
+            clearSelection()
+        }
+    }
+    
+    private fun clearSelection() {
+        allApps.forEach { it.isSelected = false }
+        _filteredApps.value = allApps
+        _selectedApps.value = 0
+    }
+    
+    fun removeMonitoredApp(app: MonitoredApp) {
+        viewModelScope.launch {
+            repository.deleteMonitoredApp(app)
+        }
+    }
+    
+    fun formatInterval(interval: Long, context: android.content.Context): String {
+        return when (interval) {
+            com.gnzalobnites.appsusagemonitor.utils.Constants.INTERVAL_10_SECONDS -> 
+                context.getString(com.gnzalobnites.appsusagemonitor.R.string.interval_every_10_seconds)
+            com.gnzalobnites.appsusagemonitor.utils.Constants.INTERVAL_1_MINUTE -> 
+                context.getString(com.gnzalobnites.appsusagemonitor.R.string.interval_every_1_minute)
+            com.gnzalobnites.appsusagemonitor.utils.Constants.INTERVAL_5_MINUTES -> 
+                context.getString(com.gnzalobnites.appsusagemonitor.R.string.interval_every_5_minutes)
+            com.gnzalobnites.appsusagemonitor.utils.Constants.INTERVAL_15_MINUTES -> 
+                context.getString(com.gnzalobnites.appsusagemonitor.R.string.interval_every_15_minutes)
+            com.gnzalobnites.appsusagemonitor.utils.Constants.INTERVAL_30_MINUTES -> 
+                context.getString(com.gnzalobnites.appsusagemonitor.R.string.interval_every_30_minutes)
+            com.gnzalobnites.appsusagemonitor.utils.Constants.INTERVAL_1_HOUR -> 
+                context.getString(com.gnzalobnites.appsusagemonitor.R.string.interval_every_1_hour)
+            else -> context.getString(com.gnzalobnites.appsusagemonitor.R.string.interval_custom)
+        }
+    }
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/ui/settings/SettingsFragment.kt =====
+package com.gnzalobnites.appsusagemonitor.ui.settings
+
+import android.content.SharedPreferences
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
+import androidx.preference.PreferenceFragmentCompat
+import com.gnzalobnites.appsusagemonitor.R
+
+class SettingsFragment : PreferenceFragmentCompat() {
+
+    override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+        setPreferencesFromResource(R.xml.root_preferences, rootKey)
+    }
+
+    // Listener para cambios en las preferencias
+    private val listener = SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, key ->
+        when (key) {
+            "theme_mode" -> {
+                val theme = sharedPreferences.getString(key, "system")
+                applyTheme(theme)
+            }
+            "language" -> {
+                // Guardar el tema actual antes de cambiar idioma
+                val currentTheme = sharedPreferences.getString("theme_mode", "system")
+            
+                val langCode = sharedPreferences.getString(key, "es") ?: "es"
+                val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(langCode)
+            
+                // Aplicar idioma (esto reiniciará la actividad)
+                AppCompatDelegate.setApplicationLocales(appLocale)
+            
+                // Forzar re-aplicación del tema después del reinicio
+                Handler(Looper.getMainLooper()).postDelayed({
+                    applyTheme(currentTheme)
+                }, 500)
+            }
+        }
+    }
+
+    private fun applyTheme(theme: String?) {
+        when (theme) {
+            "light" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+            "dark" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+            else -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Registrar el listener para estar atento a los cambios
+        preferenceManager.sharedPreferences?.registerOnSharedPreferenceChangeListener(listener)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Desregistrar el listener para evitar fugas de memoria
+        preferenceManager.sharedPreferences?.unregisterOnSharedPreferenceChangeListener(listener)
+    }
+}
+-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/ui/stats/AppSpinnerAdapter.kt =====
+package com.gnzalobnites.appsusagemonitor.ui.stats
+
+import android.content.Context
+import android.content.pm.PackageManager
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import com.gnzalobnites.appsusagemonitor.databinding.ItemAppSpinnerBinding
+
+class AppSpinnerAdapter(context: Context, private val packages: List<String>) :
+    ArrayAdapter<String>(context, 0, packages) {
+
+    private val packageManager: PackageManager = context.packageManager
+
+    override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+        return createViewFromResource(position, convertView, parent)
+    }
+
+    override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+        return createViewFromResource(position, convertView, parent)
+    }
+
+    private fun createViewFromResource(position: Int, convertView: View?, parent: ViewGroup): View {
+        val binding: ItemAppSpinnerBinding
+        val view: View
+
+        if (convertView == null) {
+            binding = ItemAppSpinnerBinding.inflate(LayoutInflater.from(context), parent, false)
+            view = binding.root
+            view.tag = binding
+        } else {
+            binding = convertView.tag as ItemAppSpinnerBinding
+            view = convertView
+        }
+
+        val packageName = packages[position]
+
+        try {
+            val appInfo = packageManager.getApplicationInfo(packageName, 0)
+            binding.appName.text = packageManager.getApplicationLabel(appInfo).toString()
+            binding.appIcon.setImageDrawable(packageManager.getApplicationIcon(appInfo))
+        } catch (e: PackageManager.NameNotFoundException) {
+            binding.appName.text = packageName
+            binding.appIcon.setImageResource(android.R.drawable.sym_def_app_icon)
+        }
+
+        return view
+    }
+}
+-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/ui/stats/StatisticsFragment.kt =====
+package com.gnzalobnites.appsusagemonitor.ui.stats
+
+import android.graphics.Color
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.AdapterView
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.BarData
+import com.github.mikephil.charting.data.BarDataSet
+import com.github.mikephil.charting.data.BarEntry
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import com.gnzalobnites.appsusagemonitor.MyApplication
+import com.gnzalobnites.appsusagemonitor.R
+import com.gnzalobnites.appsusagemonitor.data.database.DailyUsageStats
+import com.gnzalobnites.appsusagemonitor.databinding.FragmentStatisticsBinding
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
+
+class StatisticsFragment : Fragment() {
+
+    private var _binding: FragmentStatisticsBinding? = null
+    private val binding get() = _binding!!
+
+    private val viewModel: StatisticsViewModel by viewModels {
+        StatisticsViewModelFactory(
+            requireActivity().application,
+            MyApplication.database.usageSessionDao()
+        )
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentStatisticsBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        
+        setupChart()
+        setupListeners()
+        observeViewModel()
+    }
+
+    private fun setupListeners() {
+        binding.btnPreviousWeek.visibility = View.GONE
+        binding.btnNextWeek.visibility = View.GONE
+
+        binding.spinnerApps.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val packageName = parent?.getItemAtPosition(position) as? String
+                packageName?.let { viewModel.selectApp(it) }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
+
+    private fun observeViewModel() {
+        lifecycleScope.launch {
+            viewModel.availableApps.collectLatest { apps ->
+                val adapter = AppSpinnerAdapter(requireContext(), apps)
+                binding.spinnerApps.adapter = adapter
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.weekRangeLabel.collectLatest { label ->
+                binding.textWeekRange.text = label
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.weeklyStats.collectLatest { stats ->
+                updateChart(stats)
+            }
+        }
+    }
+
+    private fun setupChart() {
+        binding.chartUsage.apply {
+            description.isEnabled = false
+            setDrawGridBackground(false)
+            setDrawBarShadow(false)
+            
+            xAxis.apply {
+                position = XAxis.XAxisPosition.BOTTOM
+                setDrawGridLines(false)
+                granularity = 1f
+                textColor = if (isDarkMode()) Color.WHITE else Color.BLACK
+            }
+
+            axisLeft.apply {
+                textColor = if (isDarkMode()) Color.WHITE else Color.BLACK
+                axisMinimum = 0f
+                granularity = 1f
+                setLabelCount(5, false)
+                valueFormatter = TimeValueFormatter()
+            }
+            
+            axisRight.isEnabled = false
+            legend.isEnabled = false
+        }
+    }
+
+    private fun updateChart(dailyStats: List<DailyUsageStats>) {
+        val entries = ArrayList<BarEntry>()
+        val labels = ArrayList<String>()
+        
+        val sdf = SimpleDateFormat(getString(R.string.chart_date_format), Locale.getDefault())
+        
+        dailyStats.forEachIndexed { index, stat ->
+            entries.add(BarEntry(index.toFloat(), (stat.totalDuration / 60000f)))
+            labels.add(sdf.format(Date(stat.dayTimestamp)))
+        }
+
+        val dataSet = BarDataSet(entries, getString(R.string.chart_usage_label)).apply {
+            color = Color.parseColor("#2196F3")
+            valueTextColor = if (isDarkMode()) Color.WHITE else Color.BLACK
+            valueTextSize = 10f
+            valueFormatter = TimeValueFormatter()
+        }
+
+        binding.chartUsage.apply {
+            data = BarData(dataSet).apply { barWidth = 0.6f }
+            xAxis.valueFormatter = IndexAxisValueFormatter(labels)
+            invalidate()
+        }
+    }
+
+    private fun isDarkMode(): Boolean {
+        val mode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        return mode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/ui/stats/StatisticsFragmentArgs.kt =====
+package com.gnzalobnites.appsusagemonitor.ui.stats
+
+import android.os.Bundle
+
+class StatisticsFragmentArgs private constructor(val packageName: String) {
+    companion object {
+        fun fromBundle(bundle: Bundle): StatisticsFragmentArgs {
+            return StatisticsFragmentArgs(
+                packageName = bundle.getString("packageName") ?: ""
+            )
+        }
+    }
+}
+-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/ui/stats/StatisticsViewModel.kt =====
+package com.gnzalobnites.appsusagemonitor.ui.stats
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.gnzalobnites.appsusagemonitor.data.database.DailyUsageStats
+import com.gnzalobnites.appsusagemonitor.data.database.UsageSessionDao
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import java.util.*
+
+class StatisticsViewModel(
+    application: Application,
+    private val usageSessionDao: UsageSessionDao
+) : AndroidViewModel(application) {
+
+    private val _selectedPackage = MutableStateFlow<String?>(null)
+    private val _availableApps = MutableStateFlow<List<String>>(emptyList())
+    val availableApps: StateFlow<List<String>> = _availableApps
+
+    val weeklyStats: Flow<List<DailyUsageStats>> = _selectedPackage
+        .filterNotNull()
+        .flatMapLatest { packageName ->
+            flow {
+                emit(getStatsFromDatabase(packageName))
+            }.flowOn(Dispatchers.IO)
+        }
+
+    init {
+        loadAvailableApps()
+    }
+
+    private fun loadAvailableApps() {
+        viewModelScope.launch {
+            _availableApps.value = usageSessionDao.getAppsWithHistory()
+            if (_selectedPackage.value == null && _availableApps.value.isNotEmpty()) {
+                _selectedPackage.value = _availableApps.value[0]
+            }
+        }
+    }
+
+    fun selectApp(packageName: String) {
+        _selectedPackage.value = packageName
+    }
+
+    private suspend fun getStatsFromDatabase(packageName: String): List<DailyUsageStats> {
+        val result = mutableListOf<DailyUsageStats>()
+        
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        
+        for (i in 6 downTo 0) {
+            val dayCalendar = Calendar.getInstance().apply {
+                timeInMillis = calendar.timeInMillis
+                add(Calendar.DAY_OF_YEAR, -i)
+            }
+            val dayStart = dayCalendar.timeInMillis
+            val dayEnd = dayStart + (24 * 60 * 60 * 1000)
+            
+            val totalForDay = try {
+                usageSessionDao.getTotalUsageForDay(packageName, dayStart, dayEnd)
+            } catch (e: Exception) {
+                0L
+            }
+            
+            result.add(DailyUsageStats(dayStart, totalForDay))
+        }
+        
+        return result
+    }
+
+    val weekRangeLabel: Flow<String> = flow {
+        val endDate = Date()
+        
+        val startCalendar = Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_YEAR, -6)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val startDate = Date(startCalendar.timeInMillis)
+
+        val sdf = java.text.SimpleDateFormat(getApplication<Application>().getString(com.gnzalobnites.appsusagemonitor.R.string.week_range_format), Locale.getDefault())
+        emit("${sdf.format(startDate)} - ${sdf.format(endDate)}")
+    }
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/ui/stats/StatisticsViewModelFactory.kt =====
+package com.gnzalobnites.appsusagemonitor.ui.stats
+
+import android.app.Application
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.gnzalobnites.appsusagemonitor.data.database.UsageSessionDao
+
+class StatisticsViewModelFactory(
+    private val application: Application,
+    private val usageSessionDao: UsageSessionDao
+) : ViewModelProvider.Factory {
+    
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(StatisticsViewModel::class.java)) {
+            return StatisticsViewModel(application, usageSessionDao) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/ui/stats/TimeValueFormatter.kt =====
+package com.gnzalobnites.appsusagemonitor.ui.stats
+
+import com.github.mikephil.charting.formatter.ValueFormatter
+import com.gnzalobnites.appsusagemonitor.R
+import java.util.concurrent.TimeUnit
+
+class TimeValueFormatter : ValueFormatter() {
+    
+    override fun getFormattedValue(value: Float): String {
+        val minutes = value.toLong()
+        return when {
+            minutes < 60 -> String.format("%d%s", minutes, "m")
+            minutes < 1440 -> {
+                val hours = minutes / 60
+                val remainingMinutes = minutes % 60
+                String.format("%d%s %d%s", hours, "h", remainingMinutes, "m")
+            }
+            else -> {
+                val days = minutes / 1440
+                val remainingHours = (minutes % 1440) / 60
+                String.format("%d%s %d%s", days, "d", remainingHours, "h")
+            }
+        }
+    }
+}
+-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/utils/AccessibilityHelper.kt =====
+package com.gnzalobnites.appsusagemonitor.utils
+
+import android.content.ComponentName
+import android.content.Context
+import android.provider.Settings
+import android.text.TextUtils
+
+object AccessibilityHelper {
+    
+    fun isAccessibilityServiceEnabled(context: Context, serviceClass: Class<*>): Boolean {
+        val expectedComponentName = ComponentName(context, serviceClass)
+        val enabledServicesSetting = Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+
+        val colonSplitter = TextUtils.SimpleStringSplitter(':')
+        colonSplitter.setString(enabledServicesSetting)
+
+        while (colonSplitter.hasNext()) {
+            val componentNameString = colonSplitter.next()
+            val enabledService = ComponentName.unflattenFromString(componentNameString)
+            if (enabledService != null && enabledService == expectedComponentName) {
+                return true
+            }
+        }
+        
+        return false
+    }
+    
+    fun openAccessibilitySettings(context: Context) {
+        val intent = android.content.Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+        context.startActivity(intent)
+    }
+}
+-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/utils/Constants.kt =====
+package com.gnzalobnites.appsusagemonitor.utils
+
+object Constants {
+    const val INTERVAL_10_SECONDS = 10000L
+    const val INTERVAL_1_MINUTE = 60000L
+    const val INTERVAL_5_MINUTES = 300000L
+    const val INTERVAL_15_MINUTES = 900000L
+    const val INTERVAL_30_MINUTES = 1800000L
+    const val INTERVAL_1_HOUR = 3600000L
+    
+    const val ACTION_SHOW_BUBBLE = "com.gnzalobnites.appsusagemonitor.SHOW_BUBBLE"
+    const val ACTION_HIDE_BUBBLE = "com.gnzalobnites.appsusagemonitor.HIDE_BUBBLE"
+    const val ACTION_BUBBLE_CLOSED = "com.gnzalobnites.appsusagemonitor.BUBBLE_CLOSED"
+    const val EXTRA_PACKAGE_NAME = "extra_package_name"
+    const val EXTRA_BADGE_COUNT = "extra_badge_count"
+    const val EXTRA_INTERVAL = "extra_interval"
+    const val EXTRA_SESSION_START_TIME = "extra_session_start_time"
+    const val EXTRA_BUBBLE_PERSISTENT = "extra_bubble_persistent"  // NUEVA CONSTANTE
+    
+    const val NOTIFICATION_ID = 1001
+}-e 
+
+===== app/src/main/java/com/gnzalobnites/appsusagemonitor/utils/PermissionHelper.kt =====
+package com.gnzalobnites.appsusagemonitor.utils
+
+import android.Manifest
+import android.app.usage.UsageStatsManager
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
+import java.util.Calendar  // <--- IMPORTANTE: Esta línea soluciona el error
+
+object PermissionHelper {
+    
+    const val REQUEST_CODE_NOTIFICATIONS = 1001
+    const val REQUEST_CODE_OVERLAY = 1002
+    
+    fun hasUsageStatsPermission(context: Context): Boolean {
+        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val currentTime = System.currentTimeMillis()
+        val stats = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_DAILY,
+            currentTime - 1000 * 60 * 60 * 24,
+            currentTime
+        )
+        return stats != null && stats.isNotEmpty()
+    }
+    
+    fun hasOverlayPermission(context: Context): Boolean {
+        return Settings.canDrawOverlays(context)
+    }
+    
+    fun hasNotificationPermission(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+                    PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+    
+    fun hasAllPermissions(context: Context): Boolean {
+        return hasUsageStatsPermission(context) && 
+               hasOverlayPermission(context) && 
+               hasNotificationPermission(context)
+    }
+    
+    fun requestUsageStatsPermission(fragment: Fragment) {
+        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+        fragment.startActivity(intent)
+    }
+    
+    fun requestOverlayPermission(fragment: Fragment) {
+        val intent = Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:${fragment.requireContext().packageName}")
+        )
+        fragment.startActivityForResult(intent, REQUEST_CODE_OVERLAY)
+    }
+    
+    fun requestNotificationPermission(activity: FragmentActivity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    activity,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    REQUEST_CODE_NOTIFICATIONS
+                )
+            }
+        }
+    }
+    
+    fun requestAllPermissions(fragment: Fragment) {
+        if (!hasUsageStatsPermission(fragment.requireContext())) {
+            requestUsageStatsPermission(fragment)
+        }
+        if (!hasOverlayPermission(fragment.requireContext())) {
+            requestOverlayPermission(fragment)
+        }
+        if (!hasNotificationPermission(fragment.requireContext())) {
+            fragment.activity?.let { requestNotificationPermission(it) }
+        }
+    }
+    
+    // Función para banners - Obtiene el uso total de hoy desde el sistema
+    fun getTotalUsageTodayFromSystem(context: Context, packageName: String): Long {
+        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        
+        val start = calendar.timeInMillis
+        val end = System.currentTimeMillis()
+
+        val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, start, end)
+        return stats.find { it.packageName == packageName }?.totalTimeInForeground ?: 0L
+    }
+}
+-e 
+

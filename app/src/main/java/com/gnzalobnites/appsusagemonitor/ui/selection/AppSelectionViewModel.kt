@@ -107,9 +107,14 @@ class AppSelectionViewModel(application: Application) : AndroidViewModel(applica
         _selectedApps.value = 0
     }
     
+    /**
+     * MODIFICADO: Ahora utiliza removeAppFromMonitor en lugar de deleteMonitoredApp
+     * para solo desactivar el monitoreo sin eliminar el registro de la BD.
+     */
     fun removeMonitoredApp(app: MonitoredApp) {
         viewModelScope.launch {
-            repository.deleteMonitoredApp(app)
+            // Cambiamos deleteMonitoredApp por removeAppFromMonitor
+            repository.removeAppFromMonitor(app)
         }
     }
     
@@ -130,4 +135,4 @@ class AppSelectionViewModel(application: Application) : AndroidViewModel(applica
             else -> context.getString(com.gnzalobnites.appsusagemonitor.R.string.interval_custom)
         }
     }
-}
+} 
