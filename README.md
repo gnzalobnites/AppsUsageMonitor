@@ -1,47 +1,28 @@
-📱 Apps Usage Monitor - Versión 2.0.5
+# 📱 Apps Usage Monitor
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.9.23-blue.svg)](https://kotlinlang.org)
-[![Android Gradle Plugin](https://img.shields.io/badge/AGP-8.4.0-green.svg)](https://developer.android.com/studio/releases/gradle-plugin)
-[![Gradle](https://img.shields.io/badge/Gradle-8.6-purple.svg)](https://gradle.org)
 [![API](https://img.shields.io/badge/API-23%2B-brightgreen.svg)](https://android-arsenal.com/api?level=23)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
-[![APKPure](https://img.shields.io/badge/APKPure-2.0.5-orange)](https://apkpure.net/apps-usage-monitor/com.gnzalobnites.appsusagemonitor)
 
-📋 Descripción
+## 📋 Descripción
 
-Apps Usage Monitor es una aplicación Android de código abierto que te ayuda a tomar conciencia del tiempo que pasas en tus aplicaciones. Mediante banners de conciencia temporal configurables y estadísticas detalladas, podrás gestionar mejor tu tiempo digital y reducir el uso excesivo del teléfono.
+**Apps Usage Monitor** es una aplicación de Android de código abierto diseñada para ayudarte a tomar conciencia y controlar el tiempo que pasas en tus aplicaciones. En un mundo lleno de distracciones digitales, esta herramienta te proporciona la información y los recordatorios visuales necesarios para fomentar un uso más consciente y saludable de tu teléfono.
 
-✨ Características Principales
+Mediante **banners de conciencia temporal** que aparecen en intervalos configurables y **estadísticas detalladas** de uso, podrás identificar patrones, gestionar mejor tu tiempo digital y reducir el uso excesivo de aplicaciones.
 
-- 🔔 Banners de conciencia temporal: Aparecen en el intervalo que configures para cada aplicación (10s, 1m, 5m, 15m, 30m, 1h)
-- 📊 Estadísticas en tiempo real: Gráfico circular que muestra el uso de hoy de tus apps monitoreadas
-- ⏱️ Contador de sesión actual: Al expandir el banner, ves el tiempo de la sesión actual y el total del día
-- 👆 Interacción intuitiva: Un click expande el banner mostrando tiempos detallados, otro click lo cierra
-- 🎯 Monitoreo por app: Selecciona exactamente qué aplicaciones quieres monitorear, cada una con su propio intervalo
-- 📈 Estadísticas históricas: Gráfico de barras con el uso diario de los últimos 7 días por aplicación
-- 🔐 Persistencia de datos: Historial completo de sesiones guardado localmente con Room Database
-- 🌙 Tema oscuro/claro: Configurable desde ajustes, con detección automática del sistema
-- 🌐 Internacionalización: Disponible en español e inglés con detección automática
-- 🧠 Detección inteligente: Maneja paquetes del sistema, teclados y gestos para no interrumpir la experiencia
+## ✨ Características Principales
 
+- **⏱️ Banners de Conciencia Temporal:** Recibe recordatorios visuales no intrusivos en forma de burbuja flotante. Aparecen en el intervalo que configures para cada aplicación (ej. 1 minuto, 5 minutos, 1 hora).
+- **📊 Panel Principal con Gráfico Circular:** Visualiza de un vistazo el tiempo de uso de hoy de tus aplicaciones monitoreadas en un atractivo gráfico circular.
+- **📈 Estadísticas Históricas Detalladas:** Consulta el uso diario de los últimos 7 días para cualquier aplicación que hayas monitoreado, presentado en un claro gráfico de barras.
+- **💡 Banner Expandible:** Toca la burbuja flotante para expandirla y ver información detallada de la sesión actual en tiempo real, así como el tiempo total acumulado en el día. Un segundo toque la vuelve a contraer.
+- **🎯 Configuración por Aplicación:** Selecciona exactamente qué aplicaciones deseas monitorear y define un intervalo de notificación personalizado para cada una de ellas.
+- **⚙️ Modo Claro/Oscuro:** La aplicación se adapta a tu preferencia, con soporte completo para temas claro y oscuro, incluyendo la detección automática de la configuración del sistema.
+- **🌐 Internacionalización:** Disponible en múltiples idiomas (Español e Inglés) para una mejor experiencia de usuario.
+- **🔒 Privacidad y Datos Locales:** Todo el historial de sesiones se almacena de forma segura y privada en tu dispositivo utilizando **Room Database**. No se envía ningún dato a servidores externos.
+- **🛡️ Arquitectura Robusta:** Construida siguiendo los principios de **Arquitectura Limpia y MVVM** (Model-View-ViewModel) para garantizar un código mantenible, escalable y libre de errores.
 
-🆕 Novedades de la Versión 2.0.5 (Reescritura Completa)
-
-- ✅ Arquitectura robusta: Reescritura completa con Room Database para almacenamiento persistente
-- ✅ Banners persistentes: Ahora los banners permanecen visibles y se actualizan en tiempo real
-- ✅ Estadísticas reales: Los gráficos muestran datos reales de la base de datos, no simulaciones
-- ✅ Fragmento de estadísticas: Nuevo gráfico de barras con historial de 7 días por aplicación
-- ✅ Gestión de apps monitoreadas: Interfaz mejorada para agregar/quitar apps con búsqueda en tiempo real
-- ✅ Mejora en permisos: Verificación y solicitud inteligente de permisos (UsageStats, Overlay, Notificaciones)
-- ✅ Servicio de accesibilidad optimizado: Detección más precisa de cambios de aplicación
-- ✅ Caché de nombres de apps: Mejor rendimiento al mostrar estadísticas
-- ✅ Actualización automática: Los datos se recargan al cambiar de día
-- ✅ Footer integrado: Enlaces a email, invitación a café y versión directamente en pantalla principal
-- ✅ Correcciones críticas: Solucionados problemas de fugas de memoria, NullPointerException y manejo de ciclos de vida
-- ✅ Implementación de una barra de progreso, para indicar que la aplicación está creando en segundo plano la lista de aplicaciones a seleccionar
-- ✅ Mejora de la función de búsqueda de aplicaciones a seleccionar para su monitoreo
-
-📸 Capturas de Pantalla
+## 📸 Capturas de Pantalla
 
 <div align="center">
   <table>
@@ -68,26 +49,24 @@ Apps Usage Monitor es una aplicación Android de código abierto que te ayuda a 
   </table>
 </div>
 
-🚀 Instalación
+## 🚀 Primeros Pasos
 
-📲 Desde tiendas de aplicaciones
+### Requisitos del Sistema
 
-| Plataforma | Enlace |
-| --- | --- |
-| GitHub | [AppsUsageMonitor-v2.0.5.apk](https://github.com/gnzalobnites/AppsUsageMonitor/releases/tag/v2.0.5) |
-| F-Droid | Próximamente |
-| APKPure | [Apps Usage Monitor en APKPure](https://apkpure.com/p/com.gnzalobnites.appsusagemonitor) |
+- Android 6.0 (API nivel 23) o superior.
 
-⚠️ Importante: si usás Android 13 o superior, necesitarás permitir los ajustes restringidos en Ajustes > Aplicaciones > Apps Usage Monitor, luego de solicitar el permiso de accesibilidad para la aplicación y recibir la advertencia de Android por otorgar ese permiso a una aplicación ajena a la Play Store. Una vez recbida la advertencia del sistema, aparecerá un menú de tres puntos en la esquina superior derecha de la pantalla de configuración de la aplicación, que permitirá activar los ajustes restringidos. El procedimiento es el siguiente:
-1. Solicitar el permiso de accesibilidad para la aplicación (luego de presionar "Iniciar monitoreo" en la pantalla principal)
-2. Aparecerá una advertencia del sistema que explicará los riesgos de otorgar tal permiso a una aplicación ajena a la Play Store: cerrarla
-3. Ir a Ajustes > Aplicaciones > Apps Usage Monitor
-4. Permitir los ajustes restringidos desde el menú de tres puntos (⋮) de la esquina superior derecha de la pantalla.
-5. Solicitar nuevamente el permiso de accesibilidad: esta vez, se podrá activar sin problemas.
+### Permisos Necesarios
+
+Para que Apps Usage Monitor funcione correctamente, necesita los siguientes permisos:
+
+1.  **Permiso de Datos de Uso (UsageStats):** **Obligatorio.** Permite a la aplicación leer las estadísticas de tiempo de uso de otras aplicaciones.
+2.  **Permiso de Superposición (Overlay):** **Obligatorio.** Necesario para dibujar los banners flotantes sobre otras aplicaciones.
+3.  **Permiso de Notificaciones (Android 13+):** **Recomendado.** Permite que el servicio de monitoreo se ejecute en segundo plano de manera eficiente.
+4.  **Servicio de Accesibilidad:** **Recomendado para máxima precisión.** Mejora significativamente la detección de cuándo cambias de una aplicación a otra, asegurando que los tiempos de sesión sean exactos.
 
 ### 📸 Guía para permisos en Android 13+
 
-Sigue estos pasos para habilitar correctamente el servicio de accesibilidad:
+En Android 13 y versiones posteriores, debido a políticas de seguridad más estrictas para aplicaciones instaladas fuera de Google Play, es posible que necesites seguir estos pasos adicionales para habilitar el **Servicio de Accesibilidad**:
 
 <div align="center">
   <table>
@@ -109,130 +88,91 @@ Sigue estos pasos para habilitar correctamente el servicio de accesibilidad:
     <tr>
       <td align="center"><b>4. Se habilitará el otorgamiento del permiso.</b></td>
       <td align="center"><b>5. Otórgale el permiso a la app</b></td>
-      <td align="center"><b>6. El monitoreo se activará. </b></td>
+      <td align="center"><b>6. El monitoreo se activará.</b></td>
     </tr>
   </table>
 </div>
 
-🔧 Requisitos
+## 🛠️ Compilación desde el Código Fuente
 
-- Android 6.0 (API 23) o superior
-- Permiso de datos de uso (UsageStats) - Obligatorio para estadísticas
-- Permiso de superposición (Overlay) - Necesario para mostrar banners
-- Permiso de notificaciones (Android 13+) - Para servicio en segundo plano
-- Servicio de accesibilidad (Opcional pero recomendado) - Mejora la precisión
+¿Te interesa el desarrollo? ¡Puedes compilar la aplicación tú mismo!
 
-🛠️ Compilación desde Código Fuente
+### Prerrequisitos
 
-Requisitos de desarrollo
+- **Android Studio** (Hedgehog o superior recomendado)
+- **JDK 17** o superior
+- **Android SDK** (API nivel 34 recomendado)
 
-- Java JDK 17 o superior
-- Android Studio Hedgehog (2023.1.1) o superior
-- Android SDK (API 34 recomendado)
-- Gradle 8.6 (incluido)
+### Pasos
 
-Pasos para compilar
+1.  **Clona el repositorio:**
+    ```bash
+    git clone https://github.com/gnzalobnites/AppsUsageMonitor.git
+    cd AppsUsageMonitor
+    ```
 
-```bash
-# 1. Clona el repositorio
-git clone https://github.com/gnzalobnites/AppsUsageMonitor.git
-cd AppsUsageMonitor
+2.  **Compila la aplicación:**
+    - Para generar un APK de depuración (debug):
+        ```bash
+        ./gradlew assembleDebug
+        ```
+    - Para generar un APK de distribución (release), necesitarás crear un archivo `keystore.properties` en la raíz del proyecto con las credenciales de tu keystore. Luego ejecuta:
+        ```bash
+        ./gradlew assembleRelease
+        ```
 
-# 2. Entra a la rama dev
-git checkout dev
+El APK generado se encontrará en la carpeta `app/build/outputs/apk/`.
 
-# 3. Compila en modo debug
-./gradlew assembleDebug
+## 🧠 Arquitectura del Proyecto
 
-# 4. Para generar APK release (necesitas keystore propio)
-# Crea un archivo keystore.properties en la raíz con:
-# storeFile=../tu-keystore.jks
-# storePassword=tu-password
-# keyAlias=tu-alias
-# keyPassword=tu-password-key
-./gradlew assembleRelease
-```
-
-📁 Estructura del Proyecto
+El proyecto está estructurado siguiendo los principios de **Arquitectura Limpia y MVVM** para garantizar la separación de responsabilidades y la facilidad de prueba.
 
 ```
 app/
 ├── src/main/java/com/gnzalobnites/appsusagemonitor/
 │   ├── data/               # Capa de datos
-│   │   ├── database/        # Room Database, DAOs, Converters
-│   │   ├── entities/        # Entidades (MonitoredApp, UsageSession)
-│   │   ├── model/           # Modelos de datos (UsageStat)
-│   │   └── repository/      # Repositorios (AppRepository, UsageRepository)
+│   │   ├── database/        # Room Database, DAOs y Converters
+│   │   ├── entities/        # Entidades de la base de datos (MonitoredApp, UsageSession)
+│   │   ├── model/           # Modelos de datos simples (UsageStat)
+│   │   └── repository/      # Repositorios que abstraen las fuentes de datos (DB y UsageStatsManager)
 │   ├── service/             # Servicios en primer plano
-│   │   ├── MonitoringService.kt  # Servicio de accesibilidad
-│   │   └── BubbleService.kt      # Servicio de banners overlay
-│   ├── ui/                  # Capa de presentación
-│   │   ├── about/           # Fragmento Acerca de
-│   │   ├── adapters/        # Adaptadores de RecyclerView
-│   │   ├── main/            # Fragmento principal y ViewModel
-│   │   ├── selection/       # Selección de apps y ViewModel
-│   │   ├── settings/        # Fragmento de configuración
-│   │   └── stats/           # Estadísticas y ViewModel
-│   └── utils/               # Utilidades (Constants, PermissionHelper)
-└── src/main/res/
-    ├── layout/              # Layouts XML
-    ├── drawable/             # Recursos gráficos
-    ├── values/               # Strings, colores, temas
-    └── menu/                 # Menú del drawer
+│   │   ├── MonitoringService.kt  # Servicio de Accesibilidad para detección de apps
+│   │   └── BubbleService.kt      # Servicio de Overlay para mostrar los banners
+│   ├── ui/                  # Capa de presentación (Vistas y ViewModels)
+│   │   ├── about/           # Fragmento "Acerca de"
+│   │   ├── adapters/        # Adaptadores para RecyclerViews
+│   │   ├── main/            # Fragmento principal y su ViewModel
+│   │   ├── selection/       # Fragmento de selección de apps y su ViewModel
+│   │   ├── settings/        # Fragmento de configuración (PreferenceFragment)
+│   │   └── stats/           # Fragmento de estadísticas y su ViewModel
+│   └── utils/               # Clases de utilidad (Constants, PermissionHelper, etc.)
+└── src/main/res/            # Recursos (layouts, drawables, strings, temas)
 ```
 
-🧠 Arquitectura
+## 🤝 Contribuciones
 
-La aplicación sigue principios de Arquitectura Limpia y MVVM:
+¡Las contribuciones son siempre bienvenidas! Si tienes una idea para mejorar la aplicación, por favor:
 
-- Room Database: Almacenamiento local de sesiones y apps monitoreadas
-- ViewModel + LiveData/Flow: Comunicación reactiva con la UI
-- Repositorios: Abstracción de fuentes de datos (DB + UsageStatsManager)
-- Servicios: Componentes en primer plano con notificaciones
-- ViewBinding: Binding seguro y eficiente de vistas
+1.  Haz un **fork** del repositorio.
+2.  Crea una nueva rama para tu funcionalidad (`git checkout -b feature/AmazingFeature`).
+3.  Haz **commit** de tus cambios (`git commit -m 'Add some AmazingFeature'`).
+4.  Haz **push** a la rama (`git push origin feature/AmazingFeature`).
+5.  Abre un **Pull Request**.
 
-🤝 Contribuciones
+## 📄 Licencia
 
-Las contribuciones son bienvenidas. Por favor:
+Este proyecto está licenciado bajo la **GNU General Public License v3.0**. Consulta el archivo [LICENSE](LICENSE) para más detalles.
 
-1. Haz fork del proyecto
-2. Crea una rama para tu feature (git checkout -b feature/AmazingFeature)
-3. Commit tus cambios (git commit -m 'Add some AmazingFeature')
-4. Push a la rama (git push origin feature/AmazingFeature)
-5. Abre un Pull Request
+## 📬 Contacto y Apoyo
 
-📄 Licencia
+**Desarrollador:** Gonzalo Gastón Benites
 
-Este proyecto está licenciado bajo GNU General Public License v3.0 - ver el archivo LICENSE para más detalles.
+- **Correo:** [benitesgonzalogaston@gmail.com](mailto:benitesgonzalogaston@gmail.com)
+- **GitHub:** [@gnzalobnites](https://github.com/gnzalobnites)
 
-📬 Contacto
+Si esta aplicación te resulta útil y quieres apoyar su desarrollo, ¡puedes invitarme un café!
 
-Desarrollador: Gonzalo Benites
-
-- Email: benitesgonzalogaston@gmail.com
-- GitHub: [@gnzalobnites](https://github.com/gnzalobnites)
-- Buy Me a Coffee: https://buymeacoffee.com/gnzbenitesh
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/gnzbenitesh)
 
 ---
-
-¡Si te gusta la aplicación, considera invitarme un café! ☕
-
----
-
-📊 Comparativa de Versiones
-
-
-| Característica | v1.2.4 |  v2.0.5 (Nueva) |
-| --- | --- | --- |
-| Base de datos | ❌ No persistente | ✅ Room Database |
-| Historial por app | ❌ No | ✅ 7 días |
-| Banners persistentes | ❌ Se cerraban solos | ✅ Permanecen visibles |
-| Tiempo real en banner | ❌ No | ✅ Sí |
-| Múltiples intervalos | ❌ Global | ✅ Por app |
-| Búsqueda de apps | ❌ No | ✅ Sí |
-| Footer integrado | ❌ No | ✅ Sí |
-| Manejo de exenciones | ❌ Básico | ✅ Avanzado |
-
----
-
-Descarga la última versión y toma el control de tu tiempo digital 🚀
+**¡Descarga Apps Usage Monitor y toma el control de tu tiempo digital!** 🚀
