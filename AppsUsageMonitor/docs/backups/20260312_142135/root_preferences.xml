@@ -26,13 +26,4 @@
             app:summary="@string/pref_persistent_notif_summary" />
     </PreferenceCategory>
 
-    <!-- NUEVA CATEGORÍA DE ACTUALIZACIONES -->
-    <PreferenceCategory app:title="@string/pref_category_updates">
-        <SwitchPreferenceCompat
-            app:key="auto_check_updates"
-            app:title="@string/pref_auto_update_title"
-            app:summary="@string/pref_auto_update_summary"
-            app:defaultValue="true" />
-    </PreferenceCategory>
-
 </PreferenceScreen>

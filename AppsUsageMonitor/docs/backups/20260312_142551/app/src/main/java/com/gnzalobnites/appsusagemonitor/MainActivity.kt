@@ -22,16 +22,7 @@ import androidx.navigation.ui.setupWithNavController
 import com.gnzalobnites.appsusagemonitor.databinding.ActivityMainBinding
 import com.gnzalobnites.appsusagemonitor.utils.PermissionHelper
 
-import com.gnzalobnites.appsusagemonitor.utils.UpdateInfo
-import com.gnzalobnites.appsusagemonitor.utils.UpdateManager
-import com.gnzalobnites.appsusagemonitor.utils.AppUpdater
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
-import android.content.SharedPreferences
-import androidx.preference.PreferenceManager
-import androidx.appcompat.app.AlertDialog
 class MainActivity : AppCompatActivity() {
-    private var appUpdater: AppUpdater? = null
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var drawerLayout: DrawerLayout
@@ -87,8 +78,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         checkAndRequestPermissions()
-        // NUEVO: Llamada a la comprobación silenciosa de actualizaciones
-        checkUpdatesSilently()
     }
 
     private fun applyTheme(theme: String?) {
@@ -130,50 +119,4 @@ class MainActivity : AppCompatActivity() {
         return androidx.navigation.ui.NavigationUI.navigateUp(navController, appBarConfiguration)
                 || super.onSupportNavigateUp()
     }
-    // NUEVO: Comprobación silenciosa (respetando el switch y el intervalo de 24h)
-    private fun checkUpdatesSilently() {
-        val prefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
-        val autoUpdateEnabled = prefs.getBoolean("auto_check_updates", true)
-
-        if (!autoUpdateEnabled) return
-
-        val lastCheckTime = prefs.getLong("last_update_check", 0L)
-        val currentTime = System.currentTimeMillis()
-        val twentyFourHoursInMillis = 24 * 60 * 60 * 1000L
-
-        if (currentTime - lastCheckTime < twentyFourHoursInMillis) return
-
-        lifecycleScope.launch {
-            // Actualizamos el timestamp de la comprobación inmediatamente para evitar múltiples llamadas
-            prefs.edit().putLong("last_update_check", currentTime).apply()
-
-            try {
-                val packageInfo = packageManager.getPackageInfo(packageName, 0)
-                val currentVersion = packageInfo.versionName
-
-                val updateManager = UpdateManager()
-                val updateInfo = updateManager.checkForUpdates(currentVersion)
-
-                if (updateInfo != null) {
-                    showUpdateAvailableDialog(updateInfo)
-                }
-            } catch (e: Exception) {
-                // Error silencioso (por si no hay conexión, etc.)
-            }
-        }
-    }
-
-    // NUEVO: Diálogo para mostrar que hay actualización
-    private fun showUpdateAvailableDialog(updateInfo: UpdateInfo) {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.update_dialog_title)
-            .setMessage(getString(R.string.update_dialog_message, updateInfo.versionName))
-            .setPositiveButton(R.string.update_dialog_download) { _, _ ->
-                appUpdater = AppUpdater(this)
-                appUpdater?.downloadAndInstall(updateInfo.downloadUrl)
-            }
-            .setNegativeButton(R.string.update_dialog_later, null)
-            .show()
-    }
-
 }

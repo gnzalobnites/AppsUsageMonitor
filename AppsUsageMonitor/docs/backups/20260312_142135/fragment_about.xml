@@ -87,16 +87,6 @@
                     android:textAlignment="viewStart"
                     app:icon="@android:drawable/ic_menu_search" />
 
-                <!-- NUEVO BOTÓN DE ACTUALIZACIONES -->
-                <Button
-                    android:id="@+id/btnCheckUpdates"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/update_check_button"
-                    app:icon="@android:drawable/stat_sys_download" />
-
                 <Button
                     android:id="@+id/btnCoffee"
                     style="@style/Widget.MaterialComponents.Button.UnelevatedButton"

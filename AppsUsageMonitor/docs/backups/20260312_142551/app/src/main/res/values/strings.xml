@@ -261,25 +261,4 @@
 
 <string name="loading_installed_apps">Loading installed apps...</string>
 
-<!-- Strings for Updates -->
-    <string name="pref_category_updates">Updates</string>
-    <string name="pref_auto_update_title">Check for updates automatically</string>
-    <string name="pref_auto_update_summary">Check every 24 hours when opening the app</string>
-    
-    <string name="update_check_button">Check for updates</string>
-    <string name="update_checking">Checking…</string>
-    <string name="update_no_update_available">You already have the latest version</string>
-    <string name="update_check_error">Error checking for updates</string>
-    
-    <string name="update_dialog_title">New update available!</string>
-    <string name="update_dialog_message">Version %s is now available. Download now?</string>
-    <string name="update_dialog_download">Download</string>
-    <string name="update_dialog_later">Later</string>
-    
-    <string name="update_download_title">Downloading update</string>
-    <string name="update_download_description">Downloading the latest version of Apps Usage Monitor…</string>
-    <string name="update_download_started">Download started</string>
-    <string name="update_file_not_found">Error: Update file not found</string>
-    <string name="update_no_installer">No app found to install the APK</string>
-
 </resources>
