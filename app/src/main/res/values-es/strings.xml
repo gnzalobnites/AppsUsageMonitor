@@ -283,4 +283,7 @@
     <string name="update_file_not_found">Error: No se encontró el archivo de actualización</string>
     <string name="update_no_installer">No se encontró una aplicación para instalar el APK</string>
 
+    <!-- Nuevas cadenas para la burbuja rediseñada -->
+	<!--<string name="current_session_label">Tu momento de enfoque</string>-->
+	<string name="continue_button">Cerrar</string>
 </resources>

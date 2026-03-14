@@ -282,4 +282,7 @@
     <string name="update_file_not_found">Error: Update file not found</string>
     <string name="update_no_installer">No app found to install the APK</string>
 
+    <!-- New strings for the redesigned bubble -->
+	<!--<string name="current_session_label">Your focus moment</string>-->
+	<string name="continue_button">Close</string>
 </resources>

@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
-import android.content.res.Configuration
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
@@ -18,6 +17,7 @@ import android.util.Log
 import android.view.*
 import android.widget.Button
 import android.widget.TextView
+import android.widget.ProgressBar
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
@@ -26,9 +26,13 @@ import com.gnzalobnites.appsusagemonitor.data.repository.AppRepository
 import com.gnzalobnites.appsusagemonitor.utils.Constants
 import kotlinx.coroutines.*
 import java.util.*
+import android.animation.ObjectAnimator
+import android.animation.PropertyValuesHolder
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.OvershootInterpolator
 
 class BubbleService : LifecycleService() {
-    
+
     private lateinit var windowManager: WindowManager
     private lateinit var appRepository: AppRepository
     private var bubbleView: View? = null
@@ -42,16 +46,24 @@ class BubbleService : LifecycleService() {
     private var updateExpandedViewRunnable: Runnable? = null
     private var isBubbleActive = false
     private var isPersistent = false
-    
+
     private var updateHandler = Handler(Looper.getMainLooper())
     private var updateRunnable: Runnable? = null
     private var updateJob: Job? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    
+
     private var cachedTotalToday: Long = 0L
     private var lastCacheUpdate: Long = 0L
     private val CACHE_DURATION = 5000L
-    
+
+    // Animaciones y estados
+    private var pulseAnimation: ObjectAnimator? = null
+    // --- NUEVAS VARIABLES PARA OPAICDAD Y ARRASTRE ---
+    private var idleRunnable: Runnable? = null
+    private val IDLE_ALPHA = 0.6f
+    private val ACTIVE_ALPHA = 1.0f
+    private val IDLE_DELAY_MS = 3000L // 3 segundos antes de atenuarse
+
     private val bubbleParams: WindowManager.LayoutParams by lazy {
         WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -60,17 +72,17 @@ class BubbleService : LifecycleService() {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             else
                 WindowManager.LayoutParams.TYPE_PHONE,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or 
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.END
-            
+
             val displayMetrics = resources.displayMetrics
             val screenHeight = displayMetrics.heightPixels
             y = screenHeight / 4
-            
+
             x = 0
         }
     }
@@ -100,12 +112,12 @@ class BubbleService : LifecycleService() {
         appRepository = AppRepository(this)
         startForegroundService()
     }
-    
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        
+
         Log.d(TAG, "onStartCommand: action=${intent?.action}")
-        
+
         when (intent?.action) {
             Constants.ACTION_SHOW_BUBBLE -> {
                 val packageName = intent.getStringExtra(Constants.EXTRA_PACKAGE_NAME)
@@ -113,15 +125,15 @@ class BubbleService : LifecycleService() {
                 val interval = intent.getLongExtra(Constants.EXTRA_INTERVAL, Constants.INTERVAL_1_MINUTE)
                 val sessionStart = intent.getLongExtra(Constants.EXTRA_SESSION_START_TIME, System.currentTimeMillis())
                 isPersistent = intent.getBooleanExtra(Constants.EXTRA_BUBBLE_PERSISTENT, false)
-                
+
                 currentInterval = interval
                 sessionStartTime = sessionStart
-                
+
                 if (packageName != null) {
                     currentPackageName = packageName
                     refreshTotalTodayCache(packageName)
                 }
-                
+
                 showBubble(packageName, badgeCount)
             }
             Constants.ACTION_HIDE_BUBBLE -> {
@@ -131,10 +143,10 @@ class BubbleService : LifecycleService() {
                 stopUpdatingTime()
             }
         }
-        
+
         return START_STICKY
     }
-    
+
     private fun refreshTotalTodayCache(packageName: String) {
         serviceScope.launch {
             try {
@@ -144,14 +156,14 @@ class BubbleService : LifecycleService() {
                     set(Calendar.SECOND, 0)
                     set(Calendar.MILLISECOND, 0)
                 }.timeInMillis
-                
+
                 val endOfDay = Calendar.getInstance().apply {
                     set(Calendar.HOUR_OF_DAY, 23)
                     set(Calendar.MINUTE, 59)
                     set(Calendar.SECOND, 59)
                     set(Calendar.MILLISECOND, 999)
                 }.timeInMillis
-                
+
                 cachedTotalToday = appRepository.getTotalUsageForDay(
                     packageName,
                     startOfDay,
@@ -164,11 +176,11 @@ class BubbleService : LifecycleService() {
             }
         }
     }
-    
+
     private fun startForegroundService() {
         val channelId = "bubble_service_channel"
         val notificationId = Constants.NOTIFICATION_ID
-        
+
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val channel = NotificationChannel(
@@ -190,14 +202,14 @@ class BubbleService : LifecycleService() {
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setCategory(NotificationCompat.CATEGORY_SERVICE)
                 .build()
-            
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 startForeground(notificationId, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             } else {
                 startForeground(notificationId, notification)
             }
             Log.d(TAG, "Foreground service started successfully")
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "Error starting foreground service", e)
             try {
@@ -213,22 +225,22 @@ class BubbleService : LifecycleService() {
             Log.e(TAG, "PackageName is null")
             return
         }
-        
+
         Log.d(TAG, "Attempting to show bubble for: $packageName, count: $badgeCount, persistent: $isPersistent")
-        
+
         if (!Settings.canDrawOverlays(this)) {
             Log.e(TAG, "No overlay permission")
             return
         }
-        
+
         if (isBubbleActive && bubbleView != null) {
             updateBubbleContent(packageName, badgeCount)
             return
         }
-        
+
         currentPackageName = packageName
         currentBadgeCount = badgeCount
-        
+
         try {
             createBubbleView(packageName, badgeCount)
             isBubbleActive = true
@@ -237,14 +249,108 @@ class BubbleService : LifecycleService() {
         }
     }
 
+    // --- NUEVA FUNCIÓN PARA EL ARRASTRE Y LA OPAICDAD ---
+    private fun setupBubbleTouchListener() {
+        bubbleView?.setOnTouchListener(object : View.OnTouchListener {
+            private var initialX: Int = 0
+            private var initialY: Int = 0
+            private var initialTouchX: Float = 0f
+            private var initialTouchY: Float = 0f
+            private var isDragging: Boolean = false
+            private val CLICK_THRESHOLD = 15f
+
+            override fun onTouch(view: View, event: MotionEvent): Boolean {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        initialX = bubbleParams.x
+                        initialY = bubbleParams.y
+                        initialTouchX = event.rawX
+                        initialTouchY = event.rawY
+                        isDragging = false
+
+                        resetIdleTimer()
+                        return true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val deltaX = event.rawX - initialTouchX
+                        val deltaY = event.rawY - initialTouchY
+
+                        if (Math.abs(deltaX) > CLICK_THRESHOLD || Math.abs(deltaY) > CLICK_THRESHOLD) {
+                            isDragging = true
+                        }
+
+                        if (isDragging) {
+                            bubbleParams.x = initialX + deltaX.toInt()
+                            bubbleParams.y = initialY + deltaY.toInt()
+                            windowManager.updateViewLayout(bubbleView, bubbleParams)
+
+                            resetIdleTimer()
+                        }
+                        return true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        resetIdleTimer()
+
+                        if (!isDragging) {
+                            view.performClick()
+                        }
+                        return true
+                    }
+                }
+                return false
+            }
+        })
+    }
+
+    // --- NUEVA FUNCIÓN DE ANIMACIÓN DE ENTRADA ---
+    private fun animateBubbleIn() {
+        bubbleView?.findViewById<View>(R.id.bubble_container)?.apply {
+            scaleX = 0f
+            scaleY = 0f
+            animate()
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(600)
+                .setInterpolator(OvershootInterpolator())
+                .start()
+        }
+    }
+
+    // --- NUEVA FUNCIÓN PARA CAMBIAR LA OPAICDAD ---
+    private fun setBubbleIdle(isIdle: Boolean) {
+        bubbleView?.findViewById<View>(R.id.bubble_container)?.animate()?.apply {
+            alpha(if (isIdle) IDLE_ALPHA else ACTIVE_ALPHA)
+            duration = 400
+            start()
+        }
+    }
+
+    // --- NUEVA FUNCIÓN PARA REINICIAR EL TEMPORIZADOR DE REPOSO ---
+    private fun resetIdleTimer() {
+        setBubbleIdle(false)
+        idleRunnable?.let { mainHandler.removeCallbacks(it) }
+
+        idleRunnable = Runnable {
+            if (!isExpanded) {
+                setBubbleIdle(true)
+            }
+        }
+        mainHandler.postDelayed(idleRunnable!!, IDLE_DELAY_MS)
+    }
+
     private fun createBubbleView(packageName: String, badgeCount: Int) {
         try {
             bubbleView = LayoutInflater.from(this).inflate(R.layout.bubble_view, null)
-            
+
             setupBubbleContent(packageName, badgeCount)
-            
+
+            // --- CONFIGURAR EL LISTENER DE TOQUE PARA ARRASTRAR ---
+            setupBubbleTouchListener()
+
+            // --- EL CLICK LISTENER ORIGINAL ---
             bubbleView?.setOnClickListener {
                 Log.d(TAG, "Bubble clicked")
+                resetIdleTimer()
                 if (isExpanded) {
                     hideExpandedView()
                 } else {
@@ -254,7 +360,11 @@ class BubbleService : LifecycleService() {
 
             windowManager.addView(bubbleView, bubbleParams)
             Log.d(TAG, "Bubble view added to window manager at position y=${bubbleParams.y}")
-            
+
+            // --- LLAMAR A LAS NUEVAS FUNCIONES ---
+            animateBubbleIn()
+            resetIdleTimer()
+
         } catch (e: Exception) {
             Log.e(TAG, "Error creating bubble view", e)
         }
@@ -265,30 +375,30 @@ class BubbleService : LifecycleService() {
             val bubbleIcon = bubbleView?.findViewById<View>(R.id.bubble_icon)
             val badgeText = bubbleView?.findViewById<TextView>(R.id.badge_text)
             val bubbleContainer = bubbleView?.findViewById<View>(R.id.bubble_container)
-            
+
             if (bubbleIcon == null || badgeText == null || bubbleContainer == null) {
                 Log.e(TAG, "Bubble views not found")
                 return
             }
-            
+
             val pm = packageManager
             val appIcon = pm.getApplicationIcon(packageName)
-            
+
             val bitmap = drawableToBitmap(appIcon)
             val roundedBitmap = getRoundedBitmap(bitmap)
-            
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 bubbleIcon.background = BitmapDrawable(resources, roundedBitmap)
             } else {
                 bubbleIcon.setBackgroundDrawable(BitmapDrawable(resources, roundedBitmap))
             }
-            
+
             badgeText.text = badgeCount.toString()
             badgeText.visibility = View.VISIBLE
             bubbleContainer.visibility = View.VISIBLE
-            
+
             Log.d(TAG, "Bubble content setup complete")
-            
+
         } catch (e: PackageManager.NameNotFoundException) {
             Log.e(TAG, getString(R.string.error_app_icon_not_found), e)
             bubbleView?.findViewById<View>(R.id.bubble_icon)?.setBackgroundColor(Color.GRAY)
@@ -303,7 +413,7 @@ class BubbleService : LifecycleService() {
             val badgeText = bubbleView?.findViewById<TextView>(R.id.badge_text)
             badgeText?.text = badgeCount.toString()
             Log.d(TAG, "Bubble content updated to count: $badgeCount")
-            
+
             if (isExpanded && expandedView != null) {
                 updateExpandedViewTimes()
             }
@@ -317,17 +427,17 @@ class BubbleService : LifecycleService() {
             if (expandedView == null) {
                 createExpandedView()
             }
-            
+
             expandedView?.visibility = View.VISIBLE
             bubbleView?.findViewById<View>(R.id.bubble_container)?.visibility = View.GONE
             isExpanded = true
-            
+
             updateExpandedViewTimes()
-            
             startUpdatingTime()
-            
+            startBreathingAnimation()
+            resetIdleTimer() // Despertar al expandir
+
             Log.d(TAG, "Expanded view shown")
-            
         } catch (e: Exception) {
             Log.e(TAG, "Error showing expanded view", e)
         }
@@ -338,9 +448,11 @@ class BubbleService : LifecycleService() {
             expandedView?.visibility = View.GONE
             bubbleView?.findViewById<View>(R.id.bubble_container)?.visibility = View.VISIBLE
             isExpanded = false
-            
+
             stopUpdatingTime()
-            
+            stopBreathingAnimation()
+            resetIdleTimer() // Reiniciar el temporizador de reposo al colapsar
+
             Log.d(TAG, "Expanded view hidden")
         } catch (e: Exception) {
             Log.e(TAG, "Error hiding expanded view", e)
@@ -351,13 +463,13 @@ class BubbleService : LifecycleService() {
         try {
             val contextThemeWrapper = ContextThemeWrapper(this, R.style.Theme_AppsUsageMonitor)
             expandedView = LayoutInflater.from(contextThemeWrapper).inflate(R.layout.bubble_expanded_view, null)
-        
+
             expandedParams.gravity = Gravity.CENTER
             expandedParams.x = 0
             expandedParams.y = 0
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                expandedView?.setBackgroundResource(R.drawable.glass_morphism_background)
+                expandedView?.setBackgroundResource(R.drawable.bg_elegant_bubble)
             }
 
             expandedView?.findViewById<Button>(R.id.close_button)?.setOnClickListener {
@@ -392,21 +504,57 @@ class BubbleService : LifecycleService() {
 
         val now = System.currentTimeMillis()
         val sessionDuration = now - sessionStartTime
-        
+
         if (now - lastCacheUpdate > CACHE_DURATION) {
             refreshTotalTodayCache(currentPackageName!!)
         }
-        
+
         val totalToday = cachedTotalToday + sessionDuration
 
         try {
             expandedView?.apply {
                 findViewById<TextView>(R.id.current_session_time)?.text = formatDuration(sessionDuration)
                 findViewById<TextView>(R.id.total_today_time)?.text = formatDuration(totalToday)
+
+                val progressPercent = if (currentInterval > 0) {
+                    ((sessionDuration % currentInterval).toFloat() / currentInterval.toFloat() * 100).toInt()
+                } else {
+                    0
+                }
+
+                val progressBar = findViewById<ProgressBar>(R.id.session_progress_bar)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    progressBar?.setProgress(progressPercent, true)
+                } else {
+                    progressBar?.progress = progressPercent
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error updating expanded view times", e)
         }
+    }
+
+    private fun startBreathingAnimation() {
+        expandedView?.let { view ->
+            pulseAnimation = ObjectAnimator.ofPropertyValuesHolder(
+                view,
+                PropertyValuesHolder.ofFloat("scaleX", 1.0f, 1.02f),
+                PropertyValuesHolder.ofFloat("scaleY", 1.0f, 1.02f)
+            ).apply {
+                duration = 2500
+                repeatCount = ObjectAnimator.INFINITE
+                repeatMode = ObjectAnimator.REVERSE
+                interpolator = AccelerateDecelerateInterpolator()
+                start()
+            }
+        }
+    }
+
+    private fun stopBreathingAnimation() {
+        pulseAnimation?.cancel()
+        pulseAnimation = null
+        expandedView?.scaleX = 1.0f
+        expandedView?.scaleY = 1.0f
     }
 
     private fun closeCartel() {
@@ -414,7 +562,7 @@ class BubbleService : LifecycleService() {
         hideAllViews()
         isExpanded = false
         isBubbleActive = false
-        
+
         notifyBubbleClosed()
     }
 
@@ -438,10 +586,10 @@ class BubbleService : LifecycleService() {
         if (drawable is BitmapDrawable && drawable.bitmap != null) {
             return drawable.bitmap
         }
-        
+
         val width = drawable.intrinsicWidth.coerceAtLeast(1)
         val height = drawable.intrinsicHeight.coerceAtLeast(1)
-        
+
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         drawable.setBounds(0, 0, canvas.width, canvas.height)
@@ -452,18 +600,18 @@ class BubbleService : LifecycleService() {
     private fun getRoundedBitmap(bitmap: Bitmap): Bitmap {
         val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
-        
+
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             shader = BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
         }
-        
+
         canvas.drawCircle(
             (bitmap.width / 2).toFloat(),
             (bitmap.height / 2).toFloat(),
             (bitmap.width / 2).toFloat(),
             paint
         )
-        
+
         return output
     }
 
@@ -471,7 +619,7 @@ class BubbleService : LifecycleService() {
         val seconds = (duration / 1000) % 60
         val minutes = (duration / (1000 * 60)) % 60
         val hours = (duration / (1000 * 60 * 60))
-        
+
         return when {
             hours > 0 -> String.format("%02d:%02d:%02d", hours, minutes, seconds)
             minutes > 0 -> String.format("%02d:%02d", minutes, seconds)
@@ -482,11 +630,14 @@ class BubbleService : LifecycleService() {
     private fun hideAllViews() {
         try {
             Log.d(TAG, "Hiding all views")
-            
+
             stopUpdatingTime()
             updateExpandedViewRunnable?.let { mainHandler.removeCallbacks(it) }
             updateExpandedViewRunnable = null
-            
+            // --- LIMPIAR EL RUNNABLE DE REPOSO ---
+            idleRunnable?.let { mainHandler.removeCallbacks(it) }
+            idleRunnable = null
+
             if (bubbleView != null) {
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
@@ -501,7 +652,7 @@ class BubbleService : LifecycleService() {
                 }
                 bubbleView = null
             }
-            
+
             if (expandedView != null) {
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
@@ -516,7 +667,7 @@ class BubbleService : LifecycleService() {
                 }
                 expandedView = null
             }
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "Error hiding all views", e)
         } finally {
@@ -529,6 +680,7 @@ class BubbleService : LifecycleService() {
         super.onDestroy()
         Log.d(TAG, "BubbleService destroyed")
         stopUpdatingTime()
+        stopBreathingAnimation()
         hideAllViews()
         serviceScope.cancel()
         mainHandler.removeCallbacksAndMessages(null)
@@ -540,4 +692,4 @@ class BubbleService : LifecycleService() {
         super.onBind(intent)
         return null
     }
-}
+} 
