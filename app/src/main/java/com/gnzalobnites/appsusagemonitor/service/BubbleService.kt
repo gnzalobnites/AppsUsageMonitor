@@ -244,6 +244,10 @@ class BubbleService : LifecycleService() {
         try {
             createBubbleView(packageName, badgeCount)
             isBubbleActive = true
+            
+            // NUEVO: Iniciar la actualización en vivo en cuanto la burbuja nace
+            startUpdatingTime()
+            
         } catch (e: Exception) {
             Log.e(TAG, "Error showing bubble", e)
         }
@@ -393,7 +397,8 @@ class BubbleService : LifecycleService() {
                 bubbleIcon.setBackgroundDrawable(BitmapDrawable(resources, roundedBitmap))
             }
 
-            badgeText.text = badgeCount.toString()
+            // Establecer texto inicial en el badge
+            badgeText.text = "0"
             badgeText.visibility = View.VISIBLE
             bubbleContainer.visibility = View.VISIBLE
 
@@ -402,21 +407,22 @@ class BubbleService : LifecycleService() {
         } catch (e: PackageManager.NameNotFoundException) {
             Log.e(TAG, getString(R.string.error_app_icon_not_found), e)
             bubbleView?.findViewById<View>(R.id.bubble_icon)?.setBackgroundColor(Color.GRAY)
-            bubbleView?.findViewById<TextView>(R.id.badge_text)?.text = badgeCount.toString()
+            bubbleView?.findViewById<TextView>(R.id.badge_text)?.text = "0"
         } catch (e: Exception) {
             Log.e(TAG, "Error setting up bubble content", e)
         }
     }
 
+    // <<<--- MÉTODO CORREGIDO: Elimina la interferencia del badgeCount --->>>
     private fun updateBubbleContent(packageName: String, badgeCount: Int) {
         try {
-            val badgeText = bubbleView?.findViewById<TextView>(R.id.badge_text)
-            badgeText?.text = badgeCount.toString()
-            Log.d(TAG, "Bubble content updated to count: $badgeCount")
+            // Ya no actualizamos el texto aquí usando badgeCount
+            // Esto evita el parpadeo entre intervalos y minutos en vivo
+            Log.d(TAG, "Bubble content update triggered. Interval count: $badgeCount")
 
-            if (isExpanded && expandedView != null) {
-                updateExpandedViewTimes()
-            }
+            // Forzamos la actualización inmediata usando nuestra nueva lógica unificada
+            updateExpandedViewTimes()
+            
         } catch (e: Exception) {
             Log.e(TAG, "Error updating bubble content", e)
         }
@@ -433,7 +439,7 @@ class BubbleService : LifecycleService() {
             isExpanded = true
 
             updateExpandedViewTimes()
-            startUpdatingTime()
+            // startUpdatingTime()  <-- ELIMINADA
             startBreathingAnimation()
             resetIdleTimer() // Despertar al expandir
 
@@ -449,7 +455,7 @@ class BubbleService : LifecycleService() {
             bubbleView?.findViewById<View>(R.id.bubble_container)?.visibility = View.VISIBLE
             isExpanded = false
 
-            stopUpdatingTime()
+            // stopUpdatingTime()  <-- ELIMINADA
             stopBreathingAnimation()
             resetIdleTimer() // Reiniciar el temporizador de reposo al colapsar
 
@@ -499,12 +505,21 @@ class BubbleService : LifecycleService() {
         Log.d(TAG, "Time updates stopped")
     }
 
+    // <<<--- MÉTODO MODIFICADO: Actualización unificada --->>>
     private fun updateExpandedViewTimes() {
-        if (!isExpanded || expandedView == null || currentPackageName == null) return
+        if (currentPackageName == null) return
 
         val now = System.currentTimeMillis()
         val sessionDuration = now - sessionStartTime
 
+        // 1. NUEVO: Actualizar siempre el contador de la burbuja minimizada (en minutos)
+        val minutesPassed = (sessionDuration / 60000).toInt()
+        bubbleView?.findViewById<TextView>(R.id.badge_text)?.text = minutesPassed.toString()
+
+        // 2. Si la burbuja NO está expandida, terminamos la ejecución aquí
+        if (!isExpanded || expandedView == null) return
+
+        // 3. Si la burbuja ESTÁ expandida, actualizamos los datos del cartel
         if (now - lastCacheUpdate > CACHE_DURATION) {
             refreshTotalTodayCache(currentPackageName!!)
         }
@@ -692,4 +707,4 @@ class BubbleService : LifecycleService() {
         super.onBind(intent)
         return null
     }
-} 
+}
