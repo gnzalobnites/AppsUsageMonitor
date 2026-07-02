@@ -11,6 +11,12 @@
     <string name="title_dashboard">Statistics</string>
     <string name="title_notifications">Notifications</string>
     
+    <!-- Live screen time notification -->
+<string name="notification_channel_screen_time">Live Screen Time</string>
+<string name="notification_channel_screen_time_description">Shows screen usage time in the status bar</string>
+<string name="notification_screen_time_title">Today\'s Screen Time</string>
+<string name="notification_screen_time_text">You have used %s of screen time</string>
+    
     <!-- Buttons - General -->
     <string name="start_monitoring">Start monitoring</string>
     <string name="stop_monitoring">Stop monitoring</string>

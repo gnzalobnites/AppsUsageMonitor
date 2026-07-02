@@ -11,10 +11,10 @@
         android:icon="@drawable/ic_apps"
         android:title="@string/drawer_app_selection" />
     
-    <item
+    <!--<item
         android:id="@+id/statisticsFragment"
         android:icon="@drawable/ic_stats"
-        android:title="@string/drawer_statistics" />
+        android:title="@string/drawer_statistics" />-->
     
     <item
         android:id="@+id/settingsFragment"

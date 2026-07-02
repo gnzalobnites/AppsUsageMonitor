@@ -52,17 +52,12 @@ class BubbleService : LifecycleService() {
     private var updateJob: Job? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    private var cachedTotalToday: Long = 0L
-    private var lastCacheUpdate: Long = 0L
-    private val CACHE_DURATION = 5000L
-
     // Animaciones y estados
     private var pulseAnimation: ObjectAnimator? = null
-    // --- NUEVAS VARIABLES PARA OPAICDAD Y ARRASTRE ---
     private var idleRunnable: Runnable? = null
     private val IDLE_ALPHA = 0.6f
     private val ACTIVE_ALPHA = 1.0f
-    private val IDLE_DELAY_MS = 3000L // 3 segundos antes de atenuarse
+    private val IDLE_DELAY_MS = 3000L
 
     private val bubbleParams: WindowManager.LayoutParams by lazy {
         WindowManager.LayoutParams(
@@ -131,7 +126,6 @@ class BubbleService : LifecycleService() {
 
                 if (packageName != null) {
                     currentPackageName = packageName
-                    refreshTotalTodayCache(packageName)
                 }
 
                 showBubble(packageName, badgeCount)
@@ -145,36 +139,6 @@ class BubbleService : LifecycleService() {
         }
 
         return START_STICKY
-    }
-
-    private fun refreshTotalTodayCache(packageName: String) {
-        serviceScope.launch {
-            try {
-                val startOfDay = Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }.timeInMillis
-
-                val endOfDay = Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, 23)
-                    set(Calendar.MINUTE, 59)
-                    set(Calendar.SECOND, 59)
-                    set(Calendar.MILLISECOND, 999)
-                }.timeInMillis
-
-                cachedTotalToday = appRepository.getTotalUsageForDay(
-                    packageName,
-                    startOfDay,
-                    endOfDay
-                )
-                lastCacheUpdate = System.currentTimeMillis()
-                Log.d(TAG, "Cache refreshed: totalToday=$cachedTotalToday ms")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error refreshing cache", e)
-            }
-        }
     }
 
     private fun startForegroundService() {
@@ -244,16 +208,12 @@ class BubbleService : LifecycleService() {
         try {
             createBubbleView(packageName, badgeCount)
             isBubbleActive = true
-            
-            // NUEVO: Iniciar la actualización en vivo en cuanto la burbuja nace
             startUpdatingTime()
-            
         } catch (e: Exception) {
             Log.e(TAG, "Error showing bubble", e)
         }
     }
 
-    // --- NUEVA FUNCIÓN PARA EL ARRASTRE Y LA OPAICDAD ---
     private fun setupBubbleTouchListener() {
         bubbleView?.setOnTouchListener(object : View.OnTouchListener {
             private var initialX: Int = 0
@@ -306,7 +266,6 @@ class BubbleService : LifecycleService() {
         })
     }
 
-    // --- NUEVA FUNCIÓN DE ANIMACIÓN DE ENTRADA ---
     private fun animateBubbleIn() {
         bubbleView?.findViewById<View>(R.id.bubble_container)?.apply {
             scaleX = 0f
@@ -320,7 +279,6 @@ class BubbleService : LifecycleService() {
         }
     }
 
-    // --- NUEVA FUNCIÓN PARA CAMBIAR LA OPAICDAD ---
     private fun setBubbleIdle(isIdle: Boolean) {
         bubbleView?.findViewById<View>(R.id.bubble_container)?.animate()?.apply {
             alpha(if (isIdle) IDLE_ALPHA else ACTIVE_ALPHA)
@@ -329,7 +287,6 @@ class BubbleService : LifecycleService() {
         }
     }
 
-    // --- NUEVA FUNCIÓN PARA REINICIAR EL TEMPORIZADOR DE REPOSO ---
     private fun resetIdleTimer() {
         setBubbleIdle(false)
         idleRunnable?.let { mainHandler.removeCallbacks(it) }
@@ -347,11 +304,8 @@ class BubbleService : LifecycleService() {
             bubbleView = LayoutInflater.from(this).inflate(R.layout.bubble_view, null)
 
             setupBubbleContent(packageName, badgeCount)
-
-            // --- CONFIGURAR EL LISTENER DE TOQUE PARA ARRASTRAR ---
             setupBubbleTouchListener()
 
-            // --- EL CLICK LISTENER ORIGINAL ---
             bubbleView?.setOnClickListener {
                 Log.d(TAG, "Bubble clicked")
                 resetIdleTimer()
@@ -365,7 +319,6 @@ class BubbleService : LifecycleService() {
             windowManager.addView(bubbleView, bubbleParams)
             Log.d(TAG, "Bubble view added to window manager at position y=${bubbleParams.y}")
 
-            // --- LLAMAR A LAS NUEVAS FUNCIONES ---
             animateBubbleIn()
             resetIdleTimer()
 
@@ -397,7 +350,6 @@ class BubbleService : LifecycleService() {
                 bubbleIcon.setBackgroundDrawable(BitmapDrawable(resources, roundedBitmap))
             }
 
-            // Establecer texto inicial en el badge
             badgeText.text = "0"
             badgeText.visibility = View.VISIBLE
             bubbleContainer.visibility = View.VISIBLE
@@ -413,16 +365,10 @@ class BubbleService : LifecycleService() {
         }
     }
 
-    // <<<--- MÉTODO CORREGIDO: Elimina la interferencia del badgeCount --->>>
     private fun updateBubbleContent(packageName: String, badgeCount: Int) {
         try {
-            // Ya no actualizamos el texto aquí usando badgeCount
-            // Esto evita el parpadeo entre intervalos y minutos en vivo
             Log.d(TAG, "Bubble content update triggered. Interval count: $badgeCount")
-
-            // Forzamos la actualización inmediata usando nuestra nueva lógica unificada
             updateExpandedViewTimes()
-            
         } catch (e: Exception) {
             Log.e(TAG, "Error updating bubble content", e)
         }
@@ -439,9 +385,8 @@ class BubbleService : LifecycleService() {
             isExpanded = true
 
             updateExpandedViewTimes()
-            // startUpdatingTime()  <-- ELIMINADA
             startBreathingAnimation()
-            resetIdleTimer() // Despertar al expandir
+            resetIdleTimer()
 
             Log.d(TAG, "Expanded view shown")
         } catch (e: Exception) {
@@ -455,9 +400,8 @@ class BubbleService : LifecycleService() {
             bubbleView?.findViewById<View>(R.id.bubble_container)?.visibility = View.VISIBLE
             isExpanded = false
 
-            // stopUpdatingTime()  <-- ELIMINADA
             stopBreathingAnimation()
-            resetIdleTimer() // Reiniciar el temporizador de reposo al colapsar
+            resetIdleTimer()
 
             Log.d(TAG, "Expanded view hidden")
         } catch (e: Exception) {
@@ -505,31 +449,27 @@ class BubbleService : LifecycleService() {
         Log.d(TAG, "Time updates stopped")
     }
 
-    // <<<--- MÉTODO MODIFICADO: Actualización unificada --->>>
+    // MÉTODO SIMPLIFICADO: Solo sesión actual
     private fun updateExpandedViewTimes() {
         if (currentPackageName == null) return
 
         val now = System.currentTimeMillis()
         val sessionDuration = now - sessionStartTime
 
-        // 1. NUEVO: Actualizar siempre el contador de la burbuja minimizada (en minutos)
+        // 1. Actualizar siempre el contador de la burbuja minimizada (en minutos)
         val minutesPassed = (sessionDuration / 60000).toInt()
         bubbleView?.findViewById<TextView>(R.id.badge_text)?.text = minutesPassed.toString()
 
         // 2. Si la burbuja NO está expandida, terminamos la ejecución aquí
         if (!isExpanded || expandedView == null) return
 
-        // 3. Si la burbuja ESTÁ expandida, actualizamos los datos del cartel
-        if (now - lastCacheUpdate > CACHE_DURATION) {
-            refreshTotalTodayCache(currentPackageName!!)
-        }
-
-        val totalToday = cachedTotalToday + sessionDuration
-
+        // 3. Actualizamos los datos del cartel expandido (Solo la sesión actual)
         try {
             expandedView?.apply {
                 findViewById<TextView>(R.id.current_session_time)?.text = formatDuration(sessionDuration)
-                findViewById<TextView>(R.id.total_today_time)?.text = formatDuration(totalToday)
+
+                // Ocultamos la vista del total diario
+                findViewById<TextView>(R.id.total_today_time)?.visibility = View.GONE
 
                 val progressPercent = if (currentInterval > 0) {
                     ((sessionDuration % currentInterval).toFloat() / currentInterval.toFloat() * 100).toInt()
@@ -579,10 +519,6 @@ class BubbleService : LifecycleService() {
         isBubbleActive = false
 
         notifyBubbleClosed()
-    }
-
-    private fun updateExpandedView(packageName: String) {
-        updateExpandedViewTimes()
     }
 
     private fun notifyBubbleClosed() {
@@ -649,7 +585,6 @@ class BubbleService : LifecycleService() {
             stopUpdatingTime()
             updateExpandedViewRunnable?.let { mainHandler.removeCallbacks(it) }
             updateExpandedViewRunnable = null
-            // --- LIMPIAR EL RUNNABLE DE REPOSO ---
             idleRunnable?.let { mainHandler.removeCallbacks(it) }
             idleRunnable = null
 

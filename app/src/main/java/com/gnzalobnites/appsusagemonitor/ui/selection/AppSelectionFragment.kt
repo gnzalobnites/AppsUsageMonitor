@@ -19,6 +19,7 @@ import com.gnzalobnites.appsusagemonitor.databinding.FragmentAppSelectionBinding
 import com.gnzalobnites.appsusagemonitor.ui.adapters.AppListAdapter
 import com.gnzalobnites.appsusagemonitor.ui.adapters.MonitoredAppsSimpleAdapter
 import com.gnzalobnites.appsusagemonitor.utils.Constants
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -30,6 +31,9 @@ class AppSelectionFragment : Fragment() {
     private val viewModel: AppSelectionViewModel by viewModels()
     private lateinit var appsAdapter: AppListAdapter
     private lateinit var monitoredAdapter: MonitoredAppsSimpleAdapter
+    
+    // NUEVO: Job para el debounce del buscador
+    private var searchJob: Job? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -140,9 +144,11 @@ class AppSelectionFragment : Fragment() {
                     showLoading(false)
                 }
 
-                // Filtrado original con debounce
-                lifecycleScope.launch {
-                    delay(300)
+                // Filtrado original con DEBOUNCE REAL
+                // Cancela la búsqueda anterior si el usuario sigue escribiendo
+                searchJob?.cancel()
+                searchJob = lifecycleScope.launch {
+                    delay(300) // Espera 300ms a que el usuario deje de escribir
                     viewModel.filterApps(s?.toString() ?: "")
                     // Ocultamos loading después del filtrado solo si no estamos en modo búsqueda
                     if (s.isNullOrEmpty()) {
@@ -236,6 +242,7 @@ class AppSelectionFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        searchJob?.cancel() // Limpiar el Job al destruir la vista
         _binding = null
     }
 }

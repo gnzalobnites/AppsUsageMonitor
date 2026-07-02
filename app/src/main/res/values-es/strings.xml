@@ -11,6 +11,12 @@
     <string name="title_dashboard">Estadísticas</string>
     <string name="title_notifications">Notificaciones</string>
     
+    <!-- Notificación de tiempo de pantalla en vivo -->
+<string name="notification_channel_screen_time">Tiempo de pantalla en vivo</string>
+<string name="notification_channel_screen_time_description">Muestra el tiempo de uso de pantalla en la barra de estado</string>
+<string name="notification_screen_time_title">Tiempo de pantalla de hoy</string>
+<string name="notification_screen_time_text">Llevas %s de uso de pantalla</string>
+    
     <!-- Buttons - General -->
     <string name="start_monitoring">Iniciar monitoreo</string>
     <string name="stop_monitoring">Detener monitoreo</string>

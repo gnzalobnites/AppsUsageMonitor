@@ -14,9 +14,9 @@
         <action
             android:id="@+id/action_main_to_selection"
             app:destination="@id/appSelectionFragment" />
-        <action
+        <!--<action
             android:id="@+id/action_main_to_stats"
-            app:destination="@id/statisticsFragment" />
+            app:destination="@id/statisticsFragment" />-->
     </fragment>
 
     <fragment
@@ -25,7 +25,7 @@
         android:label="@string/nav_app_selection_label"
         tools:layout="@layout/fragment_app_selection" />
 
-    <fragment
+    <!-- <fragment
         android:id="@+id/statisticsFragment"
         android:name="com.gnzalobnites.appsusagemonitor.ui.stats.StatisticsFragment"
         android:label="@string/nav_statistics_label"
@@ -33,7 +33,7 @@
         <argument
             android:name="packageName"
             app:argType="string" />
-    </fragment>
+    </fragment> -->
 
     <!-- Agregados estos fragmentos para que coincidan con el menú lateral -->
     <fragment

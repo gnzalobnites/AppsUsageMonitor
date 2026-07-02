@@ -17,25 +17,26 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp"
-            android:paddingBottom="0dp"
-            android:gravity="center_horizontal">
+            android:padding="32dp"
+            android:gravity="center">
 
-            <com.github.mikephil.charting.charts.PieChart
-                android:id="@+id/chart_usage"
-                android:layout_width="match_parent"
-                android:layout_height="300dp"
-                android:layout_marginTop="16dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tiempo de pantalla de hoy"
+                android:textSize="16sp"
+                android:alpha="0.8"
+                android:textColor="?attr/colorOnSurface" />
 
             <TextView
                 android:id="@+id/tv_total_time"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:textSize="20sp"
+                android:layout_marginTop="8dp"
+                android:textSize="48sp"
                 android:textStyle="bold"
-                android:textColor="?attr/colorOnSurface"
-                android:text="@string/total_time_format_placeholder" />
+                android:textColor="?attr/colorPrimary"
+                android:text="0h 00m" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
@@ -71,7 +72,6 @@
             
     </LinearLayout>
 
-    <!-- Footer con email, invitación a café y versión -->
     <LinearLayout
         android:id="@+id/container_footer"
         android:layout_width="match_parent"
@@ -82,7 +82,6 @@
         android:paddingBottom="16dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
-        <!-- Línea divisoria opcional -->
         <View
             android:layout_width="match_parent"
             android:layout_height="0.5dp"
@@ -90,7 +89,6 @@
             android:layout_marginBottom="12dp"
             android:layout_marginHorizontal="20dp"/>
 
-        <!-- Texto de sugerencias -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -98,7 +96,6 @@
             android:textSize="13sp"
             android:textColor="?android:attr/textColorSecondary" />
 
-        <!-- Email clickeable -->
         <TextView
             android:id="@+id/tvEmailFooter"
             android:layout_width="wrap_content"
@@ -111,7 +108,6 @@
             android:clickable="true"
             android:focusable="true"/>
 
-        <!-- Línea de invitación a café -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -140,7 +136,6 @@
                 android:padding="4dp"/>
         </LinearLayout>
 
-        <!-- Versión -->
         <TextView
             android:id="@+id/tvVersionFooter"
             android:layout_width="wrap_content"

@@ -20,10 +20,6 @@ import com.gnzalobnites.appsusagemonitor.R
 import com.gnzalobnites.appsusagemonitor.databinding.FragmentMainBinding
 import com.gnzalobnites.appsusagemonitor.service.MonitoringService
 import com.gnzalobnites.appsusagemonitor.utils.AccessibilityHelper
-import com.github.mikephil.charting.data.PieData
-import com.github.mikephil.charting.data.PieDataSet
-import com.github.mikephil.charting.data.PieEntry
-import com.github.mikephil.charting.utils.ColorTemplate
 import com.google.android.material.R as MaterialR
 import java.util.*
 
@@ -33,12 +29,7 @@ class MainFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: MainViewModel by viewModels()
     
-    private val chartColors by lazy { ColorTemplate.MATERIAL_COLORS.toMutableList().apply { shuffle() } }
-    
-    // Handler para el observer de cambio de día
     private val dayChangeHandler = Handler(Looper.getMainLooper())
-    
-    // Variable para tracking del estado anterior del servicio
     private var lastServiceState = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -48,124 +39,27 @@ class MainFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setupChart()
         setupObservers()
         setupButtons()
         setupFooter()
         
-        // Verificar estado inicial del servicio de accesibilidad
         viewModel.checkAccessibilityServiceState()
-        
-        // Cargar estadísticas iniciales
         viewModel.loadTodayStats()
-        
-        // Detectar cambio de día y recargar datos automáticamente
         observeDayChange()
         
-        // CORREGIDO: Observer para actualizar el botón automáticamente
         viewModel.isAccessibilityServiceEnabled.observe(viewLifecycleOwner) { isEnabled ->
             updateServiceButtonState(isEnabled)
         }
     }
 
-    private fun setupChart() {
-        val textColor = getThemeColor(MaterialR.attr.colorOnSurface)
-        
-        binding.chartUsage.apply {
-            description.isEnabled = false
-            setUsePercentValues(false)
-            setDrawEntryLabels(true)
-            holeRadius = 52f
-            transparentCircleRadius = 57f
-            setHoleColor(Color.TRANSPARENT)
-            animateY(1000)
-            setEntryLabelColor(textColor)
-            setEntryLabelTextSize(12f)
-            centerText = getString(R.string.today)
-            setCenterTextSize(18f)
-            setCenterTextColor(textColor)
-            
-            legend.isEnabled = false
-        }
-    }
-
     private fun setupObservers() {
-        viewModel.usageStats.observe(viewLifecycleOwner) { statsMap: Map<String, Long> ->
-            updateChartDisplay(statsMap)
-        }
-        
-        viewModel.monitoredApps.observe(viewLifecycleOwner) { monitoredList ->
-            if (viewModel.usageStats.value.isNullOrEmpty()) {
-                if (monitoredList.isEmpty()) {
-                    binding.tvTotalTime.text = getString(R.string.empty_state_no_apps)
-                } else {
-                    binding.tvTotalTime.text = getString(R.string.no_usage_today)
-                }
+        viewModel.totalScreenTime.observe(viewLifecycleOwner) { totalMs ->
+            if (totalMs > 0) {
+                binding.tvTotalTime.text = formatTime(totalMs)
+            } else {
+                binding.tvTotalTime.text = getString(R.string.no_usage_today)
             }
         }
-        
-        // Mantenemos el observer anterior para compatibilidad
-        viewModel.isServiceRunning.observe(viewLifecycleOwner) { isRunning ->
-            // No hacemos nada aquí para evitar duplicación, usamos el nuevo observer
-        }
-    }
-    
-    private fun updateChartDisplay(statsMap: Map<String, Long>) {
-        if (statsMap.isEmpty()) {
-            binding.chartUsage.visibility = View.GONE
-            binding.tvTotalTime.visibility = View.VISIBLE
-            binding.tvTotalTime.text = getString(R.string.no_monitored_apps_data_today)
-            return
-        }
-        
-        val entries = ArrayList<PieEntry>()
-        var totalMs = 0L
-
-        statsMap.filter { it.value > 60000 }.forEach { (name, time) ->
-            entries.add(PieEntry(time.toFloat(), name))
-            totalMs += time
-        }
-
-        if (entries.isEmpty() && statsMap.isNotEmpty()) {
-            Toast.makeText(requireContext(), R.string.all_apps_less_than_minute, Toast.LENGTH_SHORT).show()
-            statsMap.forEach { (name, time) ->
-                entries.add(PieEntry(time.toFloat(), name))
-                totalMs += time
-            }
-        }
-
-        val textColor = getThemeColor(MaterialR.attr.colorOnSurface)
-        
-        val dataSet = PieDataSet(entries, "")
-        dataSet.colors = chartColors
-        dataSet.sliceSpace = 3f
-        dataSet.selectionShift = 5f
-        
-        dataSet.valueFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
-            override fun getFormattedValue(value: Float): String {
-                return formatTime(value.toLong())
-            }
-        }
-        dataSet.valueTextSize = 12f
-        dataSet.setValueTextColor(Color.WHITE)
-        
-        if (entries.isNotEmpty()) {
-            val pieData = PieData(dataSet)
-            pieData.setValueTextSize(12f)
-            pieData.setValueTextColor(Color.WHITE)
-            binding.chartUsage.data = pieData
-            
-            binding.chartUsage.setCenterText(getString(R.string.today))
-            binding.chartUsage.setCenterTextColor(textColor)
-        } else {
-            binding.chartUsage.data = null
-            binding.chartUsage.setCenterText(getString(R.string.no_data))
-            binding.chartUsage.setCenterTextColor(textColor)
-        }
-        
-        binding.chartUsage.invalidate()
-        
-        binding.tvTotalTime.text = String.format(getString(R.string.total_time_format), formatTime(totalMs))
     }
 
     private fun setupButtons() {
@@ -177,10 +71,8 @@ class MainFragment : Fragment() {
             val isEnabled = viewModel.isAccessibilityServiceEnabled.value ?: false
             
             if (isEnabled) {
-                // Si está habilitado, mostramos diálogo para desactivar
                 showAccessibilityDisableDialog()
             } else {
-                // Si no está habilitado, verificamos permiso de uso de datos primero
                 if (!hasUsageStatsPermission()) {
                     Toast.makeText(
                         requireContext(), 
@@ -188,7 +80,6 @@ class MainFragment : Fragment() {
                         Toast.LENGTH_LONG
                     ).show()
                 } else {
-                    // Guiamos al usuario a activar el servicio de accesibilidad
                     showAccessibilityEnableDialog()
                 }
             }
@@ -245,17 +136,13 @@ class MainFragment : Fragment() {
         }
     }
 
-    // CORREGIDO: Actualiza el botón según el estado real y muestra toast solo cuando cambia de OFF a ON
     private fun updateServiceButtonState(isEnabled: Boolean) {
-        // Mostrar toast solo cuando cambia de desactivado a activado
         if (isEnabled && !lastServiceState) {
             Toast.makeText(requireContext(), R.string.service_running, Toast.LENGTH_SHORT).show()
         }
         
-        // Actualizar el estado anterior
         lastServiceState = isEnabled
         
-        // Actualizar UI del botón
         if (isEnabled) {
             binding.btnServiceControl.text = getString(R.string.stop_monitoring)
             binding.btnServiceControl.backgroundTintList = 
@@ -267,10 +154,6 @@ class MainFragment : Fragment() {
         }
     }
 
-    private fun isServiceRunning(serviceClass: Class<*>): Boolean {
-        return AccessibilityHelper.isAccessibilityServiceEnabled(requireContext(), serviceClass)
-    }
-    
     private fun hasUsageStatsPermission(): Boolean {
         val appOps = requireContext().getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
         val mode = appOps.checkOpNoThrow(
@@ -284,12 +167,11 @@ class MainFragment : Fragment() {
     private fun formatTime(millis: Long): String {
         val hours = millis / 3600000
         val minutes = (millis % 3600000) / 60000
-        val seconds = (millis % 60000) / 1000
         
-        return when {
-            hours > 0 -> String.format(getString(R.string.hours_minutes_format), hours, minutes)
-            minutes > 0 -> String.format(getString(R.string.minutes_seconds_format), minutes, seconds)
-            else -> String.format(getString(R.string.seconds_format), seconds)
+        return if (hours > 0) {
+            String.format("%dh %02dm", hours, minutes)
+        } else {
+            String.format("%dm", minutes)
         }
     }
 
@@ -299,9 +181,6 @@ class MainFragment : Fragment() {
         return typedValue.data
     }
 
-    /**
-     * Observa el cambio de día y recarga los datos automáticamente a medianoche
-     */
     private fun observeDayChange() {
         val calendar = Calendar.getInstance()
         val midnight = Calendar.getInstance().apply {
@@ -315,30 +194,24 @@ class MainFragment : Fragment() {
         val timeUntilMidnight = midnight.timeInMillis - System.currentTimeMillis()
         
         dayChangeHandler.postDelayed({
-            // Recargar datos a la medianoche
             viewModel.loadTodayStats()
-            // Repetir el observer para el próximo día
             observeDayChange()
         }, timeUntilMidnight)
     }
 
     override fun onResume() {
         super.onResume()
-        // CORREGIDO: Verificación directa del estado del servicio
         val enabled = AccessibilityHelper.isAccessibilityServiceEnabled(
             requireContext(),
             MonitoringService::class.java
         )
-        // Actualizamos el ViewModel y la UI
         viewModel.checkAccessibilityServiceState()
         viewModel.loadTodayStats()
-        // Forzamos actualización de UI por si el LiveData no ha cambiado
         updateServiceButtonState(enabled)
     }
 
     override fun onPause() {
         super.onPause()
-        // Limpiar callbacks pendientes para evitar memory leaks
         dayChangeHandler.removeCallbacksAndMessages(null)
     }
 

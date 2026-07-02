@@ -65,7 +65,6 @@ class MainActivity : AppCompatActivity() {
             setOf(
                 R.id.homeFragment,
                 R.id.appSelectionFragment,
-                R.id.statisticsFragment,
                 R.id.settingsFragment,
                 R.id.aboutFragment
             ),
