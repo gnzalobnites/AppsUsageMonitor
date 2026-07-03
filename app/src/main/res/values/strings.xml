@@ -6,16 +6,22 @@
     <!-- Accessibility service -->
     <string name="accessibility_service_description">This service allows monitoring which apps you are using to display usage time notifications</string>
     
+    <!-- Bubble Service (background) -->
+    <string name="bubble_service_channel_name">Monitoring Service</string>
+    <string name="bubble_service_channel_description">Keeps the monitoring service running in background</string>
+    <string name="bubble_service_running">Monitoring active</string>
+    
     <!-- Navigation titles -->
     <string name="title_home">Home</string>
     <string name="title_dashboard">Statistics</string>
     <string name="title_notifications">Notifications</string>
     
     <!-- Live screen time notification -->
-<string name="notification_channel_screen_time">Live Screen Time</string>
-<string name="notification_channel_screen_time_description">Shows screen usage time in the status bar</string>
-<string name="notification_screen_time_title">Today\'s Screen Time</string>
-<string name="notification_screen_time_text">You have used %s of screen time</string>
+    <string name="notification_channel_screen_time">Live Screen Time</string>
+    <string name="notification_channel_screen_time_description">Shows screen usage time in the status bar</string>
+    <string name="notification_screen_time_title">Today\'s Screen Time</string>
+    <string name="notification_screen_time_text">You have used %s of screen time</string>
+    <string name="notification_screen_time_initializing">Initializing monitor...</string>
     
     <!-- Buttons - General -->
     <string name="start_monitoring">Start monitoring</string>
@@ -77,6 +83,9 @@
     <string name="total_today_time_format">00:00</string>
     <string name="banner_app_label">App:</string>
     <string name="banner_today_prefix">Today: </string>
+    
+    <!-- MODIFIED: New label for today's total screen time -->
+    <string name="bubble_today_screen_label">Today\'s total screen time</string>
     
     <!-- Chart labels -->
     <string name="chart_usage_label">Usage time (minutes)</string>
@@ -221,8 +230,6 @@
     <string name="email_subject_support">Apps Usage Monitor Support</string>
 
     <!-- Time in minutes (for TimeValueFormatter) -->
-    <!-- Note: These are hard formats as they are universal abbreviations -->
-    <!-- They remain as in the code -->
 
     <!-- ===== NEW ADDED STRINGS ===== -->
     <!-- Preferences categories -->
@@ -265,9 +272,9 @@
 
     <string name="cancel">Cancel</string>
 
-<string name="loading_installed_apps">Loading installed apps...</string>
+    <string name="loading_installed_apps">Loading installed apps...</string>
 
-<!-- Strings for Updates -->
+    <!-- Strings for Updates -->
     <string name="pref_category_updates">Updates</string>
     <string name="pref_auto_update_title">Check for updates automatically</string>
     <string name="pref_auto_update_summary">Check every 24 hours when opening the app</string>
@@ -289,6 +296,5 @@
     <string name="update_no_installer">No app found to install the APK</string>
 
     <!-- New strings for the redesigned bubble -->
-	<!--<string name="current_session_label">Your focus moment</string>-->
-	<string name="continue_button">Close</string>
+    <string name="continue_button">Close</string>
 </resources>

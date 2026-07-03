@@ -7,15 +7,22 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Environment
+import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
-import com.gnzalobnites.appsusagemonitor.R  // <-- IMPORTACIÓN AÑADIDA
+import com.gnzalobnites.appsusagemonitor.R
 import java.io.File
 
 class AppUpdater(private val context: Context) {
 
+    private val appContext = context.applicationContext
     private var downloadId: Long = -1
     private var downloadCompleteReceiver: BroadcastReceiver? = null
+    private var isReceiverRegistered = false
+
+    companion object {
+        private const val TAG = "AppUpdater"
+    }
 
     /**
      * Inicia la descarga del APK desde la URL proporcionada.
@@ -27,36 +34,32 @@ class AppUpdater(private val context: Context) {
             setTitle(context.getString(R.string.update_download_title))
             setDescription(context.getString(R.string.update_download_description))
             setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            // Se guarda en los archivos externos de la app para no requerir permisos de almacenamiento
-            setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, fileName)
+            setDestinationInExternalFilesDir(appContext, Environment.DIRECTORY_DOWNLOADS, fileName)
         }
 
-        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val downloadManager = appContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         downloadId = downloadManager.enqueue(request)
 
-        // Registrar el receiver para saber cuándo termina
-        downloadCompleteReceiver = onDownloadComplete(fileName)
-        context.registerReceiver(
-            downloadCompleteReceiver,
-            IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-            Context.RECEIVER_NOT_EXPORTED
-        )
+        // Registrar el receiver usando appContext para evitar memory leaks
+        if (!isReceiverRegistered) {
+            downloadCompleteReceiver = onDownloadComplete(fileName)
+            appContext.registerReceiver(
+                downloadCompleteReceiver,
+                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+                Context.RECEIVER_NOT_EXPORTED
+            )
+            isReceiverRegistered = true
+        }
         
-        Toast.makeText(context, R.string.update_download_started, Toast.LENGTH_SHORT).show()
+        Toast.makeText(appContext, R.string.update_download_started, Toast.LENGTH_SHORT).show()
     }
 
     private fun onDownloadComplete(fileName: String) = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
             if (downloadId == id) {
-                installApk(context, fileName)
-                // Es importante desregistrarse para evitar fugas de memoria
-                try {
-                    context.unregisterReceiver(this)
-                } catch (e: IllegalArgumentException) {
-                    // El receiver ya no estaba registrado
-                }
-                downloadCompleteReceiver = null
+                installApk(appContext, fileName)
+                cleanup()
             }
         }
     }
@@ -79,7 +82,6 @@ class AppUpdater(private val context: Context) {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
         }
         
-        // Verificar si hay una actividad que pueda manejar el intent
         if (installIntent.resolveActivity(context.packageManager) != null) {
             context.startActivity(installIntent)
         } else {
@@ -91,13 +93,16 @@ class AppUpdater(private val context: Context) {
      * Limpia el receiver si la actividad/fragmento se destruye antes de que termine la descarga.
      */
     fun cleanup() {
-        downloadCompleteReceiver?.let {
-            try {
-                context.unregisterReceiver(it)
-            } catch (e: IllegalArgumentException) {
-                // Ignorar
+        if (isReceiverRegistered) {
+            downloadCompleteReceiver?.let {
+                try {
+                    appContext.unregisterReceiver(it)
+                } catch (e: IllegalArgumentException) {
+                    Log.e(TAG, "Receiver already unregistered", e)
+                }
+                downloadCompleteReceiver = null
+                isReceiverRegistered = false
             }
-            downloadCompleteReceiver = null
         }
     }
 }

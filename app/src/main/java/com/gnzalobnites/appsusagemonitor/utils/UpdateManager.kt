@@ -5,10 +5,15 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import android.util.Log
 
 data class UpdateInfo(val versionName: String, val downloadUrl: String)
 
 class UpdateManager {
+
+    companion object {
+        private const val TAG = "UpdateManager"
+    }
 
     /**
      * Comprueba en GitHub si hay una versión más reciente que la actual.
@@ -21,6 +26,8 @@ class UpdateManager {
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
+            connection.connectTimeout = 10000
+            connection.readTimeout = 10000
 
             if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
@@ -39,20 +46,34 @@ class UpdateManager {
                         return@withContext UpdateInfo(tagName, downloadUrl)
                     }
                 }
+            } else {
+                Log.e(TAG, "GitHub API error: ${connection.responseCode}")
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Error checking for updates", e)
         }
         return@withContext null
     }
 
     /**
-     * Compara dos versiones semánticas.
+     * Compara dos versiones semánticas con manejo robusto de formatos.
      * @return true si fetched es más nueva que current.
      */
     private fun isNewerVersion(current: String, fetched: String): Boolean {
-        val currentParts = current.split(".").map { it.toIntOrNull() ?: 0 }
-        val fetchedParts = fetched.split(".").map { it.toIntOrNull() ?: 0 }
+        // Normalizar versiones: eliminar sufijos como -beta, -alpha, etc.
+        val normalizeVersion = { version: String ->
+            version.split("-", "+").firstOrNull() ?: version
+        }
+        
+        val currentNormalized = normalizeVersion(current)
+        val fetchedNormalized = normalizeVersion(fetched)
+        
+        val currentParts = currentNormalized.split(".").map { 
+            it.toIntOrNull() ?: 0 
+        }
+        val fetchedParts = fetchedNormalized.split(".").map { 
+            it.toIntOrNull() ?: 0 
+        }
         
         val maxLength = maxOf(currentParts.size, fetchedParts.size)
         for (i in 0 until maxLength) {

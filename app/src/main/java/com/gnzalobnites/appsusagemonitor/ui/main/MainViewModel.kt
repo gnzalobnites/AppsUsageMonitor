@@ -4,10 +4,11 @@ import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.asLiveData
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
 import com.gnzalobnites.appsusagemonitor.data.repository.AppRepository
 import com.gnzalobnites.appsusagemonitor.data.repository.UsageRepository
@@ -23,17 +24,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val usageRepository = UsageRepository(application)
     private val packageManager = application.packageManager
     
-    val monitoredApps: LiveData<List<MonitoredApp>> = repository.getMonitoredApps().asLiveData()
+    val monitoredApps = repository.getMonitoredApps().asLiveData()
     
-    private val _isServiceRunning = MutableLiveData(false)
-    val isServiceRunning: LiveData<Boolean> = _isServiceRunning
+    private val _isServiceRunning = MutableStateFlow(false)
+    val isServiceRunning: StateFlow<Boolean> = _isServiceRunning.asStateFlow()
     
-    private val _isAccessibilityServiceEnabled = MutableLiveData(false)
-    val isAccessibilityServiceEnabled: LiveData<Boolean> = _isAccessibilityServiceEnabled
+    private val _isAccessibilityServiceEnabled = MutableStateFlow(false)
+    val isAccessibilityServiceEnabled: StateFlow<Boolean> = _isAccessibilityServiceEnabled.asStateFlow()
     
-    // SIMPLIFICADO: Solo el tiempo total de pantalla
-    private val _totalScreenTime = MutableLiveData<Long>()
-    val totalScreenTime: LiveData<Long> = _totalScreenTime
+    // SIMPLIFICADO: Solo el tiempo total de pantalla con StateFlow
+    private val _totalScreenTime = MutableStateFlow(0L)
+    val totalScreenTime: StateFlow<Long> = _totalScreenTime.asStateFlow()
     
     fun updateServiceState(isEnabled: Boolean) {
         _isAccessibilityServiceEnabled.value = isEnabled
@@ -46,8 +47,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 getApplication(),
                 MonitoringService::class.java
             )
-            _isAccessibilityServiceEnabled.postValue(isEnabled)
-            _isServiceRunning.postValue(isEnabled)
+            _isAccessibilityServiceEnabled.value = isEnabled
+            _isServiceRunning.value = isEnabled
         }
     }
     
@@ -71,9 +72,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val totalTime = usageRepository.getExactScreenTimeToday()
-                _totalScreenTime.postValue(totalTime)
+                _totalScreenTime.value = totalTime
             } catch (e: Exception) {
-                _totalScreenTime.postValue(0L)
+                _totalScreenTime.value = 0L
             }
         }
     }

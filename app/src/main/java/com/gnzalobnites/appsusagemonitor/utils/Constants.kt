@@ -15,7 +15,8 @@ object Constants {
     const val EXTRA_BADGE_COUNT = "extra_badge_count"
     const val EXTRA_INTERVAL = "extra_interval"
     const val EXTRA_SESSION_START_TIME = "extra_session_start_time"
-    const val EXTRA_BUBBLE_PERSISTENT = "extra_bubble_persistent"  // NUEVA CONSTANTE
+    const val EXTRA_BUBBLE_PERSISTENT = "extra_bubble_persistent"
     
     const val NOTIFICATION_ID = 1001
+    const val NOTIFICATION_CHANNEL_ID = "screen_time_realtime" // NUEVA CONSTANTE UNIFICADA
 }

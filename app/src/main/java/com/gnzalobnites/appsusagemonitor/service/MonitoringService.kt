@@ -29,7 +29,7 @@ class MonitoringService : AccessibilityService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var currentAppPackage: String? = null
     private var currentMonitoredApp: MonitoredApp? = null
-    private var sessionStartTime: Long = 0L  // Guardamos en memoria
+    private var sessionStartTime: Long = 0L
     private var lastBubbleShowTime: Long = 0L
     private var isBubbleVisible = false
     private var nextBubbleJob: Job? = null
@@ -38,7 +38,7 @@ class MonitoringService : AccessibilityService() {
     private var departureJob: Job? = null
 
     private var screenTimeNotificationJob: Job? = null
-    private val SCREEN_TIME_NOTIFICATION_ID = 2026
+    // ELIMINADA: private val SCREEN_TIME_NOTIFICATION_ID = 2026
 
     companion object {
         private const val TAG = "MonitoringService"
@@ -52,15 +52,19 @@ class MonitoringService : AccessibilityService() {
         createNotificationChannel()
     }
 
+    /**
+     * MODIFICADO: Usa el canal unificado desde Constants
+     */
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                "screen_time_realtime",
+                Constants.NOTIFICATION_CHANNEL_ID,
                 getString(R.string.notification_channel_screen_time),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = getString(R.string.notification_channel_screen_time_description)
                 setShowBadge(false)
+                setSound(null, null)
             }
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
@@ -124,6 +128,9 @@ class MonitoringService : AccessibilityService() {
         return bitmap
     }
 
+    /**
+     * MODIFICADO: Usa el ID unificado de Constants.NOTIFICATION_ID
+     */
     private fun updateScreenTimeNotification(usageRepo: UsageRepository) {
         try {
             val totalMillis = usageRepo.getExactScreenTimeToday()
@@ -133,7 +140,7 @@ class MonitoringService : AccessibilityService() {
             val fullTimeText = String.format("%dh %02dm", hours, minutes)
             val bitmapIcon = createStackedTimeBitmap(hours, minutes)
 
-            val notification = NotificationCompat.Builder(this, "screen_time_realtime")
+            val notification = NotificationCompat.Builder(this, Constants.NOTIFICATION_CHANNEL_ID)
                 .setSmallIcon(IconCompat.createWithBitmap(bitmapIcon))
                 .setContentTitle(getString(R.string.notification_screen_time_title))
                 .setContentText(getString(R.string.notification_screen_time_text, fullTimeText))
@@ -144,7 +151,8 @@ class MonitoringService : AccessibilityService() {
                 .build()
 
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.notify(SCREEN_TIME_NOTIFICATION_ID, notification)
+            // Usar el MISMO ID que BubbleService
+            notificationManager.notify(Constants.NOTIFICATION_ID, notification)
 
             Log.d(TAG, "Notification updated: $fullTimeText (exact: $totalMillis ms)")
         } catch (e: Exception) {
@@ -156,13 +164,10 @@ class MonitoringService : AccessibilityService() {
         screenTimeNotificationJob?.cancel()
         screenTimeNotificationJob = null
 
-        try {
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.cancel(SCREEN_TIME_NOTIFICATION_ID)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error canceling notification", e)
-        }
-        Log.d(TAG, "Screen time notification stopped")
+        // ELIMINADO: notificationManager.cancel(SCREEN_TIME_NOTIFICATION_ID)
+        // La notificación es administrada por el estado Foreground del BubbleService.
+        
+        Log.d(TAG, "Screen time notification loop stopped")
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
@@ -192,7 +197,6 @@ class MonitoringService : AccessibilityService() {
 
                 if (currentAppPackage != null) {
                     // La sesión anterior termina automáticamente al cambiar de app
-                    // Solo guardamos el tiempo en memoria
                 }
                 startNewSession(packageName, monitoredApp)
             } else {
@@ -207,7 +211,6 @@ class MonitoringService : AccessibilityService() {
                     delay(500)
                     if (currentAppPackage != null) {
                         Log.w(DEBUG_TAG, "Cerrando sesión tras 500ms. App destino: $packageName")
-                        // La sesión se cierra, solo limpiamos estado en memoria
                         cleanupCurrentState()
                     }
                 }
@@ -376,11 +379,7 @@ class MonitoringService : AccessibilityService() {
         serviceScope.cancel()
         hideBubble()
 
-        try {
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.cancel(SCREEN_TIME_NOTIFICATION_ID)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error canceling notification on destroy", e)
-        }
+        // ELIMINADO: notificationManager.cancel(...) en el destroy
+        // Cuando BubbleService ejecute stopForeground(true), la notificación se destruirá automáticamente.
     }
 }

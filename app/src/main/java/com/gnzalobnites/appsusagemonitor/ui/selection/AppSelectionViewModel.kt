@@ -3,10 +3,12 @@ package com.gnzalobnites.appsusagemonitor.ui.selection
 import android.app.Application
 import android.content.pm.PackageManager
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.asLiveData
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
 import com.gnzalobnites.appsusagemonitor.data.repository.AppRepository
 import kotlinx.coroutines.Dispatchers
@@ -25,21 +27,22 @@ class AppSelectionViewModel(application: Application) : AndroidViewModel(applica
     private val repository = AppRepository(application)
     private val packageManager = application.packageManager
     
-    private val _installedApps = MutableLiveData<List<AppInfo>>()
-    val installedApps: LiveData<List<AppInfo>> = _installedApps
+    private val _installedApps = MutableStateFlow<List<AppInfo>>(emptyList())
+    val installedApps: StateFlow<List<AppInfo>> = _installedApps.asStateFlow()
     
-    private val _filteredApps = MutableLiveData<List<AppInfo>>()
-    val filteredApps: LiveData<List<AppInfo>> = _filteredApps
+    private val _filteredApps = MutableStateFlow<List<AppInfo>>(emptyList())
+    val filteredApps: StateFlow<List<AppInfo>> = _filteredApps.asStateFlow()
     
-    private val _selectedApps = MutableLiveData<Int>(0)
-    val selectedApps: LiveData<Int> = _selectedApps
+    private val _selectedApps = MutableStateFlow(0)
+    val selectedApps: StateFlow<Int> = _selectedApps.asStateFlow()
     
-    private val _isLoading = MutableLiveData<Boolean>(false)
-    val isLoading: LiveData<Boolean> = _isLoading
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     
-    val monitoredApps: LiveData<List<MonitoredApp>> = repository.getMonitoredApps().asLiveData()
+    // Usar distinctUntilChanged para evitar actualizaciones innecesarias
+    val monitoredApps = repository.getMonitoredApps().distinctUntilChanged().asLiveData()
     
-    private var allApps: List<AppInfo> = listOf()
+    private var allApps: List<AppInfo> = emptyList()
     
     fun loadInstalledApps() {
         _isLoading.value = true
@@ -82,10 +85,10 @@ class AppSelectionViewModel(application: Application) : AndroidViewModel(applica
         if (index != -1) {
             allApps[index].isSelected = !allApps[index].isSelected
             
-            val filteredList = _filteredApps.value?.toMutableList()
-            filteredList?.find { it.packageName == appInfo.packageName }?.isSelected = allApps[index].isSelected
+            val filteredList = _filteredApps.value.toMutableList()
+            filteredList.find { it.packageName == appInfo.packageName }?.isSelected = allApps[index].isSelected
             
-            _filteredApps.value = filteredList ?: emptyList()
+            _filteredApps.value = filteredList
             
             val selectedCount = allApps.count { it.isSelected }
             _selectedApps.value = selectedCount
@@ -107,13 +110,8 @@ class AppSelectionViewModel(application: Application) : AndroidViewModel(applica
         _selectedApps.value = 0
     }
     
-    /**
-     * MODIFICADO: Ahora utiliza removeAppFromMonitor en lugar de deleteMonitoredApp
-     * para solo desactivar el monitoreo sin eliminar el registro de la BD.
-     */
     fun removeMonitoredApp(app: MonitoredApp) {
         viewModelScope.launch {
-            // Cambiamos deleteMonitoredApp por removeAppFromMonitor
             repository.removeAppFromMonitor(app)
         }
     }
@@ -135,4 +133,4 @@ class AppSelectionViewModel(application: Application) : AndroidViewModel(applica
             else -> context.getString(com.gnzalobnites.appsusagemonitor.R.string.interval_custom)
         }
     }
-} 
+}

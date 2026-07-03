@@ -15,12 +15,15 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.gnzalobnites.appsusagemonitor.R
 import com.gnzalobnites.appsusagemonitor.databinding.FragmentMainBinding
 import com.gnzalobnites.appsusagemonitor.service.MonitoringService
 import com.gnzalobnites.appsusagemonitor.utils.AccessibilityHelper
+import com.gnzalobnites.appsusagemonitor.utils.TimeFormatter
 import com.google.android.material.R as MaterialR
+import kotlinx.coroutines.launch
 import java.util.*
 
 class MainFragment : Fragment() {
@@ -47,17 +50,22 @@ class MainFragment : Fragment() {
         viewModel.loadTodayStats()
         observeDayChange()
         
-        viewModel.isAccessibilityServiceEnabled.observe(viewLifecycleOwner) { isEnabled ->
-            updateServiceButtonState(isEnabled)
+        lifecycleScope.launch {
+            viewModel.isAccessibilityServiceEnabled.collect { isEnabled ->
+                updateServiceButtonState(isEnabled)
+            }
         }
     }
 
     private fun setupObservers() {
-        viewModel.totalScreenTime.observe(viewLifecycleOwner) { totalMs ->
-            if (totalMs > 0) {
-                binding.tvTotalTime.text = formatTime(totalMs)
-            } else {
-                binding.tvTotalTime.text = getString(R.string.no_usage_today)
+        lifecycleScope.launch {
+            viewModel.totalScreenTime.collect { totalMs ->
+                if (totalMs > 0) {
+                    // Usar TimeFormatter en lugar de formatTime local
+                    binding.tvTotalTime.text = TimeFormatter.formatTime(totalMs)
+                } else {
+                    binding.tvTotalTime.text = getString(R.string.no_usage_today)
+                }
             }
         }
     }
@@ -68,7 +76,7 @@ class MainFragment : Fragment() {
         }
 
         binding.btnServiceControl.setOnClickListener {
-            val isEnabled = viewModel.isAccessibilityServiceEnabled.value ?: false
+            val isEnabled = viewModel.isAccessibilityServiceEnabled.value
             
             if (isEnabled) {
                 showAccessibilityDisableDialog()
@@ -156,22 +164,19 @@ class MainFragment : Fragment() {
 
     private fun hasUsageStatsPermission(): Boolean {
         val appOps = requireContext().getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
-        val mode = appOps.checkOpNoThrow(
-            android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
-            android.os.Process.myUid(),
-            requireContext().packageName
-        )
-        return mode == android.app.AppOpsManager.MODE_ALLOWED
-    }
-
-    private fun formatTime(millis: Long): String {
-        val hours = millis / 3600000
-        val minutes = (millis % 3600000) / 60000
-        
-        return if (hours > 0) {
-            String.format("%dh %02dm", hours, minutes)
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            appOps.unsafeCheckOpNoThrow(
+                android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                android.os.Process.myUid(),
+                requireContext().packageName
+            ) == android.app.AppOpsManager.MODE_ALLOWED
         } else {
-            String.format("%dm", minutes)
+            @Suppress("DEPRECATION")
+            appOps.checkOpNoThrow(
+                android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                android.os.Process.myUid(),
+                requireContext().packageName
+            ) == android.app.AppOpsManager.MODE_ALLOWED
         }
     }
 
@@ -182,7 +187,6 @@ class MainFragment : Fragment() {
     }
 
     private fun observeDayChange() {
-        val calendar = Calendar.getInstance()
         val midnight = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)

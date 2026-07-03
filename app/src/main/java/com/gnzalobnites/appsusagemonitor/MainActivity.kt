@@ -21,7 +21,6 @@ import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.gnzalobnites.appsusagemonitor.databinding.ActivityMainBinding
 import com.gnzalobnites.appsusagemonitor.utils.PermissionHelper
-
 import com.gnzalobnites.appsusagemonitor.utils.UpdateInfo
 import com.gnzalobnites.appsusagemonitor.utils.UpdateManager
 import com.gnzalobnites.appsusagemonitor.utils.AppUpdater
@@ -30,12 +29,20 @@ import kotlinx.coroutines.launch
 import android.content.SharedPreferences
 import androidx.preference.PreferenceManager
 import androidx.appcompat.app.AlertDialog
+import android.util.Log
+
 class MainActivity : AppCompatActivity() {
     private var appUpdater: AppUpdater? = null
+    private var isUpdateCheckRunning = false
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var appBarConfiguration: AppBarConfiguration
+
+    companion object {
+        private const val TAG = "MainActivity"
+        private const val TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000L
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,7 +93,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         checkAndRequestPermissions()
-        // NUEVO: Llamada a la comprobación silenciosa de actualizaciones
         checkUpdatesSilently()
     }
 
@@ -129,8 +135,10 @@ class MainActivity : AppCompatActivity() {
         return androidx.navigation.ui.NavigationUI.navigateUp(navController, appBarConfiguration)
                 || super.onSupportNavigateUp()
     }
-    // NUEVO: Comprobación silenciosa (respetando el switch y el intervalo de 24h)
+
     private fun checkUpdatesSilently() {
+        if (isUpdateCheckRunning) return
+        
         val prefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
         val autoUpdateEnabled = prefs.getBoolean("auto_check_updates", true)
 
@@ -138,15 +146,16 @@ class MainActivity : AppCompatActivity() {
 
         val lastCheckTime = prefs.getLong("last_update_check", 0L)
         val currentTime = System.currentTimeMillis()
-        val twentyFourHoursInMillis = 24 * 60 * 60 * 1000L
 
-        if (currentTime - lastCheckTime < twentyFourHoursInMillis) return
+        if (currentTime - lastCheckTime < TWENTY_FOUR_HOURS_MS) return
+
+        isUpdateCheckRunning = true
 
         lifecycleScope.launch {
-            // Actualizamos el timestamp de la comprobación inmediatamente para evitar múltiples llamadas
-            prefs.edit().putLong("last_update_check", currentTime).apply()
-
             try {
+                // Actualizamos el timestamp de la comprobación inmediatamente para evitar múltiples llamadas
+                prefs.edit().putLong("last_update_check", currentTime).apply()
+
                 val packageInfo = packageManager.getPackageInfo(packageName, 0)
                 val currentVersion = packageInfo.versionName
 
@@ -157,12 +166,13 @@ class MainActivity : AppCompatActivity() {
                     showUpdateAvailableDialog(updateInfo)
                 }
             } catch (e: Exception) {
-                // Error silencioso (por si no hay conexión, etc.)
+                Log.e(TAG, "Error checking updates silently", e)
+            } finally {
+                isUpdateCheckRunning = false
             }
         }
     }
 
-    // NUEVO: Diálogo para mostrar que hay actualización
     private fun showUpdateAvailableDialog(updateInfo: UpdateInfo) {
         AlertDialog.Builder(this)
             .setTitle(R.string.update_dialog_title)
@@ -172,7 +182,16 @@ class MainActivity : AppCompatActivity() {
                 appUpdater?.downloadAndInstall(updateInfo.downloadUrl)
             }
             .setNegativeButton(R.string.update_dialog_later, null)
+            .setOnCancelListener {
+                // Limpiar el flag si el diálogo se cancela
+                isUpdateCheckRunning = false
+            }
             .show()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        appUpdater?.cleanup()
+        appUpdater = null
+    }
 }

@@ -8,7 +8,7 @@ import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
 
 @Database(
     entities = [MonitoredApp::class],
-    version = 2,  // Incrementamos la versión para que Room elimine las tablas viejas
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -24,7 +24,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "app_usage_database"
-                ).fallbackToDestructiveMigration() // Esto elimina las tablas viejas y crea las nuevas
+                ).fallbackToDestructiveMigration()
                  .build()
                 INSTANCE = instance
                 instance

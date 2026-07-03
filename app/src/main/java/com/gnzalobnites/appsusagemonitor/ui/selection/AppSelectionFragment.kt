@@ -32,7 +32,6 @@ class AppSelectionFragment : Fragment() {
     private lateinit var appsAdapter: AppListAdapter
     private lateinit var monitoredAdapter: MonitoredAppsSimpleAdapter
     
-    // NUEVO: Job para el debounce del buscador
     private var searchJob: Job? = null
 
     override fun onCreateView(
@@ -53,7 +52,6 @@ class AppSelectionFragment : Fragment() {
         setupObservers()
         setupListeners()
         
-        // Mostrar contenedor de carga mientras se cargan las apps
         showLoading(true)
         viewModel.loadInstalledApps()
     }
@@ -98,24 +96,19 @@ class AppSelectionFragment : Fragment() {
     }
 
     private fun setupSearch() {
-        // Detectar el toque en el ícono de la "X" (drawableEnd)
         binding.editSearch.setOnTouchListener { _, event ->
-            val DRAWABLE_END = 2 // Índice para el drawable de la derecha (end/right)
+            val DRAWABLE_END = 2
             
             if (event.action == MotionEvent.ACTION_UP) {
                 val endDrawable = binding.editSearch.compoundDrawablesRelative[DRAWABLE_END]
                 if (endDrawable != null) {
-                    // Calcular el área interactiva del ícono
                     val touchableArea = binding.editSearch.right - binding.editSearch.paddingEnd - endDrawable.intrinsicWidth
                     
                     if (event.rawX >= touchableArea) {
-                        binding.editSearch.text.clear() // Borrar texto
-                        
-                        // Opcional: Ocultar teclado al limpiar
+                        binding.editSearch.text.clear()
                         binding.editSearch.clearFocus()
                         val imm = requireContext().getSystemService(InputMethodManager::class.java)
                         imm.hideSoftInputFromWindow(binding.editSearch.windowToken, 0)
-                        
                         return@setOnTouchListener true
                     }
                 }
@@ -123,34 +116,27 @@ class AppSelectionFragment : Fragment() {
             false
         }
 
-        // Actualizar el TextWatcher para filtrar apps y mostrar/ocultar la "X"
         binding.editSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                // Cambiar el ícono dinámicamente usando recursos de Android por defecto
                 binding.editSearch.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                    android.R.drawable.ic_menu_search, // Ícono de inicio (Lupa)
+                    android.R.drawable.ic_menu_search,
                     0, 
-                    if (!s.isNullOrEmpty()) android.R.drawable.ic_menu_close_clear_cancel else 0, // Ícono final (X) solo si hay texto
-                    0 
+                    if (!s.isNullOrEmpty()) android.R.drawable.ic_menu_close_clear_cancel else 0, 
+                    0
                 )
 
-                // Mostrar loading durante el filtrado si hay texto
                 if (!s.isNullOrEmpty()) {
                     showLoading(true)
                 } else {
-                    // Si el texto está vacío, mostramos la lista completa
                     showLoading(false)
                 }
 
-                // Filtrado original con DEBOUNCE REAL
-                // Cancela la búsqueda anterior si el usuario sigue escribiendo
                 searchJob?.cancel()
                 searchJob = lifecycleScope.launch {
-                    delay(300) // Espera 300ms a que el usuario deje de escribir
+                    delay(300)
                     viewModel.filterApps(s?.toString() ?: "")
-                    // Ocultamos loading después del filtrado solo si no estamos en modo búsqueda
                     if (s.isNullOrEmpty()) {
                         showLoading(false)
                     }
@@ -162,14 +148,17 @@ class AppSelectionFragment : Fragment() {
     }
 
     private fun setupObservers() {
-        viewModel.filteredApps.observe(viewLifecycleOwner) { apps ->
-            appsAdapter.submitList(apps)
-            // Ocultamos loading cuando llegan los datos
-            showLoading(false)
+        lifecycleScope.launch {
+            viewModel.filteredApps.collect { apps ->
+                appsAdapter.submitList(apps)
+                showLoading(false)
+            }
         }
         
-        viewModel.selectedApps.observe(viewLifecycleOwner) { selectedCount ->
-            binding.buttonAddSelected.text = getString(R.string.add_selected_with_count, selectedCount)
+        lifecycleScope.launch {
+            viewModel.selectedApps.collect { selectedCount ->
+                binding.buttonAddSelected.text = getString(R.string.add_selected_with_count, selectedCount)
+            }
         }
 
         viewModel.monitoredApps.observe(viewLifecycleOwner) { monitoredApps ->
@@ -186,12 +175,10 @@ class AppSelectionFragment : Fragment() {
     }
 
     private fun setupListeners() {
-        // 1. Ocultar la sección de abajo cuando el buscador tiene el foco (teclado abierto)
         binding.editSearch.setOnFocusChangeListener { _, hasFocus ->
             binding.bottomSectionContainer.visibility = if (hasFocus) View.GONE else View.VISIBLE
         }
 
-        // 2. Al hacer scroll en la lista de búsqueda, ocultamos el teclado y la sección de abajo reaparece
         binding.recyclerViewApps.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: androidx.recyclerview.widget.RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
@@ -204,12 +191,11 @@ class AppSelectionFragment : Fragment() {
         })
 
         binding.buttonAddSelected.setOnClickListener {
-            // Quitar el foco y el teclado al hacer clic en agregar
             binding.editSearch.clearFocus()
             val imm = requireContext().getSystemService(InputMethodManager::class.java)
             imm.hideSoftInputFromWindow(it.windowToken, 0)
 
-            val selectedCount = viewModel.selectedApps.value ?: 0
+            val selectedCount = viewModel.selectedApps.value
             if (selectedCount == 0) {
                 Toast.makeText(requireContext(), R.string.select_at_least_one, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -240,9 +226,15 @@ class AppSelectionFragment : Fragment() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        // Cancelar searchJob al pausar para ahorrar recursos
+        searchJob?.cancel()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
-        searchJob?.cancel() // Limpiar el Job al destruir la vista
+        searchJob?.cancel()
         _binding = null
     }
 }
