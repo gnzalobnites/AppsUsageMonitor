@@ -18,9 +18,11 @@ import android.view.*
 import android.widget.Button
 import android.widget.TextView
 import android.widget.ProgressBar
+import android.widget.LinearLayout
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import androidx.preference.PreferenceManager
 import com.gnzalobnites.appsusagemonitor.R
 import com.gnzalobnites.appsusagemonitor.data.repository.AppRepository
 import com.gnzalobnites.appsusagemonitor.data.repository.UsageRepository
@@ -53,6 +55,7 @@ class BubbleService : LifecycleService() {
     private var isPersistent = false
     private var isDestroying = false
     private var isForegroundStarted = false
+    private var isPreviewMode = false
 
     private var updateHandler = Handler(Looper.getMainLooper())
     private var updateRunnable: Runnable? = null
@@ -64,8 +67,9 @@ class BubbleService : LifecycleService() {
     private var progressBarView: ProgressBar? = null
     private var badgeTextView: TextView? = null
     private var totalTodayTimeView: TextView? = null
-    private var bubbleContainerView: View? = null
+    private var bubbleContainerView: LinearLayout? = null
     private var closeButton: Button? = null
+    private var bubbleIconView: View? = null
 
     // Animaciones y estados
     private var pulseAnimation: ObjectAnimator? = null
@@ -74,6 +78,7 @@ class BubbleService : LifecycleService() {
     private val ACTIVE_ALPHA = 1.0f
     private val IDLE_DELAY_MS = 3000L
 
+    // CORREGIDO: Siempre usar WRAP_CONTENT para que el padding y sombras no se recorten
     private val bubbleParams: WindowManager.LayoutParams by lazy {
         WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -113,6 +118,7 @@ class BubbleService : LifecycleService() {
 
     companion object {
         private const val TAG = "BubbleService"
+        private const val PREVIEW_PACKAGE = "com.gnzalobnites.appsusagemonitor.preview"
     }
 
     override fun onCreate() {
@@ -136,6 +142,8 @@ class BubbleService : LifecycleService() {
                 val interval = intent.getLongExtra(Constants.EXTRA_INTERVAL, Constants.INTERVAL_1_MINUTE)
                 val sessionStart = intent.getLongExtra(Constants.EXTRA_SESSION_START_TIME, System.currentTimeMillis())
                 isPersistent = intent.getBooleanExtra(Constants.EXTRA_BUBBLE_PERSISTENT, false)
+                
+                isPreviewMode = packageName == PREVIEW_PACKAGE || packageName == this.packageName
 
                 currentInterval = interval
                 sessionStartTime = sessionStart
@@ -150,25 +158,27 @@ class BubbleService : LifecycleService() {
                 Log.d(TAG, "Hiding bubble")
                 hideAllViews()
                 isBubbleActive = false
+                isPreviewMode = false
                 stopUpdatingTime()
+            }
+            Constants.ACTION_UPDATE_PREVIEW -> {
+                val size = intent.getIntExtra(Constants.EXTRA_PREVIEW_SIZE, -1)
+                val opacity = intent.getIntExtra(Constants.EXTRA_PREVIEW_OPACITY, -1)
+                updateBubbleAppearanceLive(size, opacity)
             }
         }
 
         return START_STICKY
     }
 
-    /**
-     * MODIFICADO: Usa el canal unificado para que MonitoringService pueda sobrescribir esta notificación.
-     */
     private fun startForegroundService() {
         if (isForegroundStarted) return
         isForegroundStarted = true
 
-        val channelId = Constants.NOTIFICATION_CHANNEL_ID // Canal unificado
+        val channelId = Constants.NOTIFICATION_CHANNEL_ID
         val notificationId = Constants.NOTIFICATION_ID
 
         try {
-            // Crear canal para la notificación
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val channel = NotificationChannel(
                     channelId,
@@ -177,13 +187,12 @@ class BubbleService : LifecycleService() {
                 ).apply {
                     description = getString(R.string.notification_channel_screen_time_description)
                     setShowBadge(false)
-                    setSound(null, null) // Sin sonido para que sea silenciosa
+                    setSound(null, null)
                 }
                 val notificationManager = getSystemService(NotificationManager::class.java)
                 notificationManager.createNotificationChannel(channel)
             }
 
-            // Notificación inicial que será sobrescrita casi al instante por el MonitoringService
             val notification = NotificationCompat.Builder(this, channelId)
                 .setContentTitle(getString(R.string.notification_screen_time_title))
                 .setContentText(getString(R.string.notification_screen_time_initializing))
@@ -258,7 +267,6 @@ class BubbleService : LifecycleService() {
                         initialTouchX = event.rawX
                         initialTouchY = event.rawY
                         isDragging = false
-
                         resetIdleTimer()
                         return true
                     }
@@ -274,14 +282,12 @@ class BubbleService : LifecycleService() {
                             bubbleParams.x = initialX + deltaX.toInt()
                             bubbleParams.y = initialY + deltaY.toInt()
                             windowManager.updateViewLayout(bubbleView, bubbleParams)
-
                             resetIdleTimer()
                         }
                         return true
                     }
                     MotionEvent.ACTION_UP -> {
                         resetIdleTimer()
-
                         if (!isDragging) {
                             view.performClick()
                         }
@@ -329,10 +335,15 @@ class BubbleService : LifecycleService() {
     private fun createBubbleView(packageName: String, badgeCount: Int) {
         try {
             bubbleView = LayoutInflater.from(this).inflate(R.layout.bubble_view, null)
-
             setupBubbleContent(packageName, badgeCount)
             setupBubbleTouchListener()
             cacheBubbleViews()
+
+            // Aplicar preferencias guardadas
+            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+            val savedSize = prefs.getInt("bubble_size", 60)
+            val savedOpacity = prefs.getInt("bubble_opacity", 80)
+            updateBubbleAppearanceLive(savedSize, savedOpacity)
 
             bubbleView?.setOnClickListener {
                 Log.d(TAG, "Bubble clicked")
@@ -358,8 +369,10 @@ class BubbleService : LifecycleService() {
 
     private fun cacheBubbleViews() {
         bubbleView?.let {
-            badgeTextView = it.findViewById(R.id.badge_text)
+            // CORREGIDO: Obtener views correctamente
             bubbleContainerView = it.findViewById(R.id.bubble_container)
+            badgeTextView = it.findViewById(R.id.badge_text)
+            bubbleIconView = it.findViewById(R.id.bubble_icon)
         }
     }
 
@@ -376,7 +389,7 @@ class BubbleService : LifecycleService() {
         try {
             val bubbleIcon = bubbleView?.findViewById<View>(R.id.bubble_icon)
             val badgeText = bubbleView?.findViewById<TextView>(R.id.badge_text)
-            val bubbleContainer = bubbleView?.findViewById<View>(R.id.bubble_container)
+            val bubbleContainer = bubbleView?.findViewById<LinearLayout>(R.id.bubble_container)
 
             if (bubbleIcon == null || badgeText == null || bubbleContainer == null) {
                 Log.e(TAG, "Bubble views not found")
@@ -446,10 +459,8 @@ class BubbleService : LifecycleService() {
             expandedView?.visibility = View.GONE
             bubbleContainerView?.visibility = View.VISIBLE
             isExpanded = false
-
             stopBreathingAnimation()
             resetIdleTimer()
-
             Log.d(TAG, "Expanded view hidden")
         } catch (e: Exception) {
             Log.e(TAG, "Error hiding expanded view", e)
@@ -502,19 +513,19 @@ class BubbleService : LifecycleService() {
         val now = System.currentTimeMillis()
         val sessionDuration = now - sessionStartTime
 
-        // 1. Actualizar siempre el contador de la burbuja minimizada usando TimeFormatter
-        badgeTextView?.text = TimeFormatter.formatDuration(sessionDuration)
+        if (isPreviewMode) {
+            badgeTextView?.text = "👁"
+        } else {
+            badgeTextView?.text = TimeFormatter.formatDuration(sessionDuration)
+        }
 
-        // 2. Si la burbuja NO está expandida, terminamos la ejecución aquí
         if (!isExpanded || expandedView == null) return
 
-        // 3. Actualizamos los datos del cartel expandido usando vistas cacheadas y TimeFormatter
         try {
-            currentSessionTimeView?.text = TimeFormatter.formatDuration(sessionDuration)
+            currentSessionTimeView?.text = if (isPreviewMode) "Preview" else TimeFormatter.formatDuration(sessionDuration)
 
-            // Mostrar el tiempo total de pantalla del día
             val totalScreenTimeToday = usageRepository.getExactScreenTimeToday()
-            totalTodayTimeView?.text = TimeFormatter.formatDuration(totalScreenTimeToday)
+            totalTodayTimeView?.text = if (isPreviewMode) "Configuración" else TimeFormatter.formatDuration(totalScreenTimeToday)
             totalTodayTimeView?.visibility = View.VISIBLE
 
             val progressPercent = if (currentInterval > 0) {
@@ -532,6 +543,63 @@ class BubbleService : LifecycleService() {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error updating expanded view times", e)
+        }
+    }
+
+    /**
+     * CORREGIDO: Actualiza la apariencia de la burbuja en tiempo real
+     * - Ya no modifica bubbleParams (siempre WRAP_CONTENT)
+     * - Aplica opacidad a la vista raíz completa
+     * - Usa 60% del tamaño para el icono
+     * - Forza requestLayout e invalidate
+     */
+    private fun updateBubbleAppearanceLive(size: Int, opacity: Int) {
+        if (bubbleView == null || bubbleContainerView == null) return
+
+        // CORRECCIÓN: Aplicar opacidad a la vista raíz completa
+        if (opacity != -1) {
+            val alphaValue = opacity / 100f
+            bubbleView?.alpha = alphaValue
+            Log.d(TAG, "Preview opacity updated: $opacity% -> alpha: $alphaValue")
+        }
+
+        // CORRECCIÓN: Tamaño - solo modificar el contenedor, no bubbleParams
+        if (size != -1) {
+            val scale = resources.displayMetrics.density
+            val baseSizeDp = 40
+            val maxSizeDp = 100
+            val additionalDp = ((size / 100f) * (maxSizeDp - baseSizeDp))
+            val finalSizeDp = baseSizeDp + additionalDp
+            val finalSizePx = (finalSizeDp * scale).toInt()
+
+            // CORRECCIÓN: Solo modificar el contenedor, no la ventana
+            val params = bubbleContainerView?.layoutParams
+            params?.width = finalSizePx
+            params?.height = finalSizePx
+            bubbleContainerView?.layoutParams = params
+
+            // Icono al 60% del tamaño del contenedor (más proporcionado)
+            val iconParams = bubbleIconView?.layoutParams
+            val iconSize = (finalSizePx * 0.60f).toInt()
+            iconParams?.width = iconSize
+            iconParams?.height = iconSize
+            bubbleIconView?.layoutParams = iconParams
+
+            // Forzar redibujado completo
+            bubbleContainerView?.requestLayout()
+            bubbleContainerView?.invalidate()
+            bubbleIconView?.requestLayout()
+            bubbleIconView?.invalidate()
+            bubbleView?.requestLayout()
+            bubbleView?.invalidate()
+
+            // Actualizar la ventana (solo posición, no tamaño)
+            try {
+                windowManager.updateViewLayout(bubbleView, bubbleParams)
+                Log.d(TAG, "Preview size updated: ${size}% -> ${finalSizeDp}dp (${finalSizePx}px)")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error actualizando el layout en tiempo real", e)
+            }
         }
     }
 
@@ -563,7 +631,6 @@ class BubbleService : LifecycleService() {
         hideAllViews()
         isExpanded = false
         isBubbleActive = false
-
         notifyBubbleClosed()
     }
 
@@ -584,10 +651,11 @@ class BubbleService : LifecycleService() {
             return drawable.bitmap
         }
 
-        val width = drawable.intrinsicWidth.coerceAtLeast(1)
-        val height = drawable.intrinsicHeight.coerceAtLeast(1)
+        val width = drawable.intrinsicWidth.coerceAtLeast(100)
+        val height = drawable.intrinsicHeight.coerceAtLeast(100)
+        val size = Math.max(width, height)
 
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
@@ -595,20 +663,25 @@ class BubbleService : LifecycleService() {
     }
 
     private fun getRoundedBitmap(bitmap: Bitmap): Bitmap {
-        val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+        val size = Math.min(bitmap.width, bitmap.height)
+        val output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
 
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            shader = BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+        val shader = BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+        val dx = (size - bitmap.width) / 2f
+        val dy = (size - bitmap.height) / 2f
+        if (dx != 0f || dy != 0f) {
+            val matrix = android.graphics.Matrix()
+            matrix.setTranslate(dx, dy)
+            shader.setLocalMatrix(matrix)
         }
 
-        canvas.drawCircle(
-            (bitmap.width / 2).toFloat(),
-            (bitmap.height / 2).toFloat(),
-            (bitmap.width / 2).toFloat(),
-            paint
-        )
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.shader = shader
+        }
 
+        val radius = size / 2f
+        canvas.drawCircle(radius, radius, radius, paint)
         return output
     }
 
@@ -649,33 +722,32 @@ class BubbleService : LifecycleService() {
         expandedView = null
         isBubbleActive = false
         isExpanded = false
+        isPreviewMode = false
         
-        // Limpiar cache de vistas
         currentSessionTimeView = null
         progressBarView = null
         badgeTextView = null
         totalTodayTimeView = null
         bubbleContainerView = null
         closeButton = null
+        bubbleIconView = null
     }
 
     private fun hideAllViews() {
         try {
             Log.d(TAG, "Hiding all views")
-
             stopUpdatingTime()
             updateExpandedViewRunnable?.let { mainHandler.removeCallbacks(it) }
             updateExpandedViewRunnable = null
             idleRunnable?.let { mainHandler.removeCallbacks(it) }
             idleRunnable = null
-
             removeAllViews()
-
         } catch (e: Exception) {
             Log.e(TAG, "Error hiding all views", e)
         } finally {
             isBubbleActive = false
             isExpanded = false
+            isPreviewMode = false
         }
     }
 
@@ -689,9 +761,9 @@ class BubbleService : LifecycleService() {
         serviceScope.cancel()
         mainHandler.removeCallbacksAndMessages(null)
         updateHandler.removeCallbacksAndMessages(null)
-        // Detener foreground con remoción de notificación
         stopForeground(STOP_FOREGROUND_REMOVE)
         isForegroundStarted = false
+        isPreviewMode = false
     }
 
     override fun onBind(intent: Intent): IBinder? {

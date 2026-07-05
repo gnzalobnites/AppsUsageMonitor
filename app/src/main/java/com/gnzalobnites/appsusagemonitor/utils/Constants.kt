@@ -11,12 +11,16 @@ object Constants {
     const val ACTION_SHOW_BUBBLE = "com.gnzalobnites.appsusagemonitor.SHOW_BUBBLE"
     const val ACTION_HIDE_BUBBLE = "com.gnzalobnites.appsusagemonitor.HIDE_BUBBLE"
     const val ACTION_BUBBLE_CLOSED = "com.gnzalobnites.appsusagemonitor.BUBBLE_CLOSED"
+    const val ACTION_UPDATE_PREVIEW = "com.gnzalobnites.appsusagemonitor.UPDATE_PREVIEW"
+    
     const val EXTRA_PACKAGE_NAME = "extra_package_name"
     const val EXTRA_BADGE_COUNT = "extra_badge_count"
     const val EXTRA_INTERVAL = "extra_interval"
     const val EXTRA_SESSION_START_TIME = "extra_session_start_time"
     const val EXTRA_BUBBLE_PERSISTENT = "extra_bubble_persistent"
+    const val EXTRA_PREVIEW_SIZE = "extra_preview_size"
+    const val EXTRA_PREVIEW_OPACITY = "extra_preview_opacity"
     
     const val NOTIFICATION_ID = 1001
-    const val NOTIFICATION_CHANNEL_ID = "screen_time_realtime" // NUEVA CONSTANTE UNIFICADA
+    const val NOTIFICATION_CHANNEL_ID = "screen_time_realtime"
 }

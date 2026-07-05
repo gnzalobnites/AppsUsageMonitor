@@ -6,6 +6,30 @@
     <!-- Accessibility service -->
     <string name="accessibility_service_description">This service allows monitoring which apps you are using to display usage time notifications</string>
     
+    <!-- Dashboard - Control Center -->
+<string name="dashboard_title">Control Center</string>
+<string name="dashboard_subtitle">Configure your focus experience</string>
+
+<!-- Service status -->
+<string name="service_status_label">Service status</string>
+<string name="service_status_active">Active</string>
+<string name="service_status_inactive">Inactive</string>
+<string name="monitored_apps_count_label">Monitored apps</string>
+<string name="current_interval_label">Interval</string>
+<string name="today_screen_time_label">Screen time</string>
+
+<!-- Bubble settings -->
+<string name="bubble_settings_title">Bubble settings</string>
+<string name="bubble_size_label">Size</string>
+<string name="bubble_opacity_label">Opacity</string>
+<string name="haptic_feedback_label">Vibrate on touch</string>
+<string name="auto_hide_label">Auto hide</string>
+
+<!-- Notification settings -->
+<string name="notification_settings_title">Notification settings</string>
+<string name="show_screen_time_label">Show screen time</string>
+<string name="notification_sound_label">Notification sound</string>
+    
     <!-- Bubble Service (background) -->
     <string name="bubble_service_channel_name">Monitoring Service</string>
     <string name="bubble_service_channel_description">Keeps the monitoring service running in background</string>

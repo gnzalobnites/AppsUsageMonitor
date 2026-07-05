@@ -6,6 +6,30 @@
     <!-- Accessibility service -->
     <string name="accessibility_service_description">Este servicio permite monitorear qué aplicaciones estás usando para mostrar notificaciones de tiempo de uso</string>
     
+    <!-- Dashboard - Centro de Control -->
+<string name="dashboard_title">Centro de Control</string>
+<string name="dashboard_subtitle">Configura tu experiencia de enfoque</string>
+
+<!-- Estado del servicio -->
+<string name="service_status_label">Estado del servicio</string>
+<string name="service_status_active">Activo</string>
+<string name="service_status_inactive">Inactivo</string>
+<string name="monitored_apps_count_label">Apps monitoreadas</string>
+<string name="current_interval_label">Intervalo</string>
+<string name="today_screen_time_label">Tiempo de pantalla</string>
+
+<!-- Configuración de la burbuja -->
+<string name="bubble_settings_title">Configuración de la burbuja</string>
+<string name="bubble_size_label">Tamaño</string>
+<string name="bubble_opacity_label">Opacidad</string>
+<string name="haptic_feedback_label">Vibración al tocar</string>
+<string name="auto_hide_label">Ocultar automáticamente</string>
+
+<!-- Configuración de notificación -->
+<string name="notification_settings_title">Configuración de notificación</string>
+<string name="show_screen_time_label">Mostrar tiempo de pantalla</string>
+<string name="notification_sound_label">Sonido de notificación</string>
+    
     <!-- Bubble Service (background) -->
     <string name="bubble_service_channel_name">Servicio de monitoreo</string>
     <string name="bubble_service_channel_description">Mantiene el servicio de monitoreo activo en segundo plano</string>

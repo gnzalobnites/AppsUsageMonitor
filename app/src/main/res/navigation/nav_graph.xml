@@ -5,47 +5,28 @@
     android:id="@+id/nav_graph"
     app:startDestination="@id/homeFragment">
 
-    <!-- Cambiado de mainFragment a homeFragment para coincidir con drawer_menu.xml -->
     <fragment
         android:id="@+id/homeFragment"
         android:name="com.gnzalobnites.appsusagemonitor.ui.main.MainFragment"
-        android:label="@string/nav_home_label"
-        tools:layout="@layout/fragment_main">
-        <action
-            android:id="@+id/action_main_to_selection"
-            app:destination="@id/appSelectionFragment" />
-        <!--<action
-            android:id="@+id/action_main_to_stats"
-            app:destination="@id/statisticsFragment" />-->
-    </fragment>
+        android:label="@string/drawer_home"
+        tools:layout="@layout/fragment_main" />
 
     <fragment
         android:id="@+id/appSelectionFragment"
         android:name="com.gnzalobnites.appsusagemonitor.ui.selection.AppSelectionFragment"
-        android:label="@string/nav_app_selection_label"
+        android:label="@string/drawer_app_selection"
         tools:layout="@layout/fragment_app_selection" />
 
-    <!-- <fragment
-        android:id="@+id/statisticsFragment"
-        android:name="com.gnzalobnites.appsusagemonitor.ui.stats.StatisticsFragment"
-        android:label="@string/nav_statistics_label"
-        tools:layout="@layout/fragment_statistics">
-        <argument
-            android:name="packageName"
-            app:argType="string" />
-    </fragment> -->
-
-    <!-- Agregados estos fragmentos para que coincidan con el menú lateral -->
     <fragment
         android:id="@+id/settingsFragment"
         android:name="com.gnzalobnites.appsusagemonitor.ui.settings.SettingsFragment"
-        android:label="@string/nav_settings_label"
+        android:label="@string/drawer_settings"
         tools:layout="@layout/fragment_settings" />
 
     <fragment
         android:id="@+id/aboutFragment"
         android:name="com.gnzalobnites.appsusagemonitor.ui.about.AboutFragment"
-        android:label="@string/nav_about_label"
+        android:label="@string/drawer_about"
         tools:layout="@layout/fragment_about" />
 
 </navigation>

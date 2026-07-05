@@ -9,18 +9,24 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.SeekBar
 import android.widget.Toast
+import androidx.appcompat.widget.SwitchCompat
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.gnzalobnites.appsusagemonitor.R
 import com.gnzalobnites.appsusagemonitor.databinding.FragmentMainBinding
+import com.gnzalobnites.appsusagemonitor.service.BubbleService
 import com.gnzalobnites.appsusagemonitor.service.MonitoringService
 import com.gnzalobnites.appsusagemonitor.utils.AccessibilityHelper
+import com.gnzalobnites.appsusagemonitor.utils.Constants
 import com.gnzalobnites.appsusagemonitor.utils.TimeFormatter
 import com.google.android.material.R as MaterialR
 import kotlinx.coroutines.launch
@@ -33,7 +39,10 @@ class MainFragment : Fragment() {
     private val viewModel: MainViewModel by viewModels()
     
     private val dayChangeHandler = Handler(Looper.getMainLooper())
+    private val previewHandler = Handler(Looper.getMainLooper())
+    private var previewHideRunnable: Runnable? = null
     private var lastServiceState = false
+    private var isPreviewActive = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentMainBinding.inflate(inflater, container, false)
@@ -44,15 +53,28 @@ class MainFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupObservers()
         setupButtons()
-        setupFooter()
+        setupControls()
         
         viewModel.checkAccessibilityServiceState()
         viewModel.loadTodayStats()
+        viewModel.loadMonitoredAppsCount()
         observeDayChange()
         
         lifecycleScope.launch {
             viewModel.isAccessibilityServiceEnabled.collect { isEnabled ->
                 updateServiceButtonState(isEnabled)
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.monitoredAppsCount.collect { count ->
+                binding.monitoredAppsCount.text = count.toString()
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.currentInterval.collect { interval ->
+                binding.currentIntervalValue.text = formatInterval(interval)
             }
         }
     }
@@ -61,11 +83,21 @@ class MainFragment : Fragment() {
         lifecycleScope.launch {
             viewModel.totalScreenTime.collect { totalMs ->
                 if (totalMs > 0) {
-                    // Usar TimeFormatter en lugar de formatTime local
-                    binding.tvTotalTime.text = TimeFormatter.formatTime(totalMs)
+                    binding.todayScreenTimeValue.text = TimeFormatter.formatTime(totalMs)
                 } else {
-                    binding.tvTotalTime.text = getString(R.string.no_usage_today)
+                    binding.todayScreenTimeValue.text = "0m"
                 }
+            }
+        }
+
+        viewModel.preferences.observe(viewLifecycleOwner) { prefs ->
+            prefs?.let {
+                binding.bubbleSizeSeekbar.progress = it.bubbleSize
+                binding.bubbleOpacitySeekbar.progress = it.bubbleOpacity
+                binding.switchHapticFeedback.isChecked = it.hapticFeedback
+                binding.switchAutoHide.isChecked = it.autoHide
+                binding.switchShowScreenTime.isChecked = it.showScreenTime
+                binding.switchSoundNotifications.isChecked = it.soundNotifications
             }
         }
     }
@@ -94,6 +126,133 @@ class MainFragment : Fragment() {
         }
     }
 
+    private fun setupControls() {
+        // Configurar SeekBars con correcciones
+        binding.bubbleSizeSeekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    viewModel.setBubbleSize(progress)
+                    updateBubblePreview(size = progress)
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                startBubblePreview()
+            }
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                // CORRECCIÓN: Ocultar después de 1.5s al soltar
+                previewHideRunnable = Runnable { hideBubblePreview() }
+                previewHandler.postDelayed(previewHideRunnable!!, 1500)
+            }
+        })
+
+        binding.bubbleOpacitySeekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    viewModel.setBubbleOpacity(progress)
+                    updateBubblePreview(opacity = progress)
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                startBubblePreview()
+            }
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                // CORRECCIÓN: Ocultar después de 1.5s al soltar
+                previewHideRunnable = Runnable { hideBubblePreview() }
+                previewHandler.postDelayed(previewHideRunnable!!, 1500)
+            }
+        })
+
+        // Configurar Switches
+        binding.switchHapticFeedback.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.setHapticFeedback(isChecked)
+        }
+
+        binding.switchAutoHide.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.setAutoHide(isChecked)
+        }
+
+        binding.switchShowScreenTime.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.setShowScreenTime(isChecked)
+        }
+
+        binding.switchSoundNotifications.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.setSoundNotifications(isChecked)
+        }
+    }
+
+    /**
+     * CORREGIDO: Inicia la burbuja en modo previsualización
+     * Ahora envía tamaño y opacidad inmediatamente para evitar el salto
+     */
+    private fun startBubblePreview() {
+        // Cancelar cualquier orden previa de ocultamiento
+        previewHandler.removeCallbacksAndMessages(null)
+        
+        if (isPreviewActive) return
+        isPreviewActive = true
+        
+        try {
+            val intent = Intent(requireContext(), BubbleService::class.java).apply {
+                action = Constants.ACTION_SHOW_BUBBLE
+                putExtra(Constants.EXTRA_PACKAGE_NAME, requireContext().packageName)
+                putExtra(Constants.EXTRA_BADGE_COUNT, 0)
+                putExtra(Constants.EXTRA_INTERVAL, 60000L)
+                putExtra(Constants.EXTRA_BUBBLE_PERSISTENT, true)
+            }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                requireContext().startForegroundService(intent)
+            } else {
+                requireContext().startService(intent)
+            }
+            
+            // CORRECCIÓN: Enviar tamaño y opacidad inmediatamente para evitar el "salto" inicial
+            updateBubblePreview(
+                size = binding.bubbleSizeSeekbar.progress,
+                opacity = binding.bubbleOpacitySeekbar.progress
+            )
+            
+            Log.d("MainFragment", "Bubble preview started")
+        } catch (e: Exception) {
+            Log.e("MainFragment", "Error starting bubble preview", e)
+            isPreviewActive = false
+        }
+    }
+
+    /**
+     * Actualiza la previsualización de la burbuja en tiempo real
+     */
+    private fun updateBubblePreview(size: Int? = null, opacity: Int? = null) {
+        try {
+            val intent = Intent(requireContext(), BubbleService::class.java).apply {
+                action = Constants.ACTION_UPDATE_PREVIEW
+                size?.let { putExtra(Constants.EXTRA_PREVIEW_SIZE, it) }
+                opacity?.let { putExtra(Constants.EXTRA_PREVIEW_OPACITY, it) }
+            }
+            requireContext().startService(intent)
+            Log.d("MainFragment", "Bubble preview updated: size=$size, opacity=$opacity")
+        } catch (e: Exception) {
+            Log.e("MainFragment", "Error updating bubble preview", e)
+        }
+    }
+
+    /**
+     * Oculta la burbuja de previsualización
+     */
+    private fun hideBubblePreview() {
+        if (!isPreviewActive) return
+        isPreviewActive = false
+        
+        try {
+            val intent = Intent(requireContext(), BubbleService::class.java).apply {
+                action = Constants.ACTION_HIDE_BUBBLE
+            }
+            requireContext().startService(intent)
+            Log.d("MainFragment", "Bubble preview hidden")
+        } catch (e: Exception) {
+            Log.e("MainFragment", "Error hiding bubble preview", e)
+        }
+    }
+
     private fun showAccessibilityEnableDialog() {
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle(R.string.accessibility_permission_title)
@@ -116,34 +275,6 @@ class MainFragment : Fragment() {
             .show()
     }
 
-    private fun setupFooter() {
-        val versionText = try {
-            val packageInfo = requireContext().packageManager.getPackageInfo(requireContext().packageName, 0)
-            getString(R.string.version_format, packageInfo.versionName)
-        } catch (e: PackageManager.NameNotFoundException) {
-            getString(R.string.version_format_placeholder)
-        }
-        binding.tvVersionFooter.text = versionText
-
-        binding.btnBuyCoffeeFooter.setOnClickListener {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://buymeacoffee.com/gnzbenitesh"))
-            startActivity(intent)
-        }
-        
-        binding.tvEmailFooter.setOnClickListener {
-            val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                data = Uri.parse("mailto:${getString(R.string.developer_email)}")
-                putExtra(Intent.EXTRA_SUBJECT, getString(R.string.email_subject_suggestions))
-            }
-            
-            try {
-                startActivity(emailIntent)
-            } catch (e: Exception) {
-                Toast.makeText(requireContext(), R.string.error_no_email_app, Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
     private fun updateServiceButtonState(isEnabled: Boolean) {
         if (isEnabled && !lastServiceState) {
             Toast.makeText(requireContext(), R.string.service_running, Toast.LENGTH_SHORT).show()
@@ -152,10 +283,16 @@ class MainFragment : Fragment() {
         lastServiceState = isEnabled
         
         if (isEnabled) {
+            binding.serviceStatusIndicator.setBackgroundResource(R.drawable.circle_indicator_active)
+            binding.serviceStatusText.text = getString(R.string.service_status_active)
+            binding.serviceStatusText.setTextColor(ContextCompat.getColor(requireContext(), R.color.green_500))
             binding.btnServiceControl.text = getString(R.string.stop_monitoring)
             binding.btnServiceControl.backgroundTintList = 
                 ColorStateList.valueOf(Color.parseColor("#E57373"))
         } else {
+            binding.serviceStatusIndicator.setBackgroundResource(R.drawable.circle_indicator_inactive)
+            binding.serviceStatusText.text = getString(R.string.service_status_inactive)
+            binding.serviceStatusText.setTextColor(ContextCompat.getColor(requireContext(), android.R.color.darker_gray))
             binding.btnServiceControl.text = getString(R.string.start_monitoring)
             binding.btnServiceControl.backgroundTintList = 
                 ColorStateList.valueOf(getThemeColor(MaterialR.attr.colorPrimary))
@@ -177,6 +314,18 @@ class MainFragment : Fragment() {
                 android.os.Process.myUid(),
                 requireContext().packageName
             ) == android.app.AppOpsManager.MODE_ALLOWED
+        }
+    }
+
+    private fun formatInterval(interval: Long): String {
+        return when (interval) {
+            10000L -> "10s"
+            60000L -> "1 min"
+            300000L -> "5 min"
+            900000L -> "15 min"
+            1800000L -> "30 min"
+            3600000L -> "1 h"
+            else -> "Custom"
         }
     }
 
@@ -211,17 +360,22 @@ class MainFragment : Fragment() {
         )
         viewModel.checkAccessibilityServiceState()
         viewModel.loadTodayStats()
+        viewModel.loadMonitoredAppsCount()
         updateServiceButtonState(enabled)
     }
 
     override fun onPause() {
         super.onPause()
         dayChangeHandler.removeCallbacksAndMessages(null)
+        previewHandler.removeCallbacksAndMessages(null)
+        hideBubblePreview()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         dayChangeHandler.removeCallbacksAndMessages(null)
+        previewHandler.removeCallbacksAndMessages(null)
+        hideBubblePreview()
         _binding = null
     }
 }
