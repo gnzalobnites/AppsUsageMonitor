@@ -20,41 +20,52 @@ class UpdateManager {
      * @param currentVersion Versión actual de la app (ej. "2.0.6")
      * @return UpdateInfo con los datos de la nueva versión si existe, null si ya está actualizada o hay error.
      */
-    suspend fun checkForUpdates(currentVersion: String): UpdateInfo? = withContext(Dispatchers.IO) {
-        try {
-            val url = URL("https://api.github.com/repos/gnzalobnites/AppsUsageMonitor/releases/latest")
-            val connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "GET"
-            connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
-            connection.connectTimeout = 10000
-            connection.readTimeout = 10000
+     
+     
+     suspend fun checkForUpdates(currentVersion: String): UpdateInfo? = withContext(Dispatchers.IO) {
+    try {
+        val url = URL("https://api.github.com/repos/gnzalobnites/AppsUsageMonitor/releases/latest")
+        val connection = url.openConnection() as HttpURLConnection
+        connection.requestMethod = "GET"
+        connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
+        connection.connectTimeout = 10000
+        connection.readTimeout = 10000
 
-            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                val response = connection.inputStream.bufferedReader().use { it.readText() }
-                val json = JSONObject(response)
-                val tagName = json.getString("tag_name") // ej: "v2.0.6"
-                
-                // Limpiamos la "v" para comparar
-                val cleanTagName = tagName.removePrefix("v")
-                val cleanCurrent = currentVersion.removePrefix("v")
+        if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+            val response = connection.inputStream.bufferedReader().use { it.readText() }
+            val json = JSONObject(response)
+            
+            // Verificar que el tag exista
+            if (!json.has("tag_name")) {
+                Log.e(TAG, "GitHub response missing tag_name")
+                return@withContext null
+            }
+            
+            val tagName = json.getString("tag_name")
+            val cleanTagName = tagName.removePrefix("v")
+            val cleanCurrent = currentVersion.removePrefix("v")
 
-                if (isNewerVersion(cleanCurrent, cleanTagName)) {
-                    val assets = json.getJSONArray("assets")
-                    if (assets.length() > 0) {
-                        // Tomamos el primer asset (que debería ser el .apk)
-                        val downloadUrl = assets.getJSONObject(0).getString("browser_download_url")
+            if (isNewerVersion(cleanCurrent, cleanTagName)) {
+                val assets = json.getJSONArray("assets")
+                if (assets.length() > 0) {
+                    val asset = assets.getJSONObject(0)
+                    if (asset.has("browser_download_url")) {
+                        val downloadUrl = asset.getString("browser_download_url")
                         return@withContext UpdateInfo(tagName, downloadUrl)
                     }
                 }
-            } else {
-                Log.e(TAG, "GitHub API error: ${connection.responseCode}")
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error checking for updates", e)
+        } else {
+            Log.e(TAG, "GitHub API error: ${connection.responseCode}")
         }
-        return@withContext null
+    } catch (e: Exception) {
+        Log.e(TAG, "Error checking for updates", e)
     }
-
+    return@withContext null
+}
+     
+     
+     
     /**
      * Compara dos versiones semánticas con manejo robusto de formatos.
      * @return true si fetched es más nueva que current.

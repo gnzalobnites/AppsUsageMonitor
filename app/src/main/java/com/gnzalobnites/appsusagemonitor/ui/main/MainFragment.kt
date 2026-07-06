@@ -38,8 +38,12 @@ class MainFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: MainViewModel by viewModels()
     
+    // Handler con referencias manejadas correctamente
     private val dayChangeHandler = Handler(Looper.getMainLooper())
     private val previewHandler = Handler(Looper.getMainLooper())
+    
+    // Runnables con ciclo de vida controlado
+    private var dayChangeRunnable: Runnable? = null
     private var previewHideRunnable: Runnable? = null
     private var lastServiceState = false
     private var isPreviewActive = false
@@ -60,19 +64,20 @@ class MainFragment : Fragment() {
         viewModel.loadMonitoredAppsCount()
         observeDayChange()
         
-        lifecycleScope.launch {
+        // ✅ CORRECCIÓN: Usar viewLifecycleOwner.lifecycleScope en lugar de lifecycleScope
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.isAccessibilityServiceEnabled.collect { isEnabled ->
                 updateServiceButtonState(isEnabled)
             }
         }
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.monitoredAppsCount.collect { count ->
                 binding.monitoredAppsCount.text = count.toString()
             }
         }
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.currentInterval.collect { interval ->
                 binding.currentIntervalValue.text = formatInterval(interval)
             }
@@ -80,11 +85,14 @@ class MainFragment : Fragment() {
     }
 
     private fun setupObservers() {
-        lifecycleScope.launch {
+        // ✅ CORRECCIÓN: Usar viewLifecycleOwner.lifecycleScope en lugar de lifecycleScope
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.totalScreenTime.collect { totalMs ->
                 if (totalMs > 0) {
-                    binding.todayScreenTimeValue.text = TimeFormatter.formatTime(totalMs)
+                    // ✅ CORRECCIÓN: Se reemplaza formatTime por formatDuration para unificar el formato
+                    binding.todayScreenTimeValue.text = TimeFormatter.formatDuration(totalMs)
                 } else {
+                    // Mantenemos "0m" para consistencia con el comportamiento anterior
                     binding.todayScreenTimeValue.text = "0m"
                 }
             }
@@ -139,7 +147,8 @@ class MainFragment : Fragment() {
                 startBubblePreview()
             }
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                // CORRECCIÓN: Ocultar después de 1.5s al soltar
+                // Cancelar Runnable anterior antes de crear uno nuevo
+                previewHideRunnable?.let { previewHandler.removeCallbacks(it) }
                 previewHideRunnable = Runnable { hideBubblePreview() }
                 previewHandler.postDelayed(previewHideRunnable!!, 1500)
             }
@@ -156,7 +165,8 @@ class MainFragment : Fragment() {
                 startBubblePreview()
             }
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                // CORRECCIÓN: Ocultar después de 1.5s al soltar
+                // Cancelar Runnable anterior antes de crear uno nuevo
+                previewHideRunnable?.let { previewHandler.removeCallbacks(it) }
                 previewHideRunnable = Runnable { hideBubblePreview() }
                 previewHandler.postDelayed(previewHideRunnable!!, 1500)
             }
@@ -181,7 +191,7 @@ class MainFragment : Fragment() {
     }
 
     /**
-     * CORREGIDO: Inicia la burbuja en modo previsualización
+     * Inicia la burbuja en modo previsualización
      * Ahora envía tamaño y opacidad inmediatamente para evitar el salto
      */
     private fun startBubblePreview() {
@@ -191,21 +201,29 @@ class MainFragment : Fragment() {
         if (isPreviewActive) return
         isPreviewActive = true
         
+        // ✅ CORRECCIÓN: Verificar que el Fragment está adjunto
+        if (!isAdded || context == null) {
+            isPreviewActive = false
+            return
+        }
+        
+        val ctx = requireContext()
+        
         try {
-            val intent = Intent(requireContext(), BubbleService::class.java).apply {
+            val intent = Intent(ctx, BubbleService::class.java).apply {
                 action = Constants.ACTION_SHOW_BUBBLE
-                putExtra(Constants.EXTRA_PACKAGE_NAME, requireContext().packageName)
+                putExtra(Constants.EXTRA_PACKAGE_NAME, ctx.packageName)
                 putExtra(Constants.EXTRA_BADGE_COUNT, 0)
                 putExtra(Constants.EXTRA_INTERVAL, 60000L)
                 putExtra(Constants.EXTRA_BUBBLE_PERSISTENT, true)
             }
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                requireContext().startForegroundService(intent)
+                ctx.startForegroundService(intent)
             } else {
-                requireContext().startService(intent)
+                ctx.startService(intent)
             }
             
-            // CORRECCIÓN: Enviar tamaño y opacidad inmediatamente para evitar el "salto" inicial
+            // Enviar tamaño y opacidad inmediatamente para evitar el "salto" inicial
             updateBubblePreview(
                 size = binding.bubbleSizeSeekbar.progress,
                 opacity = binding.bubbleOpacitySeekbar.progress
@@ -222,6 +240,11 @@ class MainFragment : Fragment() {
      * Actualiza la previsualización de la burbuja en tiempo real
      */
     private fun updateBubblePreview(size: Int? = null, opacity: Int? = null) {
+        // ✅ CORRECCIÓN: Verificar que el Fragment está adjunto
+        if (!isAdded || context == null) {
+            return
+        }
+        
         try {
             val intent = Intent(requireContext(), BubbleService::class.java).apply {
                 action = Constants.ACTION_UPDATE_PREVIEW
@@ -241,6 +264,11 @@ class MainFragment : Fragment() {
     private fun hideBubblePreview() {
         if (!isPreviewActive) return
         isPreviewActive = false
+        
+        // ✅ CORRECCIÓN: Verificar que el Fragment está adjunto
+        if (!isAdded || context == null) {
+            return
+        }
         
         try {
             val intent = Intent(requireContext(), BubbleService::class.java).apply {
@@ -275,9 +303,19 @@ class MainFragment : Fragment() {
             .show()
     }
 
+    /**
+     * Actualiza el estado del botón de servicio con verificación de ciclo de vida
+     */
     private fun updateServiceButtonState(isEnabled: Boolean) {
+        // ✅ CORRECCIÓN: Verificar que el Fragment está adjunto
+        if (!isAdded || context == null) {
+            return
+        }
+        
+        val ctx = requireContext()
+        
         if (isEnabled && !lastServiceState) {
-            Toast.makeText(requireContext(), R.string.service_running, Toast.LENGTH_SHORT).show()
+            Toast.makeText(ctx, R.string.service_running, Toast.LENGTH_SHORT).show()
         }
         
         lastServiceState = isEnabled
@@ -285,14 +323,14 @@ class MainFragment : Fragment() {
         if (isEnabled) {
             binding.serviceStatusIndicator.setBackgroundResource(R.drawable.circle_indicator_active)
             binding.serviceStatusText.text = getString(R.string.service_status_active)
-            binding.serviceStatusText.setTextColor(ContextCompat.getColor(requireContext(), R.color.green_500))
+            binding.serviceStatusText.setTextColor(ContextCompat.getColor(ctx, R.color.green_500))
             binding.btnServiceControl.text = getString(R.string.stop_monitoring)
             binding.btnServiceControl.backgroundTintList = 
                 ColorStateList.valueOf(Color.parseColor("#E57373"))
         } else {
             binding.serviceStatusIndicator.setBackgroundResource(R.drawable.circle_indicator_inactive)
             binding.serviceStatusText.text = getString(R.string.service_status_inactive)
-            binding.serviceStatusText.setTextColor(ContextCompat.getColor(requireContext(), android.R.color.darker_gray))
+            binding.serviceStatusText.setTextColor(ContextCompat.getColor(ctx, android.R.color.darker_gray))
             binding.btnServiceControl.text = getString(R.string.start_monitoring)
             binding.btnServiceControl.backgroundTintList = 
                 ColorStateList.valueOf(getThemeColor(MaterialR.attr.colorPrimary))
@@ -335,7 +373,19 @@ class MainFragment : Fragment() {
         return typedValue.data
     }
 
+    /**
+     * Observa el cambio de día con manejo adecuado de ciclo de vida
+     */
     private fun observeDayChange() {
+        // Usar un Runnable que se pueda cancelar limpiamente
+        dayChangeRunnable = Runnable {
+            // Verificar que el fragmento sigue activo
+            if (isAdded && !isDetached) {
+                viewModel.loadTodayStats()
+                observeDayChange()
+            }
+        }
+        
         val midnight = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
@@ -346,10 +396,10 @@ class MainFragment : Fragment() {
         
         val timeUntilMidnight = midnight.timeInMillis - System.currentTimeMillis()
         
-        dayChangeHandler.postDelayed({
-            viewModel.loadTodayStats()
-            observeDayChange()
-        }, timeUntilMidnight)
+        // Postear el Runnable con verificación de ciclo de vida
+        dayChangeRunnable?.let { 
+            dayChangeHandler.postDelayed(it, timeUntilMidnight)
+        }
     }
 
     override fun onResume() {
@@ -363,18 +413,36 @@ class MainFragment : Fragment() {
         viewModel.loadMonitoredAppsCount()
         updateServiceButtonState(enabled)
     }
-
+    
     override fun onPause() {
         super.onPause()
+        // Cancelar TODOS los callbacks y mensajes
         dayChangeHandler.removeCallbacksAndMessages(null)
         previewHandler.removeCallbacksAndMessages(null)
+        
+        // Limpiar referencias a Runnables
+        dayChangeRunnable = null
+        previewHideRunnable = null
+        
         hideBubblePreview()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Cancelar handlers también en onStop para mayor seguridad
+        dayChangeHandler.removeCallbacksAndMessages(null)
+        previewHandler.removeCallbacksAndMessages(null)
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // Asegurar limpieza completa
         dayChangeHandler.removeCallbacksAndMessages(null)
         previewHandler.removeCallbacksAndMessages(null)
+        
+        dayChangeRunnable = null
+        previewHideRunnable = null
+        
         hideBubblePreview()
         _binding = null
     }

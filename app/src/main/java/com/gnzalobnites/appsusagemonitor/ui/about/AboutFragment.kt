@@ -15,7 +15,7 @@ import com.gnzalobnites.appsusagemonitor.R
 import com.gnzalobnites.appsusagemonitor.databinding.FragmentAboutBinding
 import com.gnzalobnites.appsusagemonitor.utils.AppUpdater
 import com.gnzalobnites.appsusagemonitor.utils.UpdateManager
-import com.gnzalobnites.appsusagemonitor.utils.UpdateInfo  // <-- IMPORTACIÓN AÑADIDA
+import com.gnzalobnites.appsusagemonitor.utils.UpdateInfo
 import kotlinx.coroutines.launch
 
 class AboutFragment : Fragment() {
@@ -68,17 +68,29 @@ class AboutFragment : Fragment() {
 
     // Comprobación manual de actualizaciones
     private fun checkForUpdatesManually() {
+        // ✅ Verificar que el Fragment está adjunto antes de continuar
+        if (!isAdded || context == null) {
+            return
+        }
+        
         // Deshabilitar el botón temporalmente para evitar spam de clics
         binding.btnCheckUpdates.isEnabled = false
         binding.btnCheckUpdates.text = getString(R.string.update_checking)
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val packageInfo = requireContext().packageManager.getPackageInfo(requireContext().packageName, 0)
+                // ✅ Usar requireContext() solo después de verificar isAdded
+                val ctx = requireContext()
+                val packageInfo = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
                 val currentVersion = packageInfo.versionName
 
                 val updateManager = UpdateManager()
                 val updateInfo = updateManager.checkForUpdates(currentVersion)
+
+                // ✅ Verificar que el Fragment sigue activo antes de mostrar UI
+                if (!isAdded || context == null) {
+                    return@launch
+                }
 
                 if (updateInfo != null) {
                     // Hay actualización
@@ -91,7 +103,10 @@ class AboutFragment : Fragment() {
                     binding.btnCheckUpdates.text = getString(R.string.update_check_button)
                 }
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), R.string.update_check_error, Toast.LENGTH_SHORT).show()
+                // ✅ Verificar que el Fragment sigue activo antes de mostrar Toast
+                if (isAdded && context != null) {
+                    Toast.makeText(requireContext(), R.string.update_check_error, Toast.LENGTH_SHORT).show()
+                }
                 // Restaurar el botón
                 binding.btnCheckUpdates.isEnabled = true
                 binding.btnCheckUpdates.text = getString(R.string.update_check_button)

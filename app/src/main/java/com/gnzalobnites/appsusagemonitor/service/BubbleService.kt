@@ -125,8 +125,9 @@ class BubbleService : LifecycleService() {
         super.onCreate()
         Log.d(TAG, "BubbleService created")
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        appRepository = AppRepository(this)
-        usageRepository = UsageRepository(applicationContext as android.app.Application)
+        // ✅ CORREGIDO: Usar application en lugar de this para evitar fugas
+        appRepository = AppRepository(application)
+        usageRepository = UsageRepository(application)
         startForegroundService()
     }
 
@@ -627,10 +628,13 @@ class BubbleService : LifecycleService() {
     }
 
     private fun closeCartel() {
+        // Detener actualizaciones primero
         stopUpdatingTime()
+        stopBreathingAnimation()
         hideAllViews()
         isExpanded = false
         isBubbleActive = false
+        isPreviewMode = false
         notifyBubbleClosed()
     }
 

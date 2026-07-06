@@ -26,6 +26,7 @@ import com.gnzalobnites.appsusagemonitor.utils.UpdateManager
 import com.gnzalobnites.appsusagemonitor.utils.AppUpdater
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import android.content.SharedPreferences
 import androidx.preference.PreferenceManager
 import androidx.appcompat.app.AlertDialog
@@ -34,6 +35,7 @@ import android.util.Log
 class MainActivity : AppCompatActivity() {
     private var appUpdater: AppUpdater? = null
     private var isUpdateCheckRunning = false
+    private var updateCheckJob: Job? = null
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var drawerLayout: DrawerLayout
@@ -151,9 +153,8 @@ class MainActivity : AppCompatActivity() {
 
         isUpdateCheckRunning = true
 
-        lifecycleScope.launch {
+        updateCheckJob = lifecycleScope.launch {
             try {
-                // Actualizamos el timestamp de la comprobación inmediatamente para evitar múltiples llamadas
                 prefs.edit().putLong("last_update_check", currentTime).apply()
 
                 val packageInfo = packageManager.getPackageInfo(packageName, 0)
@@ -162,13 +163,14 @@ class MainActivity : AppCompatActivity() {
                 val updateManager = UpdateManager()
                 val updateInfo = updateManager.checkForUpdates(currentVersion)
 
-                if (updateInfo != null) {
+                if (updateInfo != null && !isFinishing && !isDestroyed) {
                     showUpdateAvailableDialog(updateInfo)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error checking updates silently", e)
             } finally {
                 isUpdateCheckRunning = false
+                updateCheckJob = null
             }
         }
     }
@@ -183,7 +185,6 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.update_dialog_later, null)
             .setOnCancelListener {
-                // Limpiar el flag si el diálogo se cancela
                 isUpdateCheckRunning = false
             }
             .show()
@@ -191,6 +192,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        updateCheckJob?.cancel()
+        updateCheckJob = null
         appUpdater?.cleanup()
         appUpdater = null
     }

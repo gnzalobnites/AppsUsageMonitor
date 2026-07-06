@@ -46,6 +46,9 @@ class AppSelectionFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
+        // ✅ Verificar que el Fragment está adjunto antes de continuar
+        if (!isAdded || context == null) return
+        
         setupSpinner()
         setupRecyclerViews()
         setupSearch()
@@ -57,6 +60,9 @@ class AppSelectionFragment : Fragment() {
     }
 
     private fun setupSpinner() {
+        // ✅ Verificar que el Fragment está adjunto
+        if (!isAdded || context == null) return
+        
         val intervals = listOf(
             getString(R.string.interval_10_seconds),
             getString(R.string.interval_1_minute),
@@ -66,20 +72,25 @@ class AppSelectionFragment : Fragment() {
             getString(R.string.interval_1_hour)
         )
         
-        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, intervals)
+        val ctx = requireContext()
+        val adapter = ArrayAdapter(ctx, android.R.layout.simple_spinner_item, intervals)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerInterval.adapter = adapter
-        
         binding.spinnerInterval.setSelection(1)
     }
 
     private fun setupRecyclerViews() {
+        // ✅ Verificar que el Fragment está adjunto
+        if (!isAdded || context == null) return
+        
+        val ctx = requireContext()
+        
         appsAdapter = AppListAdapter { appInfo ->
             viewModel.toggleAppSelection(appInfo)
         }
         
         binding.recyclerViewApps.apply {
-            layoutManager = LinearLayoutManager(requireContext())
+            layoutManager = LinearLayoutManager(ctx)
             adapter = appsAdapter
             setHasFixedSize(true)
         }
@@ -89,26 +100,36 @@ class AppSelectionFragment : Fragment() {
         }
         
         binding.recyclerViewMonitoredApps.apply {
-            layoutManager = LinearLayoutManager(requireContext())
+            layoutManager = LinearLayoutManager(ctx)
             adapter = monitoredAdapter
             setHasFixedSize(true)
         }
     }
-
+    
     private fun setupSearch() {
+        // ✅ Verificar que el Fragment está adjunto
+        if (!isAdded || context == null) return
+        
+        // CORRECCIÓN: Usar event.x (relativo) en lugar de event.rawX (absoluto)
         binding.editSearch.setOnTouchListener { _, event ->
             val DRAWABLE_END = 2
             
             if (event.action == MotionEvent.ACTION_UP) {
                 val endDrawable = binding.editSearch.compoundDrawablesRelative[DRAWABLE_END]
                 if (endDrawable != null) {
-                    val touchableArea = binding.editSearch.right - binding.editSearch.paddingEnd - endDrawable.intrinsicWidth
+                    // Usar width en lugar de right
+                    val touchableArea = binding.editSearch.width - binding.editSearch.paddingEnd - endDrawable.intrinsicWidth
                     
-                    if (event.rawX >= touchableArea) {
+                    // Usar event.x en lugar de event.rawX
+                    if (event.x >= touchableArea) {
                         binding.editSearch.text.clear()
                         binding.editSearch.clearFocus()
-                        val imm = requireContext().getSystemService(InputMethodManager::class.java)
-                        imm.hideSoftInputFromWindow(binding.editSearch.windowToken, 0)
+                        
+                        // ✅ Verificar que el contexto existe
+                        if (isAdded && context != null) {
+                            val imm = requireContext().getSystemService(InputMethodManager::class.java)
+                            imm.hideSoftInputFromWindow(binding.editSearch.windowToken, 0)
+                        }
                         return@setOnTouchListener true
                     }
                 }
@@ -134,7 +155,8 @@ class AppSelectionFragment : Fragment() {
                 }
 
                 searchJob?.cancel()
-                searchJob = lifecycleScope.launch {
+                // ✅ CORRECCIÓN: Usar viewLifecycleOwner.lifecycleScope en lugar de lifecycleScope
+                searchJob = viewLifecycleOwner.lifecycleScope.launch {
                     delay(300)
                     viewModel.filterApps(s?.toString() ?: "")
                     if (s.isNullOrEmpty()) {
@@ -146,21 +168,23 @@ class AppSelectionFragment : Fragment() {
             override fun afterTextChanged(s: Editable?) {}
         })
     }
-
+    
     private fun setupObservers() {
-        lifecycleScope.launch {
+        // ✅ CORRECCIÓN: Usar viewLifecycleOwner.lifecycleScope en lugar de lifecycleScope
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.filteredApps.collect { apps ->
                 appsAdapter.submitList(apps)
                 showLoading(false)
             }
         }
         
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.selectedApps.collect { selectedCount ->
                 binding.buttonAddSelected.text = getString(R.string.add_selected_with_count, selectedCount)
             }
         }
 
+        // ✅ Este observer ya usa viewLifecycleOwner (está bien)
         viewModel.monitoredApps.observe(viewLifecycleOwner) { monitoredApps ->
             monitoredAdapter.submitList(monitoredApps)
             
@@ -175,6 +199,9 @@ class AppSelectionFragment : Fragment() {
     }
 
     private fun setupListeners() {
+        // ✅ Verificar que el Fragment está adjunto
+        if (!isAdded || context == null) return
+        
         binding.editSearch.setOnFocusChangeListener { _, hasFocus ->
             binding.bottomSectionContainer.visibility = if (hasFocus) View.GONE else View.VISIBLE
         }
@@ -184,20 +211,29 @@ class AppSelectionFragment : Fragment() {
                 super.onScrollStateChanged(recyclerView, newState)
                 if (newState == androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_DRAGGING && binding.editSearch.hasFocus()) {
                     binding.editSearch.clearFocus()
-                    val imm = requireContext().getSystemService(InputMethodManager::class.java)
-                    imm.hideSoftInputFromWindow(recyclerView.windowToken, 0)
+                    
+                    // ✅ Verificar que el contexto existe
+                    if (isAdded && context != null) {
+                        val imm = requireContext().getSystemService(InputMethodManager::class.java)
+                        imm.hideSoftInputFromWindow(recyclerView.windowToken, 0)
+                    }
                 }
             }
         })
 
         binding.buttonAddSelected.setOnClickListener {
+            // ✅ Verificar que el Fragment está adjunto
+            if (!isAdded || context == null) return@setOnClickListener
+            
             binding.editSearch.clearFocus()
-            val imm = requireContext().getSystemService(InputMethodManager::class.java)
+            
+            val ctx = requireContext()
+            val imm = ctx.getSystemService(InputMethodManager::class.java)
             imm.hideSoftInputFromWindow(it.windowToken, 0)
 
             val selectedCount = viewModel.selectedApps.value
             if (selectedCount == 0) {
-                Toast.makeText(requireContext(), R.string.select_at_least_one, Toast.LENGTH_SHORT).show()
+                Toast.makeText(ctx, R.string.select_at_least_one, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             
@@ -212,7 +248,7 @@ class AppSelectionFragment : Fragment() {
             }
             
             viewModel.addSelectedAppsToMonitor(interval)
-            Toast.makeText(requireContext(), R.string.apps_added, Toast.LENGTH_SHORT).show()
+            Toast.makeText(ctx, R.string.apps_added, Toast.LENGTH_SHORT).show()
         }
     }
 

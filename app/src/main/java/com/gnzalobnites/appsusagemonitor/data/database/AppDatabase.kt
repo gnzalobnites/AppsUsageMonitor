@@ -1,9 +1,10 @@
 package com.gnzalobnites.appsusagemonitor.data.database
 
+import android.app.Application
+import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import android.content.Context
 import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
 
 @Database(
@@ -18,17 +19,53 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        /**
+         * Obtiene la instancia de la base de datos usando el ApplicationContext
+         * @param context Contexto de la aplicación (puede ser Activity, Service o Application)
+         * @return Instancia de AppDatabase
+         * @throws IllegalStateException si el ApplicationContext es null
+         */
         fun getInstance(context: Context): AppDatabase {
+            // Obtener applicationContext con null safety
+            val appContext = context.applicationContext
+                ?: throw IllegalStateException("ApplicationContext is null. " +
+                    "Make sure you're passing a valid Context")
+
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
-                    context.applicationContext,
+                    appContext,
                     AppDatabase::class.java,
                     "app_usage_database"
                 ).fallbackToDestructiveMigration()
-                 .build()
+                    .build()
                 INSTANCE = instance
                 instance
             }
+        }
+
+        /**
+         * Método alternativo para usar desde Application directamente
+         * @param application Instancia de Application
+         * @return Instancia de AppDatabase
+         */
+        fun getInstance(application: Application): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    application,
+                    AppDatabase::class.java,
+                    "app_usage_database"
+                ).fallbackToDestructiveMigration()
+                    .build()
+                INSTANCE = instance
+                instance
+            }
+        }
+
+        /**
+         * Limpia la instancia de la base de datos (útil para pruebas)
+         */
+        fun clearInstance() {
+            INSTANCE = null
         }
     }
 }

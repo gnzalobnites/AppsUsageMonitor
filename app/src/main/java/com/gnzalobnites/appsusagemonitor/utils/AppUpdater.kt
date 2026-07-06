@@ -24,12 +24,10 @@ class AppUpdater(private val context: Context) {
         private const val TAG = "AppUpdater"
     }
 
-    /**
-     * Inicia la descarga del APK desde la URL proporcionada.
-     * @param url URL de descarga del APK.
-     * @param fileName Nombre con el que se guardará el archivo.
-     */
     fun downloadAndInstall(url: String, fileName: String = "AppsUsageMonitor-update.apk") {
+        // Limpiar cualquier receiver anterior
+        cleanup()
+        
         val request = DownloadManager.Request(Uri.parse(url)).apply {
             setTitle(context.getString(R.string.update_download_title))
             setDescription(context.getString(R.string.update_download_description))
@@ -40,18 +38,22 @@ class AppUpdater(private val context: Context) {
         val downloadManager = appContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         downloadId = downloadManager.enqueue(request)
 
-        // Registrar el receiver usando appContext para evitar memory leaks
-        if (!isReceiverRegistered) {
-            downloadCompleteReceiver = onDownloadComplete(fileName)
-            appContext.registerReceiver(
-                downloadCompleteReceiver,
-                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-                Context.RECEIVER_NOT_EXPORTED
-            )
-            isReceiverRegistered = true
-        }
+        downloadCompleteReceiver = onDownloadComplete(fileName)
+        val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
         
-        Toast.makeText(appContext, R.string.update_download_started, Toast.LENGTH_SHORT).show()
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                appContext.registerReceiver(downloadCompleteReceiver, filter, Context.RECEIVER_EXPORTED)
+            } else {
+                appContext.registerReceiver(downloadCompleteReceiver, filter)
+            }
+            isReceiverRegistered = true
+            Toast.makeText(appContext, R.string.update_download_started, Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error registering receiver", e)
+            downloadCompleteReceiver = null
+            isReceiverRegistered = false
+        }
     }
 
     private fun onDownloadComplete(fileName: String) = object : BroadcastReceiver() {
@@ -89,16 +91,14 @@ class AppUpdater(private val context: Context) {
         }
     }
 
-    /**
-     * Limpia el receiver si la actividad/fragmento se destruye antes de que termine la descarga.
-     */
     fun cleanup() {
         if (isReceiverRegistered) {
             downloadCompleteReceiver?.let {
                 try {
                     appContext.unregisterReceiver(it)
+                    Log.d(TAG, "Receiver unregistered successfully")
                 } catch (e: IllegalArgumentException) {
-                    Log.e(TAG, "Receiver already unregistered", e)
+                    Log.d(TAG, "Receiver was already unregistered")
                 }
                 downloadCompleteReceiver = null
                 isReceiverRegistered = false

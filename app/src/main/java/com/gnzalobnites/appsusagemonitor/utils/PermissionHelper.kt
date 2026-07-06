@@ -12,7 +12,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
-import java.util.Calendar  // <--- IMPORTANTE: Esta línea soluciona el error
+import java.util.Calendar
 
 object PermissionHelper {
     
@@ -102,6 +102,6 @@ object PermissionHelper {
         val end = System.currentTimeMillis()
 
         val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, start, end)
-        return stats.find { it.packageName == packageName }?.totalTimeInForeground ?: 0L
+        return stats?.find { it.packageName == packageName }?.totalTimeInForeground ?: 0L
     }
 }
