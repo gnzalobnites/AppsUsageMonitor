@@ -16,6 +16,11 @@ class UsageRepository(private val application: Application) {
     
     private val usageStatsManager = application.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
     
+    // Caché en memoria para evitar consultas redundantes
+    private var cachedScreenTime = 0L
+    private var lastUpdate = 0L
+    private val CACHE_DURATION = 60_000L // 1 minuto en milisegundos
+    
     companion object {
         private const val TAG = "UsageRepository"
         // Constante para DEVICE_SHUTDOWN (API 26+)
@@ -26,14 +31,33 @@ class UsageRepository(private val application: Application) {
      * SOLUCIÓN DEFINITIVA MEJORADA: Obtiene el tiempo exacto de pantalla desde las 00:00 local
      * usando eventos SCREEN_INTERACTIVE / SCREEN_NON_INTERACTIVE.
      * 
-     * Esta versión:
-     * 1. Captura TODO el tiempo de pantalla encendida (incluyendo launcher, notificaciones, bloqueo)
-     * 2. Maneja correctamente el cruce de medianoche
-     * 3. Maneja correctamente los reinicios y apagados del dispositivo (DEVICE_SHUTDOWN)
-     * 4. NO contamina con procesos en segundo plano
-     * 5. Coincide exactamente con Bienestar Digital y Samsung Health
+     * Esta versión con caché:
+     * 1. Evita consultas redundantes al sistema (ahorro de batería)
+     * 2. Captura TODO el tiempo de pantalla encendida (incluyendo launcher, notificaciones, bloqueo)
+     * 3. Maneja correctamente el cruce de medianoche
+     * 4. Maneja correctamente los reinicios y apagados del dispositivo (DEVICE_SHUTDOWN)
+     * 5. NO contamina con procesos en segundo plano
+     * 6. Coincide exactamente con Bienestar Digital y Samsung Health
      */
     fun getExactScreenTimeToday(): Long {
+        val now = System.currentTimeMillis()
+        
+        // Si no pasó 1 minuto, devolvemos el valor en memoria
+        if (now - lastUpdate < CACHE_DURATION) {
+            return cachedScreenTime
+        }
+        
+        // Si pasó 1 minuto, hacemos el cálculo pesado
+        cachedScreenTime = calculateScreenTime()
+        lastUpdate = now
+        return cachedScreenTime
+    }
+
+    /**
+     * Calcula el tiempo de pantalla consultando UsageStatsManager
+     * y recorriendo los eventos de pantalla.
+     */
+    private fun calculateScreenTime(): Long {
         val calendar = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)

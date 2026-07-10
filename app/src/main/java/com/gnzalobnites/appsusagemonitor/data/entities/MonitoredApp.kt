@@ -9,8 +9,11 @@ data class MonitoredApp(
     val packageName: String,
     val appName: String,
     val isMonitoring: Boolean = false,
-    val selectedInterval: Long = 60000L,
-    val lastNotificationTime: Long = 0L,
+    val timeGoalMinutes: Int = 5, // Meta en minutos (antes selectedInterval)
+    val currentSessionStart: Long = 0L,
+    val currentSessionDuration: Long = 0L,
     val totalUsageToday: Long = 0L,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val lastGoalNotified: Boolean = false,
+    val lastGoalNotifiedTime: Long = 0L// Para no repetir notificaciones
 )

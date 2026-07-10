@@ -1,7 +1,6 @@
 package com.gnzalobnites.appsusagemonitor.data.repository
 
 import android.app.Application
-import android.content.Context
 import android.content.pm.PackageManager
 import com.gnzalobnites.appsusagemonitor.data.database.AppDatabase
 import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
@@ -9,7 +8,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 class AppRepository(private val application: Application) {
-    // ✅ CORREGIDO: Usar Application en lugar de Context para evitar fugas
     private val db = AppDatabase.getInstance(application)
     private val monitoredAppDao = db.monitoredAppDao()
     private val packageManager: PackageManager = application.packageManager
@@ -23,7 +21,7 @@ class AppRepository(private val application: Application) {
     suspend fun getMonitoredAppsSync(): List<MonitoredApp> = 
         monitoredAppDao.getMonitoredAppsSync()
 
-    suspend fun addAppToMonitor(packageName: String, interval: Long) {
+    suspend fun addAppToMonitor(packageName: String, goalMinutes: Int) {
         val appInfo = try {
             packageManager.getApplicationInfo(packageName, 0)
         } catch (e: PackageManager.NameNotFoundException) {
@@ -36,7 +34,7 @@ class AppRepository(private val application: Application) {
         if (existingApp != null) {
             val updatedApp = existingApp.copy(
                 isMonitoring = true,
-                selectedInterval = interval
+                timeGoalMinutes = goalMinutes
             )
             monitoredAppDao.update(updatedApp)
         } else {
@@ -44,7 +42,7 @@ class AppRepository(private val application: Application) {
                 packageName = packageName,
                 appName = appName,
                 isMonitoring = true,
-                selectedInterval = interval
+                timeGoalMinutes = goalMinutes
             )
             monitoredAppDao.insert(app)
         }

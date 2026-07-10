@@ -1,36 +1,34 @@
 package com.gnzalobnites.appsusagemonitor
 
-import android.widget.TextView
-import android.view.View
-import android.os.Build
 import android.Manifest
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
+import android.view.View
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
+import androidx.preference.PreferenceManager
 import com.gnzalobnites.appsusagemonitor.databinding.ActivityMainBinding
+import com.gnzalobnites.appsusagemonitor.utils.AppUpdater
 import com.gnzalobnites.appsusagemonitor.utils.PermissionHelper
 import com.gnzalobnites.appsusagemonitor.utils.UpdateInfo
 import com.gnzalobnites.appsusagemonitor.utils.UpdateManager
-import com.gnzalobnites.appsusagemonitor.utils.AppUpdater
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
-import android.content.SharedPreferences
-import androidx.preference.PreferenceManager
-import androidx.appcompat.app.AlertDialog
-import android.util.Log
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
     private var appUpdater: AppUpdater? = null
@@ -94,7 +92,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        checkAndRequestPermissions()
+        // PERMISOS: Flujo secuencial con diálogos explicativos
+        PermissionHelper.requestAllPermissions(this)
         checkUpdatesSilently()
     }
 
@@ -106,30 +105,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun checkAndRequestPermissions() {
-        if (!PermissionHelper.hasUsageStatsPermission(this)) {
-            val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-            startActivity(intent)
-        }
+    override fun onResume() {
+        super.onResume()
+        // Revisar si el permiso que estábamos esperando ya fue otorgado
+        PermissionHelper.onActivityResumed(this)
+    }
 
-        if (!PermissionHelper.hasOverlayPermission(this)) {
-            val intent = Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:$packageName")
-            )
-            startActivity(intent)
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    PermissionHelper.REQUEST_CODE_NOTIFICATIONS
-                )
-            }
-        }
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        PermissionHelper.onRequestPermissionsResult(requestCode)
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -140,7 +128,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkUpdatesSilently() {
         if (isUpdateCheckRunning) return
-        
+
         val prefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
         val autoUpdateEnabled = prefs.getBoolean("auto_check_updates", true)
 
@@ -176,7 +164,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showUpdateAvailableDialog(updateInfo: UpdateInfo) {
-        AlertDialog.Builder(this)
+        androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle(R.string.update_dialog_title)
             .setMessage(getString(R.string.update_dialog_message, updateInfo.versionName))
             .setPositiveButton(R.string.update_dialog_download) { _, _ ->

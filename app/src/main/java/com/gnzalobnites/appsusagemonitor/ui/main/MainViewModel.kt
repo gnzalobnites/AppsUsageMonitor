@@ -13,6 +13,7 @@ import androidx.preference.PreferenceManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.gnzalobnites.appsusagemonitor.MyApplication
 import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
 import com.gnzalobnites.appsusagemonitor.data.repository.AppRepository
 import com.gnzalobnites.appsusagemonitor.data.repository.UsageRepository
@@ -35,8 +36,11 @@ data class BubblePreferences(
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     
     private val context = application.applicationContext
-    private val repository = AppRepository(application)
-    private val usageRepository = UsageRepository(application)
+    
+    // ✅ Usar los singletons de MyApplication en lugar de crear nuevas instancias
+    private val repository = MyApplication.appRepository
+    private val usageRepository = MyApplication.usageRepository
+    
     private val packageManager = application.packageManager
     private val prefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
     
@@ -58,7 +62,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val monitoredAppsCount: StateFlow<Int> = _monitoredAppsCount.asStateFlow()
     
     // Intervalo actual
-    private val _currentInterval = MutableStateFlow(60000L)
+    private val _currentInterval = MutableStateFlow(60000L) // 1 minuto por defecto
     val currentInterval: StateFlow<Long> = _currentInterval.asStateFlow()
     
     // Preferencias de la burbuja
@@ -130,7 +134,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val apps = repository.getMonitoredAppsSync()
                 if (apps.isNotEmpty()) {
                     // Tomar el intervalo de la primera app monitoreada
-                    _currentInterval.value = apps.first().selectedInterval
+                    _currentInterval.value = apps.first().timeGoalMinutes * 60000L
                 }
             } catch (e: Exception) {
                 _currentInterval.value = 60000L

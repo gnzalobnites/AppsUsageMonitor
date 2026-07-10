@@ -12,11 +12,11 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.os.Build
-import android.os.SystemClock
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import androidx.core.app.NotificationCompat
 import androidx.core.graphics.drawable.IconCompat
+import com.gnzalobnites.appsusagemonitor.MyApplication
 import com.gnzalobnites.appsusagemonitor.R
 import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
 import com.gnzalobnites.appsusagemonitor.data.repository.AppRepository
@@ -25,466 +25,314 @@ import com.gnzalobnites.appsusagemonitor.utils.Constants
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.onFailure
-// import kotlinx.coroutines.channels.trySend
 
 class MonitoringService : AccessibilityService() {
 
     private lateinit var repository: AppRepository
     private lateinit var usageRepository: UsageRepository
     
-    // ✅ Scope con IO para trabajo pesado y Main para UI
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     
-    // ✅ Canales
-    private val inputChannel = Channel<MonitorEvent>(INPUT_CHANNEL_CAPACITY)
-    private val eventChannel = Channel<MonitorEvent>(EVENT_CHANNEL_CAPACITY)
+    private val eventChannel = Channel<MonitorEvent>(64)
     
+    private var sessionUpdateJob: Job? = null
+    private var goalCheckJob: Job? = null
     private var screenTimeNotificationJob: Job? = null
-    private var loadAppJob: Job? = null
-    private var bubbleJob: Job? = null
-    private var departureJob: Job? = null
-
-    // ✅ Estado inmutable
-    private data class MonitorState(
-        val currentAppPackage: String? = null,
-        val currentMonitoredApp: MonitoredApp? = null,
-        val sessionStartTime: Long = 0L,
-        val isBubbleVisible: Boolean = false,
-        val bubbleCloseTime: Long = 0L,
-        val bubbleGeneration: Long = 0L,
-        val departureGeneration: Long = 0L,
-        val lastBubbleShowTime: Long = 0L,
-        val loadGeneration: Long = 0L
-    )
-
-    private var state = MonitorState()
-
-    // ✅ Filtro para TYPE_WINDOW_CONTENT_CHANGED
+    private var bubbleActive = false
+    private var currentPackageName: String? = null
+    private var currentMonitoredApp: MonitoredApp? = null
+    private var sessionStartTime: Long = 0L
+    
+    private var lastNotifiedHours: Long = -1L
+    private var lastNotifiedMinutes: Long = -1L
+    
     private var lastStillActivePackage: String? = null
     private var lastStillActiveTime: Long = 0L
+    private var lastAppChangeTime: Long = 0L
 
-    // ✅ Eventos
-    private sealed interface MonitorEvent {
-        data class AppChanged(
-            val packageName: String,
-            val timestamp: Long
-        ) : MonitorEvent
-        
-        data class AppStillActive(
-            val packageName: String,
-            val timestamp: Long
-        ) : MonitorEvent
-        
-        data class BubbleClosed(
-            val timestamp: Long
-        ) : MonitorEvent
-        
-        data class BubbleTimeout(
-            val generation: Long,
-            val timestamp: Long
-        ) : MonitorEvent
-        
-        data class DepartureTimeout(
-            val generation: Long,
-            val timestamp: Long
-        ) : MonitorEvent
-        
-        data object CheckScreenTime : MonitorEvent
-        
-        data class AppLoaded(
-            val generation: Long,
-            val packageName: String,
-            val monitoredApp: MonitoredApp?,
-            val appChangedTimestamp: Long
-        ) : MonitorEvent
-    }
+    // Tiempo extra activo: mientras sea true, se suprimen las notificaciones de meta alcanzada
+    private var isExtraTimeActive = false
 
     companion object {
         private const val TAG = "MonitoringService"
-        private const val DEBUG_TAG = "AppMonitor_Debug"
-        private const val DEPARTURE_DELAY_MS = 500L
-        private const val EVENT_CHANNEL_CAPACITY = 64
-        private const val INPUT_CHANNEL_CAPACITY = 128
+        private const val STILL_ACTIVE_THROTTLE_MS = 800L
         private const val SCREEN_TIME_UPDATE_INTERVAL = 60000L
-        private const val STILL_ACTIVE_THROTTLE_MS = 250L
+        private const val GOAL_CHECK_INTERVAL = 5000L
+        private const val APP_CHANGE_DEBOUNCE_MS = 500L
+    }
+
+    private sealed interface MonitorEvent {
+        data class AppChanged(val packageName: String, val timestamp: Long) : MonitorEvent
+        data object CheckScreenTime : MonitorEvent
+        data class BubbleClosed(val timestamp: Long) : MonitorEvent
     }
 
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "Service created")
-        repository = AppRepository(application)
-        usageRepository = UsageRepository(application)
+        
+        repository = MyApplication.appRepository
+        usageRepository = MyApplication.usageRepository
+        
         createNotificationChannel()
         startEventLoop()
-        startInputForwarder()
-        startBubbleService()
         startScreenTimeNotification()
-    }
-
-    private fun startInputForwarder() {
-        serviceScope.launch {
-            for (event in inputChannel) {
-                eventChannel.send(event)
-            }
-        }
     }
 
     private fun startEventLoop() {
         serviceScope.launch {
             for (event in eventChannel) {
                 try {
-                    Log.d(TAG, "Processing event: $event")
-                    val (newState, effects) = reduce(state, event)
-                    state = newState
-                    executeEffects(effects)
+                    processEvent(event)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error processing event: $event", e)
                 }
             }
-            Log.d(TAG, "Event loop finished")
         }
     }
 
-    // ✅ Reductor puro
-    private fun reduce(
-        state: MonitorState,
-        event: MonitorEvent
-    ): Pair<MonitorState, List<Effect>> {
-        return when (event) {
-            is MonitorEvent.AppChanged -> handleAppChanged(state, event)
-            is MonitorEvent.AppLoaded -> handleAppLoaded(state, event)
-            is MonitorEvent.AppStillActive -> handleAppStillActive(state, event)
-            is MonitorEvent.BubbleTimeout -> handleBubbleTimeout(state, event)
-            is MonitorEvent.DepartureTimeout -> handleDepartureTimeout(state, event)
-            is MonitorEvent.BubbleClosed -> handleBubbleClosed(state, event)
-            MonitorEvent.CheckScreenTime -> handleScreenTimeCheck(state)
+    private suspend fun processEvent(event: MonitorEvent) {
+        when (event) {
+            is MonitorEvent.AppChanged -> handleAppChanged(event)
+            MonitorEvent.CheckScreenTime -> updateScreenTimeNotification()
+            is MonitorEvent.BubbleClosed -> handleBubbleClosed(event)
         }
     }
 
-    // ✅ Handlers
-    private fun handleAppChanged(
-        state: MonitorState,
-        event: MonitorEvent.AppChanged
-    ): Pair<MonitorState, List<Effect>> {
-        Log.d(DEBUG_TAG, ">>> App changed to: ${event.packageName} at ${event.timestamp}")
-
-        if (event.packageName == state.currentAppPackage) {
-            val newGeneration = state.departureGeneration + 1
-            return state.copy(
-                departureGeneration = newGeneration
-            ) to emptyList()
+    // Filtrar ventanas irrelevantes
+    private fun isRelevantWindow(event: AccessibilityEvent): Boolean {
+        val packageName = event.packageName?.toString() ?: return false
+        val className = event.className?.toString() ?: return false
+        
+        // 1. Ignorar paquetes exentos
+        if (isPackageExempt(packageName)) {
+            Log.d(TAG, "Ignoring exempt package: $packageName")
+            return false
         }
-
-        val newLoadGen = state.loadGeneration + 1
-        val effect = Effect.LoadMonitoredApp(
-            packageName = event.packageName,
-            generation = newLoadGen,
-            appChangedTimestamp = event.timestamp
+        
+        // 2. Ignorar ventanas de sistema/UI que causan falsos cambios
+        val ignoredClassPatterns = listOf(
+            "PopupWindow",
+            "Dialog",
+            "Toast",
+            "AlertController",
+            "ChooserActivity",
+            "ResolverActivity",
+            "PermissionController",
+            "MenuPopupWindow",
+            "BottomSheetDialog",
+            "InputMethod",
+            "MultiWindowToggle",
+            "PanelBar",
+            "NotificationPanelView",
+            "StatusBar",
+            "NavigationBar",
+            "RecentTasksView",
+            "RecentsActivity",
+            "ScreenPinningRequest",
+            "Keyguard",
+            "Launcher"
         )
         
-        return state.copy(
-            loadGeneration = newLoadGen
-        ) to listOf(effect)
-    }
-
-    private fun handleAppLoaded(
-        state: MonitorState,
-        event: MonitorEvent.AppLoaded
-    ): Pair<MonitorState, List<Effect>> {
-        if (event.generation != state.loadGeneration) {
-            Log.d(TAG, "AppLoaded obsoleto (gen: ${event.generation}, actual: ${state.loadGeneration})")
-            return state to emptyList()
+        if (ignoredClassPatterns.any { className.contains(it) }) {
+            Log.d(TAG, "Ignoring system UI/dialog: $className")
+            return false
         }
-
-        return if (event.monitoredApp?.isMonitoring == true) {
-            val newBubbleGen = state.bubbleGeneration + 1
-            val newDepartureGen = state.departureGeneration + 1
-            
-            val effects = listOf(
-                Effect.ScheduleBubble(
-                    interval = event.monitoredApp.selectedInterval,
-                    generation = newBubbleGen
-                ),
-                Effect.HideBubble
-            )
-            
-            state.copy(
-                currentAppPackage = event.packageName,
-                currentMonitoredApp = event.monitoredApp,
-                sessionStartTime = event.appChangedTimestamp,
-                isBubbleVisible = false,
-                bubbleCloseTime = 0L,
-                bubbleGeneration = newBubbleGen,
-                departureGeneration = newDepartureGen,
-                lastBubbleShowTime = 0L
-            ) to effects
-        } else {
-            if (isPackageExempt(event.packageName)) {
-                Log.d(DEBUG_TAG, "Paquete exento: ${event.packageName}")
-                state to emptyList()
-            } else {
-                val newGeneration = state.departureGeneration + 1
-                val effects = listOf(
-                    Effect.ScheduleDeparture(
-                        delay = DEPARTURE_DELAY_MS,
-                        generation = newGeneration
-                    )
-                )
-                state.copy(
-                    departureGeneration = newGeneration
-                ) to effects
+        
+        // 3. Verificar que sea una ventana principal (Activity)
+        val isActivity = className.contains("Activity") || 
+                         className.contains("Fragment") ||
+                         className.contains("ViewGroup") ||
+                         packageName.contains("launcher") ||
+                         packageName.contains("home")
+        
+        if ((packageName.contains("android") || packageName.contains("system")) && !isActivity) {
+            Log.d(TAG, "Ignoring system window without activity: $className")
+            return false
+        }
+        
+        // 4. Verificar que el evento tenga contenido significativo
+        if (event.text.isEmpty() && event.contentDescription == null) {
+            if (!packageName.contains("launcher") && !packageName.contains("home")) {
+                Log.d(TAG, "Window without content: $packageName, $className")
             }
         }
+        
+        return true
     }
 
-    private fun handleAppStillActive(
-        state: MonitorState,
-        event: MonitorEvent.AppStillActive
-    ): Pair<MonitorState, List<Effect>> {
-        if (event.packageName == state.currentAppPackage) {
-            val newGeneration = state.departureGeneration + 1
-            Log.d(TAG, "App still active: ${event.packageName}, new departure gen: $newGeneration")
-            return state.copy(
-                departureGeneration = newGeneration
-            ) to emptyList()
+    private suspend fun handleAppChanged(event: MonitorEvent.AppChanged) {
+        if (event.timestamp - lastAppChangeTime < APP_CHANGE_DEBOUNCE_MS) {
+            Log.d(TAG, "Debounced: ${event.packageName}")
+            return
         }
-        return state to emptyList()
-    }
+        lastAppChangeTime = event.timestamp
 
-    private fun handleBubbleTimeout(
-        state: MonitorState,
-        event: MonitorEvent.BubbleTimeout
-    ): Pair<MonitorState, List<Effect>> {
-        if (event.generation != state.bubbleGeneration) {
-            Log.d(TAG, "Bubble timeout obsoleto (gen: ${event.generation}, actual: ${state.bubbleGeneration})")
-            return state to emptyList()
+        Log.d(TAG, "App changed to: ${event.packageName}")
+
+        // Si la app es exenta, ocultar burbuja
+        if (isPackageExempt(event.packageName)) {
+            Log.d(TAG, "Exempt package, hiding bubble")
+            hideBubble()
+            stopSessionMonitoring()
+            bubbleActive = false
+            currentPackageName = null
+            currentMonitoredApp = null
+            sessionStartTime = 0L
+            return
         }
 
-        if (state.currentAppPackage == null || state.isBubbleVisible) {
-            return state to emptyList()
+        // Si es el mismo paquete que ya estamos monitoreando, no hacer nada
+        if (event.packageName == currentPackageName && bubbleActive) {
+            Log.d(TAG, "Same package already monitored: ${event.packageName}")
+            return
         }
 
-        val intervalsPassed = if (state.sessionStartTime > 0 && state.currentMonitoredApp != null) {
-            ((event.timestamp - state.sessionStartTime) / state.currentMonitoredApp!!.selectedInterval).toInt()
-        } else {
-            1
+        // Buscar si la app está monitoreada
+        val app = withContext(Dispatchers.IO) {
+            repository.getAppByPackage(event.packageName)
         }
 
-        val effects = listOf(
-            Effect.ShowBubble(
-                packageName = state.currentAppPackage!!,
-                badgeCount = intervalsPassed,
-                interval = state.currentMonitoredApp?.selectedInterval ?: 0L,
-                sessionStartTime = state.sessionStartTime
+        if (app?.isMonitoring == true) {
+            // App monitoreada - mostrar burbuja
+            Log.d(TAG, "Starting monitoring for: ${app.appName}")
+            
+            // Resetear lastGoalNotified y lastGoalNotifiedTime al abrir la app
+            // para que pueda notificar nuevamente en esta sesión
+            val resetApp = app.copy(
+                lastGoalNotified = false,
+                lastGoalNotifiedTime = 0L
             )
-        )
-
-        return state.copy(
-            isBubbleVisible = true,
-            lastBubbleShowTime = event.timestamp
-        ) to effects
-    }
-
-    private fun handleDepartureTimeout(
-        state: MonitorState,
-        event: MonitorEvent.DepartureTimeout
-    ): Pair<MonitorState, List<Effect>> {
-        if (event.generation != state.departureGeneration) {
-            Log.d(TAG, "Departure timeout obsoleto (gen: ${event.generation}, actual: ${state.departureGeneration})")
-            return state to emptyList()
-        }
-
-        if (state.currentAppPackage != null) {
-            Log.w(DEBUG_TAG, "Cerrando sesión tras $DEPARTURE_DELAY_MS ms")
-            val effects = listOf(Effect.HideBubble)
-            return state.copy(
-                currentAppPackage = null,
-                currentMonitoredApp = null,
-                sessionStartTime = 0L,
-                isBubbleVisible = false,
-                bubbleCloseTime = 0L,
-                lastBubbleShowTime = 0L
-            ) to effects
-        }
-
-        return state to emptyList()
-    }
-
-    private fun handleBubbleClosed(
-        state: MonitorState,
-        event: MonitorEvent.BubbleClosed
-    ): Pair<MonitorState, List<Effect>> {
-        Log.d(TAG, "Burbuja cerrada por usuario")
-        
-        return if (state.currentMonitoredApp != null) {
-            val newGeneration = state.bubbleGeneration + 1
-            val effects = listOf(
-                Effect.ScheduleBubble(
-                    interval = state.currentMonitoredApp.selectedInterval,
-                    generation = newGeneration
-                )
-            )
-            state.copy(
-                isBubbleVisible = false,
-                bubbleCloseTime = event.timestamp,
-                bubbleGeneration = newGeneration
-            ) to effects
-        } else {
-            state.copy(isBubbleVisible = false) to emptyList()
-        }
-    }
-
-    private fun handleScreenTimeCheck(
-        state: MonitorState
-    ): Pair<MonitorState, List<Effect>> {
-        return state to listOf(Effect.UpdateScreenTimeNotification)
-    }
-
-    // ✅ Efectos
-    private sealed interface Effect {
-        data class ShowBubble(
-            val packageName: String,
-            val badgeCount: Int,
-            val interval: Long,
-            val sessionStartTime: Long
-        ) : Effect
-        
-        data object HideBubble : Effect
-        
-        data class ScheduleBubble(
-            val interval: Long,
-            val generation: Long
-        ) : Effect
-        
-        data class ScheduleDeparture(
-            val delay: Long,
-            val generation: Long
-        ) : Effect
-        
-        data object UpdateScreenTimeNotification : Effect
-        
-        data class LoadMonitoredApp(
-            val packageName: String,
-            val generation: Long,
-            val appChangedTimestamp: Long
-        ) : Effect
-    }
-
-    // ✅ Ejecutor de efectos - con dispatcher Main para UI
-    private fun executeEffects(effects: List<Effect>) {
-        // ✅ Los efectos que tocan el framework de Android se ejecutan en Main
-        mainScope.launch {
-            for (effect in effects) {
-                when (effect) {
-                    is Effect.ShowBubble -> {
-                        showBubble(
-                            packageName = effect.packageName,
-                            badgeCount = effect.badgeCount,
-                            interval = effect.interval,
-                            sessionStartTime = effect.sessionStartTime
-                        )
-                    }
-                    Effect.HideBubble -> hideBubble()
-                    is Effect.ScheduleBubble -> {
-                        // Schedule usa delay, se ejecuta en IO
-                        serviceScope.launch {
-                            scheduleBubble(effect.interval, effect.generation)
-                        }
-                    }
-                    is Effect.ScheduleDeparture -> {
-                        serviceScope.launch {
-                            scheduleDeparture(effect.delay, effect.generation)
-                        }
-                    }
-                    Effect.UpdateScreenTimeNotification -> updateScreenTimeNotification()
-                    is Effect.LoadMonitoredApp -> {
-                        serviceScope.launch {
-                            loadMonitoredApp(
-                                packageName = effect.packageName,
-                                generation = effect.generation,
-                                appChangedTimestamp = effect.appChangedTimestamp
-                            )
-                        }
-                    }
-                }
+            withContext(Dispatchers.IO) {
+                repository.updateAppMonitoring(resetApp)
             }
+            
+            currentPackageName = event.packageName
+            currentMonitoredApp = resetApp
+            sessionStartTime = event.timestamp
+            
+            mainScope.launch {
+                showBubble(resetApp, event.timestamp)
+            }
+            
+            startSessionMonitoring(resetApp)
+            bubbleActive = true
+        } else {
+            // App no monitoreada - ocultar burbuja
+            Log.d(TAG, "App not monitored: ${event.packageName}, hiding bubble")
+            hideBubble()
+            stopSessionMonitoring()
+            bubbleActive = false
+            currentPackageName = null
+            currentMonitoredApp = null
+            sessionStartTime = 0L
         }
     }
 
-    // ✅ Carga asíncrona
-    private suspend fun loadMonitoredApp(
-        packageName: String,
-        generation: Long,
-        appChangedTimestamp: Long
-    ) {
-        loadAppJob?.cancel()
-        loadAppJob = serviceScope.launch {
-            try {
-                Log.d(TAG, "Loading app: $packageName (gen: $generation)")
-                val monitoredApp = repository.getAppByPackage(packageName)
+    private fun startSessionMonitoring(app: MonitoredApp) {
+        sessionUpdateJob?.cancel()
+        goalCheckJob?.cancel()
+        
+        sessionUpdateJob = serviceScope.launch {
+            while (isActive && currentPackageName != null) {
+                val currentTime = System.currentTimeMillis()
+                val duration = currentTime - sessionStartTime
                 
-                eventChannel.send(
-                    MonitorEvent.AppLoaded(
-                        generation = generation,
-                        packageName = packageName,
-                        monitoredApp = monitoredApp,
-                        appChangedTimestamp = appChangedTimestamp
-                    )
-                )
-            } catch (e: CancellationException) {
-                Log.d(TAG, "Load cancelled for $packageName (gen: $generation)")
-                throw e
-            } catch (e: Exception) {
-                Log.e(TAG, "Error loading monitored app: $packageName", e)
-                eventChannel.send(
-                    MonitorEvent.AppLoaded(
-                        generation = generation,
-                        packageName = packageName,
-                        monitoredApp = null,
-                        appChangedTimestamp = appChangedTimestamp
-                    )
-                )
+                mainScope.launch {
+                    updateBubbleTime(duration)
+                }
+                
+                updateBubbleProgress(duration, app.timeGoalMinutes)
+                
+                delay(1000L)
+            }
+        }
+        
+        goalCheckJob = serviceScope.launch {
+            while (isActive && currentPackageName != null) {
+                val currentTime = System.currentTimeMillis()
+                val duration = currentTime - sessionStartTime
+                
+                // Usar el estado vivo (currentMonitoredApp), no el snapshot inicial:
+                // MonitoredApp es inmutable, y checkAndNotifyGoal actualiza
+                // currentMonitoredApp cada vez que notifica. Si seguimos pasando
+                // el `app` original, lastGoalNotifiedTime nunca avanza y el guard
+                // de isExtraTimeActive queda como unico freno (spam cada 5s en
+                // cuanto ese flag vuelve a false).
+                val liveApp = currentMonitoredApp ?: app
+                checkAndNotifyGoal(liveApp, duration)
+                
+                delay(GOAL_CHECK_INTERVAL)
             }
         }
     }
 
-    // ✅ Programadores
-    private suspend fun scheduleBubble(interval: Long, generation: Long) {
-        bubbleJob?.cancel()
-        bubbleJob = serviceScope.launch {
-            Log.d(TAG, "Programando burbuja en ${interval}ms (gen: $generation)")
-            delay(interval)
-            val timestamp = System.currentTimeMillis()
-            eventChannel.send(MonitorEvent.BubbleTimeout(generation, timestamp))
+    /**
+     * Verifica si se ha alcanzado la meta y notifica cada vez que se completa un múltiplo.
+     * 
+     * Comportamiento: Si la meta es 5 minutos, notifica a los 5, 10, 15, 20... minutos.
+     * 
+     * @param app La app monitoreada
+     * @param duration Duración actual de la sesión en milisegundos
+     */
+    private suspend fun checkAndNotifyGoal(app: MonitoredApp, duration: Long) {
+        val goalMs = app.timeGoalMinutes * 60_000L
+        
+        // Si el tiempo extra está activo, no notificar hasta que se cumpla o se detenga
+        if (isExtraTimeActive) return
+        
+        // Si no ha pasado suficiente tiempo, salir
+        if (duration < goalMs) return
+        
+        // Modo alarma: mientras la meta esté superada y no haya tiempo extra
+        // activo, se notifica en CADA verificación (cada GOAL_CHECK_INTERVAL).
+        // Se detiene únicamente cuando el usuario agrega tiempo extra
+        // (isExtraTimeActive corta el check más arriba) o cierra la app
+        // monitoreada (termina la sesión y este job se cancela).
+        val completedGoals = duration / goalMs
+        Log.d(TAG, "Goal reached for ${app.appName} (x${completedGoals}): alarm notification tick")
+        
+        // Notificar a la burbuja
+        mainScope.launch {
+            notifyGoalReached(app)
+        }
+        
+        // Mostrar/actualizar notificación en barra de estado
+        showGoalNotification(app, completedGoals)
+        
+        // Registrar la primera vez que se alcanzó la meta (una sola vez, informativo)
+        if (!app.lastGoalNotified) {
+            val updatedApp = app.copy(
+                lastGoalNotified = true,
+                lastGoalNotifiedTime = duration
+            )
+            withContext(Dispatchers.IO) {
+                repository.updateAppMonitoring(updatedApp)
+            }
+            currentMonitoredApp = updatedApp
         }
     }
 
-    private suspend fun scheduleDeparture(delay: Long, generation: Long) {
-        departureJob?.cancel()
-        departureJob = serviceScope.launch {
-            delay(delay)
-            val timestamp = System.currentTimeMillis()
-            eventChannel.send(MonitorEvent.DepartureTimeout(generation, timestamp))
-        }
+    private fun stopSessionMonitoring() {
+        sessionUpdateJob?.cancel()
+        sessionUpdateJob = null
+        goalCheckJob?.cancel()
+        goalCheckJob = null
+        // Red de seguridad: nunca dejar el freno de alarma trabado en `true`
+        // para la próxima sesión, incluso si BubbleService no llegó a avisar
+        // que el tiempo extra terminó o se detuvo.
+        isExtraTimeActive = false
+        Log.d(TAG, "Session monitoring stopped")
     }
 
-    // ✅ Funciones de UI - todas en Main implícitamente
-    private fun showBubble(
-        packageName: String,
-        badgeCount: Int,
-        interval: Long,
-        sessionStartTime: Long
-    ) {
+    private fun showBubble(app: MonitoredApp, sessionStart: Long) {
         try {
-            Log.d(TAG, "Mostrando burbuja para: $packageName, contador: $badgeCount")
-            
             val intent = Intent(this, BubbleService::class.java).apply {
                 action = Constants.ACTION_SHOW_BUBBLE
-                putExtra(Constants.EXTRA_PACKAGE_NAME, packageName)
-                putExtra(Constants.EXTRA_BADGE_COUNT, badgeCount)
-                putExtra(Constants.EXTRA_INTERVAL, interval)
-                putExtra(Constants.EXTRA_SESSION_START_TIME, sessionStartTime)
+                putExtra(Constants.EXTRA_PACKAGE_NAME, app.packageName)
+                putExtra(Constants.EXTRA_TIME_GOAL_MINUTES, app.timeGoalMinutes)
+                putExtra(Constants.EXTRA_SESSION_START_TIME, sessionStart)
                 putExtra(Constants.EXTRA_BUBBLE_PERSISTENT, true)
             }
 
@@ -493,8 +341,47 @@ class MonitoringService : AccessibilityService() {
             } else {
                 startService(intent)
             }
+            Log.d(TAG, "Bubble shown for: ${app.appName}")
         } catch (e: Exception) {
-            Log.e(TAG, "Error mostrando burbuja", e)
+            Log.e(TAG, "Error showing bubble", e)
+        }
+    }
+
+    private fun updateBubbleTime(duration: Long) {
+        try {
+            val intent = Intent(this, BubbleService::class.java).apply {
+                action = Constants.ACTION_UPDATE_SESSION_TIME
+                putExtra(Constants.EXTRA_DURATION, duration)
+            }
+            startService(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating bubble time", e)
+        }
+    }
+
+    private fun updateBubbleProgress(duration: Long, goalMinutes: Int) {
+        try {
+            val intent = Intent(this, BubbleService::class.java).apply {
+                action = Constants.ACTION_UPDATE_PROGRESS
+                putExtra(Constants.EXTRA_DURATION, duration)
+                putExtra(Constants.EXTRA_TIME_GOAL_MINUTES, goalMinutes)
+            }
+            startService(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating bubble progress", e)
+        }
+    }
+
+    private fun notifyGoalReached(app: MonitoredApp) {
+        try {
+            val intent = Intent(this, BubbleService::class.java).apply {
+                action = Constants.ACTION_BUBBLE_GOAL_REACHED
+                putExtra(Constants.EXTRA_PACKAGE_NAME, app.packageName)
+                putExtra(Constants.EXTRA_TIME_GOAL_MINUTES, app.timeGoalMinutes)
+            }
+            startService(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error notifying goal reached", e)
         }
     }
 
@@ -504,26 +391,63 @@ class MonitoringService : AccessibilityService() {
                 action = Constants.ACTION_HIDE_BUBBLE
             }
             startService(intent)
-            Log.d(TAG, "Burbuja ocultada")
+            Log.d(TAG, "Bubble hidden")
         } catch (e: Exception) {
-            Log.e(TAG, "Error ocultando burbuja", e)
+            Log.e(TAG, "Error hiding bubble", e)
         }
     }
 
-    private fun startBubbleService() {
+    private fun handleBubbleClosed(event: MonitorEvent.BubbleClosed) {
+        Log.d(TAG, "Bubble closed by user, keeping monitoring active")
+    }
+
+    /**
+     * Muestra una notificación cuando se alcanza la meta.
+     * Incluye el número de meta completada (ej: "¡Meta 3 alcanzada!").
+     */
+    private fun showGoalNotification(app: MonitoredApp, goalsCompleted: Long) {
         try {
-            val intent = Intent(this, BubbleService::class.java)
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(intent)
-            } else {
-                startService(intent)
+                val channel = NotificationChannel(
+                    Constants.GOAL_NOTIFICATION_CHANNEL_ID,
+                    getString(R.string.goal_notification_title),
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Notificaciones cuando alcanzas una meta de tiempo"
+                    enableVibration(true)
+                    enableLights(true)
+                }
+                notificationManager.createNotificationChannel(channel)
             }
+
+            val notificationTitle = if (goalsCompleted > 1) {
+                getString(R.string.goal_reached_multiple_title, goalsCompleted)
+            } else {
+                getString(R.string.goal_reached_title)
+            }
+            
+            val notificationText = getString(R.string.goal_notification_text, app.appName, app.timeGoalMinutes)
+
+            val notification = NotificationCompat.Builder(this, Constants.GOAL_NOTIFICATION_CHANNEL_ID)
+                .setContentTitle(notificationTitle)
+                .setContentText(notificationText)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setOnlyAlertOnce(false)
+                .build()
+
+            // Modo alarma: se reusa el mismo ID para que cada tick actualice
+            // y re-alerte (vibre/suene) la misma notificación en vez de
+            // apilar una nueva cada 5 segundos en la bandeja.
+            notificationManager.notify(Constants.GOAL_NOTIFICATION_ID, notification)
         } catch (e: Exception) {
-            Log.e(TAG, "Error iniciando BubbleService", e)
+            Log.e(TAG, "Error showing goal notification", e)
         }
     }
 
-    // ✅ Notificaciones
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -547,7 +471,6 @@ class MonitoringService : AccessibilityService() {
                 delay(SCREEN_TIME_UPDATE_INTERVAL)
             }
         }
-        Log.d(TAG, "Loop de notificación iniciado")
     }
 
     private fun updateScreenTimeNotification() {
@@ -555,6 +478,12 @@ class MonitoringService : AccessibilityService() {
             val totalMillis = usageRepository.getExactScreenTimeToday()
             val hours = totalMillis / (1000 * 60 * 60)
             val minutes = (totalMillis / (1000 * 60)) % 60
+
+            if (hours == lastNotifiedHours && minutes == lastNotifiedMinutes) {
+                return
+            }
+            lastNotifiedHours = hours
+            lastNotifiedMinutes = minutes
 
             val fullTimeText = String.format("%dh %02dm", hours, minutes)
             val bitmapIcon = createStackedTimeBitmap(hours, minutes)
@@ -572,7 +501,7 @@ class MonitoringService : AccessibilityService() {
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.notify(Constants.NOTIFICATION_ID, notification)
         } catch (e: Exception) {
-            Log.e(TAG, "Error actualizando notificación", e)
+            Log.e(TAG, "Error updating notification", e)
         }
     }
 
@@ -614,11 +543,14 @@ class MonitoringService : AccessibilityService() {
             packageName.contains("samsung.android.sidegesture") -> true
             packageName.contains("samsung.android.app.smartcapture") -> true
             packageName.contains("samsung.android.honeyboard") -> true
+            packageName.contains("com.android.launcher") -> true
+            packageName.contains("com.google.android.apps.nexuslauncher") -> true
+            packageName.contains("com.samsung.android.launcher") -> true
+            packageName.contains("com.google.android.googlequicksearchbox") -> true
             else -> false
         }
     }
 
-    // ✅ Overrides
     override fun onServiceConnected() {
         super.onServiceConnected()
         Log.d(TAG, "Accessibility service CONNECTED")
@@ -634,22 +566,32 @@ class MonitoringService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         val packageName = event.packageName?.toString() ?: return
-
+        val className = event.className?.toString() ?: ""
+        
+        Log.d(TAG, "Event: type=${event.eventType}, package=$packageName, class=$className, window=${event.windowId}")
+        
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                inputChannel.trySend(
-                    MonitorEvent.AppChanged(packageName, System.currentTimeMillis())
-                ).onFailure { Log.w(TAG, "AppChanged descartado para $packageName") }
+                if (packageName == currentPackageName) {
+                    Log.d(TAG, "Same package, ignoring: $packageName")
+                    return
+                }
+                
+                if (isRelevantWindow(event)) {
+                    Log.d(TAG, "Processing window change: $packageName")
+                    eventChannel.trySend(
+                        MonitorEvent.AppChanged(packageName, System.currentTimeMillis())
+                    ).onFailure { Log.w(TAG, "AppChanged descartado para $packageName") }
+                } else {
+                    Log.d(TAG, "Ignoring irrelevant window: $packageName, $className")
+                }
             }
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
-                val now = SystemClock.uptimeMillis()
+                val now = System.currentTimeMillis()
                 if (packageName != lastStillActivePackage || 
                     now - lastStillActiveTime > STILL_ACTIVE_THROTTLE_MS) {
                     lastStillActivePackage = packageName
                     lastStillActiveTime = now
-                    inputChannel.trySend(
-                        MonitorEvent.AppStillActive(packageName, System.currentTimeMillis())
-                    ).onFailure { Log.w(TAG, "AppStillActive descartado para $packageName") }
                 }
             }
         }
@@ -662,9 +604,52 @@ class MonitoringService : AccessibilityService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             Constants.ACTION_BUBBLE_CLOSED -> {
-                inputChannel.trySend(
+                eventChannel.trySend(
                     MonitorEvent.BubbleClosed(System.currentTimeMillis())
                 ).onFailure { Log.w(TAG, "BubbleClosed descartado") }
+            }
+            Constants.ACTION_EXTRA_TIME_ADDED -> {
+                isExtraTimeActive = true
+                Log.d(TAG, "Extra time added, suppressing goal notifications")
+            }
+            Constants.ACTION_EXTRA_TIME_COMPLETED -> {
+                isExtraTimeActive = false
+                Log.d(TAG, "Extra time completed, resuming goal notifications")
+                serviceScope.launch {
+                    val duration = System.currentTimeMillis() - sessionStartTime
+                    val app = currentMonitoredApp
+                    if (app != null && duration >= app.timeGoalMinutes * 60_000L) {
+                        mainScope.launch {
+                            notifyGoalReached(app)
+                        }
+                        showGoalNotification(app, duration / (app.timeGoalMinutes * 60_000L))
+                    }
+                }
+            }
+            Constants.ACTION_EXTRA_TIME_STOPPED -> {
+                isExtraTimeActive = false
+                Log.d(TAG, "Extra time stopped, resuming goal notifications")
+                serviceScope.launch {
+                    val duration = System.currentTimeMillis() - sessionStartTime
+                    val app = currentMonitoredApp
+                    if (app != null && duration >= app.timeGoalMinutes * 60_000L) {
+                        mainScope.launch {
+                            notifyGoalReached(app)
+                        }
+                        showGoalNotification(app, duration / (app.timeGoalMinutes * 60_000L))
+                    }
+                }
+            }
+            Constants.ACTION_CLOSE_MONITORED_APP -> {
+                Log.d(TAG, "Closing monitored app: sending user home")
+                performGlobalAction(GLOBAL_ACTION_HOME)
+                isExtraTimeActive = false
+                hideBubble()
+                stopSessionMonitoring()
+                bubbleActive = false
+                currentPackageName = null
+                currentMonitoredApp = null
+                sessionStartTime = 0L
             }
         }
         return super.onStartCommand(intent, flags, startId)
@@ -673,15 +658,10 @@ class MonitoringService : AccessibilityService() {
     override fun onDestroy() {
         Log.d(TAG, "Service destroying")
         
-        loadAppJob?.cancel()
-        bubbleJob?.cancel()
-        departureJob?.cancel()
-        
         hideBubble()
-        
-        inputChannel.close()
-        eventChannel.close()
+        stopSessionMonitoring()
         screenTimeNotificationJob?.cancel()
+        eventChannel.close()
         serviceScope.cancel()
         mainScope.cancel()
         

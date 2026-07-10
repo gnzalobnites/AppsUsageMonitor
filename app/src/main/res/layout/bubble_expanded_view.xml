@@ -33,18 +33,38 @@
         android:shadowDx="0"
         android:shadowDy="4"
         android:shadowRadius="8"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginBottom="12dp"/>
+
+    <!-- Meta de tiempo -->
+    <TextView
+        android:id="@+id/goal_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/goal_progress_label"
+        android:textSize="12sp"
+        android:textColor="#B3FFFFFF"
+        android:layout_marginBottom="4dp"/>
+
+    <TextView
+        android:id="@+id/goal_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/goal_progress_format"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="8dp"/>
 
     <ProgressBar
         android:id="@+id/session_progress_bar"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
-        android:layout_height="6dp"
+        android:layout_height="8dp"
         android:progressDrawable="@drawable/custom_progress_bar"
         android:max="100"
         android:layout_marginBottom="16dp"/>
 
-    <!-- MODIFICADO: Ahora muestra el tiempo total de pantalla del día -->
+    <!-- Tiempo total de pantalla -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -60,18 +80,111 @@
         android:textSize="16sp"
         android:textStyle="bold"
         android:textColor="#FFFFFF"
-        android:layout_marginBottom="24dp"/>
+        android:layout_marginBottom="16dp"/>
 
+    <!-- Icono de meta alcanzada (inicialmente invisible) -->
+    <ImageView
+        android:id="@+id/goal_icon"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:src="@drawable/ic_goal_reached"
+        android:visibility="gone"
+        android:layout_marginBottom="8dp"
+        android:contentDescription="@string/app_icon_description"/>
+
+    <!-- ===== NUEVA UI DE TIEMPO EXTRA ===== -->
+    <!-- Estado de la meta -->
+    <TextView
+        android:id="@+id/extras_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/goal_reached_title"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="#FFD700"
+        android:visibility="gone"
+        android:gravity="center_horizontal"
+        android:layout_marginBottom="4dp"/>
+
+    <!-- Tiempo total acumulado -->
+    <TextView
+        android:id="@+id/extras_total_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/goal_extras_total_time"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:visibility="gone"
+        android:layout_marginBottom="4dp"/>
+
+    <!-- Bloques extra agregados -->
+    <TextView
+        android:id="@+id/extras_blocks"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/goal_extras_blocks"
+        android:textSize="14sp"
+        android:textColor="#B3FFFFFF"
+        android:visibility="gone"
+        android:layout_marginBottom="12dp"/>
+
+    <!-- Botón: Agregar +5 min Extra -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_add_extras"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="@string/goal_extras_add_5min"
+        android:textAllCaps="false"
+        app:backgroundTint="#FFD700"
+        android:textColor="#000000"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:cornerRadius="24dp"
+        android:visibility="gone"
+        android:layout_marginBottom="8dp"
+        style="@style/Widget.MaterialComponents.Button.UnelevatedButton" />
+
+    <!-- Botón: Cerrar la app monitoreada (visible desde que se cumple la meta) -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_close_app"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Cerrar app"
+        android:textAllCaps="false"
+        app:backgroundTint="#E53935"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        app:cornerRadius="24dp"
+        android:visibility="gone"
+        android:layout_marginBottom="8dp"
+        style="@style/Widget.MaterialComponents.Button.UnelevatedButton" />
+
+    <!-- Botón: Colapsar -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_collapse"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="@string/collapse_bubble"
+        android:textAllCaps="false"
+        app:backgroundTint="#33FFFFFF"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        app:cornerRadius="24dp"
+        android:layout_marginBottom="8dp"
+        style="@style/Widget.MaterialComponents.Button.UnelevatedButton" />
+
+    <!-- Botón: Continuar (colapsa) -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/close_button"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
+        android:layout_height="48dp"
         android:text="@string/continue_button"
         android:textAllCaps="false"
         app:backgroundTint="#33FFFFFF"
         android:textColor="#FFFFFF"
-        android:textSize="16sp"
-        app:cornerRadius="25dp"
+        android:textSize="14sp"
+        app:cornerRadius="24dp"
         style="@style/Widget.MaterialComponents.Button.UnelevatedButton" />
 
 </LinearLayout>

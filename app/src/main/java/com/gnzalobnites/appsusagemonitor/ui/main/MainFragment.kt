@@ -140,7 +140,7 @@ class MainFragment : Fragment() {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
                     viewModel.setBubbleSize(progress)
-                    updateBubblePreview(size = progress)
+                    // updateBubblePreview(size = progress) // Deshabilitado
                 }
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {
@@ -158,7 +158,7 @@ class MainFragment : Fragment() {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
                     viewModel.setBubbleOpacity(progress)
-                    updateBubblePreview(opacity = progress)
+                    // updateBubblePreview(opacity = progress) // Deshabilitado
                 }
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {
@@ -213,9 +213,10 @@ class MainFragment : Fragment() {
             val intent = Intent(ctx, BubbleService::class.java).apply {
                 action = Constants.ACTION_SHOW_BUBBLE
                 putExtra(Constants.EXTRA_PACKAGE_NAME, ctx.packageName)
-                putExtra(Constants.EXTRA_BADGE_COUNT, 0)
-                putExtra(Constants.EXTRA_INTERVAL, 60000L)
+                putExtra(Constants.EXTRA_SESSION_START_TIME, System.currentTimeMillis())
+                putExtra(Constants.EXTRA_TIME_GOAL_MINUTES, 5) // Meta de 5 minutos para preview
                 putExtra(Constants.EXTRA_BUBBLE_PERSISTENT, true)
+                putExtra("is_preview", true) // Flag para identificar que es preview
             }
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 ctx.startForegroundService(intent)
@@ -223,11 +224,6 @@ class MainFragment : Fragment() {
                 ctx.startService(intent)
             }
             
-            // Enviar tamaño y opacidad inmediatamente para evitar el "salto" inicial
-            updateBubblePreview(
-                size = binding.bubbleSizeSeekbar.progress,
-                opacity = binding.bubbleOpacitySeekbar.progress
-            )
             
             Log.d("MainFragment", "Bubble preview started")
         } catch (e: Exception) {
@@ -247,9 +243,9 @@ class MainFragment : Fragment() {
         
         try {
             val intent = Intent(requireContext(), BubbleService::class.java).apply {
-                action = Constants.ACTION_UPDATE_PREVIEW
-                size?.let { putExtra(Constants.EXTRA_PREVIEW_SIZE, it) }
-                opacity?.let { putExtra(Constants.EXTRA_PREVIEW_OPACITY, it) }
+                // action = Constants.ACTION_UPDATE_PREVIEW // Eliminado - ya no se usa
+                // size?.let { putExtra(Constants.EXTRA_PREVIEW_SIZE, it) } // Eliminado
+                // opacity?.let { putExtra(Constants.EXTRA_PREVIEW_OPACITY, it) } // Eliminado
             }
             requireContext().startService(intent)
             Log.d("MainFragment", "Bubble preview updated: size=$size, opacity=$opacity")

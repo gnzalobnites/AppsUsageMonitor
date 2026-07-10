@@ -34,7 +34,7 @@ class MonitoredAppsAdapter(
 
         fun bind(app: MonitoredApp) {
             binding.appName.text = app.appName
-            binding.appInterval.text = formatInterval(app.selectedInterval)
+            binding.appInterval.text = formatInterval(app.timeGoalMinutes.toLong())
 
             try {
                 val pm = itemView.context.packageManager
@@ -50,13 +50,14 @@ class MonitoredAppsAdapter(
         }
 
         private fun formatInterval(interval: Long): String {
-            return when (interval) {
-                Constants.INTERVAL_10_SECONDS -> itemView.context.getString(R.string.interval_every_10_seconds)
-                Constants.INTERVAL_1_MINUTE -> itemView.context.getString(R.string.interval_every_1_minute)
-                Constants.INTERVAL_5_MINUTES -> itemView.context.getString(R.string.interval_every_5_minutes)
-                Constants.INTERVAL_15_MINUTES -> itemView.context.getString(R.string.interval_every_15_minutes)
-                Constants.INTERVAL_30_MINUTES -> itemView.context.getString(R.string.interval_every_30_minutes)
-                Constants.INTERVAL_1_HOUR -> itemView.context.getString(R.string.interval_every_1_hour)
+            val minutes = (interval / 60000).toInt()
+            return when (minutes) {
+                1 -> itemView.context.getString(R.string.interval_every_1_minute)
+                5 -> itemView.context.getString(R.string.interval_every_5_minutes)
+                10 -> itemView.context.getString(R.string.interval_every_10_seconds)
+                15 -> itemView.context.getString(R.string.interval_every_15_minutes)
+                30 -> itemView.context.getString(R.string.interval_every_30_minutes)
+                60 -> itemView.context.getString(R.string.interval_every_1_hour)
                 else -> itemView.context.getString(R.string.interval_custom)
             }
         }

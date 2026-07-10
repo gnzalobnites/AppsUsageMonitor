@@ -5,11 +5,13 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.gnzalobnites.appsusagemonitor.data.entities.MonitoredApp
 
 @Database(
     entities = [MonitoredApp::class],
-    version = 2,
+    version = 3, // Incrementar versión
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -19,51 +21,63 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        /**
-         * Obtiene la instancia de la base de datos usando el ApplicationContext
-         * @param context Contexto de la aplicación (puede ser Activity, Service o Application)
-         * @return Instancia de AppDatabase
-         * @throws IllegalStateException si el ApplicationContext es null
-         */
+        // Migración de versión 2 a 3
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Agregar nuevas columnas
+                database.execSQL("ALTER TABLE monitored_apps ADD COLUMN timeGoalMinutes INTEGER NOT NULL DEFAULT 5")
+                database.execSQL("ALTER TABLE monitored_apps ADD COLUMN currentSessionStart INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE monitored_apps ADD COLUMN currentSessionDuration INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE monitored_apps ADD COLUMN lastGoalNotified INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE monitored_apps ADD COLUMN lastGoalNotifiedTime INTEGER NOT NULL DEFAULT 0")
+                
+                // Migrar datos existentes: selectedInterval -> timeGoalMinutes
+                database.execSQL("""
+                    UPDATE monitored_apps 
+                    SET timeGoalMinutes = CASE 
+                        WHEN selectedInterval = 10000 THEN 1
+                        WHEN selectedInterval = 60000 THEN 1
+                        WHEN selectedInterval = 300000 THEN 5
+                        WHEN selectedInterval = 900000 THEN 15
+                        WHEN selectedInterval = 1800000 THEN 30
+                        WHEN selectedInterval = 3600000 THEN 60
+                        ELSE 5
+                    END
+                """)
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
-            // Obtener applicationContext con null safety
             val appContext = context.applicationContext
-                ?: throw IllegalStateException("ApplicationContext is null. " +
-                    "Make sure you're passing a valid Context")
+                ?: throw IllegalStateException("ApplicationContext is null")
 
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     appContext,
                     AppDatabase::class.java,
                     "app_usage_database"
-                ).fallbackToDestructiveMigration()
-                    .build()
+                ).addMigrations(MIGRATION_2_3)
+                 .fallbackToDestructiveMigration()
+                 .build()
                 INSTANCE = instance
                 instance
             }
         }
 
-        /**
-         * Método alternativo para usar desde Application directamente
-         * @param application Instancia de Application
-         * @return Instancia de AppDatabase
-         */
         fun getInstance(application: Application): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     application,
                     AppDatabase::class.java,
                     "app_usage_database"
-                ).fallbackToDestructiveMigration()
-                    .build()
+                ).addMigrations(MIGRATION_2_3)
+                 .fallbackToDestructiveMigration()
+                 .build()
                 INSTANCE = instance
                 instance
             }
         }
 
-        /**
-         * Limpia la instancia de la base de datos (útil para pruebas)
-         */
         fun clearInstance() {
             INSTANCE = null
         }

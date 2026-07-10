@@ -1,325 +1,188 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- App name -->
-    <string name="app_name">Apps Usage Monitor</string>
+    <string name="app_name">AppsUsageMonitor</string>
+    <string name="developer_name">Gonzalo Benites</string>
+    <string name="developer_email">gnzalobnites@gmail.com</string>
     
-    <!-- Accessibility service -->
-    <string name="accessibility_service_description">Este servicio permite monitorear qué aplicaciones estás usando para mostrar notificaciones de tiempo de uso</string>
+    <string name="goal_reached_multiple_title">¡Meta %d alcanzada!</string>
     
-    <!-- Dashboard - Centro de Control -->
-<string name="dashboard_title">Centro de Control</string>
-<string name="dashboard_subtitle">Configura tu experiencia de enfoque</string>
-
-<!-- Estado del servicio -->
-<string name="service_status_label">Estado del servicio</string>
-<string name="service_status_active">Activo</string>
-<string name="service_status_inactive">Inactivo</string>
-<string name="monitored_apps_count_label">Apps monitoreadas</string>
-<string name="current_interval_label">Intervalo</string>
-<string name="today_screen_time_label">Tiempo de pantalla</string>
-
-<!-- Configuración de la burbuja -->
-<string name="bubble_settings_title">Configuración de la burbuja</string>
-<string name="bubble_size_label">Tamaño</string>
-<string name="bubble_opacity_label">Opacidad</string>
-<string name="haptic_feedback_label">Vibración al tocar</string>
-<string name="auto_hide_label">Ocultar automáticamente</string>
-
-<!-- Configuración de notificación -->
-<string name="notification_settings_title">Configuración de notificación</string>
-<string name="show_screen_time_label">Mostrar tiempo de pantalla</string>
-<string name="notification_sound_label">Sonido de notificación</string>
+    <!-- Splash -->
+    <string name="splash_author">Por Gonzalo Benites</string>
     
-    <!-- Bubble Service (background) -->
-    <string name="bubble_service_channel_name">Servicio de monitoreo</string>
-    <string name="bubble_service_channel_description">Mantiene el servicio de monitoreo activo en segundo plano</string>
-    <string name="bubble_service_running">Monitoreo activo</string>
+    <!-- Navigation -->
+    <string name="nav_header_version_format">v%s</string>
+    <string name="nav_header_version_placeholder">v1.0.0</string>
+    <string name="app_icon_description">Icono de la aplicación</string>
+    <string name="item_app_icon_desc">Icono de la aplicación</string>
     
-    <!-- Navigation titles -->
-    <string name="title_home">Inicio</string>
-    <string name="title_dashboard">Estadísticas</string>
-    <string name="title_notifications">Notificaciones</string>
+    <!-- Drawer Menu -->
+    <string name="drawer_home">Inicio</string>
+    <string name="drawer_app_selection">Seleccionar Apps</string>
+    <string name="drawer_settings">Ajustes</string>
+    <string name="drawer_about">Acerca de</string>
     
-    <!-- Live screen time notification -->
-    <string name="notification_channel_screen_time">Tiempo de pantalla en vivo</string>
-    <string name="notification_channel_screen_time_description">Muestra el tiempo de uso de pantalla en la barra de estado</string>
-    <string name="notification_screen_time_title">Tiempo de pantalla de hoy</string>
-    <string name="notification_screen_time_text">Has usado %s de tiempo de pantalla</string>
-    <string name="notification_screen_time_initializing">Iniciando monitor...</string>
+    <!-- Dashboard -->
+    <string name="service_status_label">Estado del Servicio</string>
+    <string name="service_status_active">Activo</string>
+    <string name="service_status_inactive">Inactivo</string>
+    <string name="service_running">Servicio en ejecución</string>
+    <string name="monitored_apps_count_label">Apps Monitoreadas</string>
+    <string name="current_interval_label">Meta de Tiempo</string>
+    <string name="today_screen_time_label">Tiempo de Pantalla Hoy</string>
+    <string name="bubble_settings_title">Configuración de Burbuja</string>
+    <string name="bubble_size_label">Tamaño</string>
+    <string name="bubble_opacity_label">Opacidad</string>
+    <string name="haptic_feedback_label">Vibración</string>
+    <string name="auto_hide_label">Auto Ocultar</string>
+    <string name="notification_settings_title">Configuración de Notificaciones</string>
+    <string name="show_screen_time_label">Mostrar Tiempo de Pantalla</string>
+    <string name="notification_sound_label">Sonido de Notificación</string>
+    <string name="select_apps">Seleccionar Apps</string>
+    <string name="start_monitoring">Iniciar Monitoreo</string>
+    <string name="stop_monitoring">Detener Monitoreo</string>
+    <string name="stop_monitoring_title">Detener Monitoreo</string>
+    <string name="stop_monitoring_message">¿Seguro que quieres detener el monitoreo? Puedes reactivarlo desde Ajustes > Accesibilidad.</string>
     
+    <!-- App Selection -->
+    <string name="select_interval">Seleccionar Meta de Tiempo</string>
+    <string name="select_apps_title">Seleccionar Apps</string>
+    <string name="select_at_least_one">Selecciona al menos una aplicación</string>
+    <string name="search_apps_hint">Buscar aplicaciones...</string>
+    <string name="add_selected">Añadir Seleccionadas</string>
+    <string name="add_selected_with_count">Añadir Seleccionadas (%d)</string>
+    <string name="monitored_apps_title">Apps Monitoreadas</string>
+    <string name="no_monitored_apps">No hay apps monitoreadas</string>
+    <string name="loading_apps">Cargando aplicaciones...</string>
+    <string name="apps_added">Aplicaciones añadidas al monitoreo</string>
     
-    <!-- Buttons - General -->
-    <string name="start_monitoring">Iniciar monitoreo</string>
-    <string name="stop_monitoring">Detener monitoreo</string>
-    <string name="select_apps">Seleccionar apps</string>
-    <string name="add_selected">Agregar seleccionadas</string>
-    <string name="add_selected_with_count">Agregar seleccionadas (%d)</string>
-    <string name="close">Cerrar</string>
-    <string name="configure_permissions">Configurar permisos</string>
+    <!-- Preference Categories -->
+    <string name="pref_category_appearance">Apariencia</string>
+    <string name="pref_category_notifications">Notificaciones</string>
+    <string name="pref_category_updates">Actualizaciones</string>
     
-    <!-- Messages -->
-    <string name="no_apps_monitored">No hay apps siendo monitoreadas</string>
-    <string name="permissions_required">Permisos necesarios</string>
-    <string name="permissions_description">Se necesitan permisos de accesibilidad, uso de datos y superposición</string>
-    <string name="select_at_least_one">Selecciona al menos una app</string>
-    <string name="apps_added">Apps agregadas al monitoreo</string>
-    <string name="apps_added_count">%d apps agregadas al monitoreo</string>
+    <!-- Preference Titles -->
+    <string name="pref_theme_title">Tema</string>
+    <string name="pref_language_title">Idioma</string>
+    <string name="pref_persistent_notif_title">Notificación Persistente</string>
+    <string name="pref_persistent_notif_summary">Mostrar notificación continua con el tiempo de pantalla</string>
+    <string name="pref_auto_update_title">Buscar Actualizaciones Automáticamente</string>
+    <string name="pref_auto_update_summary">Revisar si hay nuevas versiones cada 24 horas</string>
     
-    <!-- Time labels -->
-    <string name="current_session_label">Tiempo de uso actual</string>
-    <string name="total_today_label">Total hoy</string>
-    <string name="total_week_label">Semana</string>
-    <string name="daily_usage_title">Uso diario (últimos 7 días)</string>
+    <!-- Theme -->
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Oscuro</string>
+    <string name="theme_system">Predeterminado del sistema</string>
     
-    <!-- Statistics -->
-    <string name="today">Hoy</string>
-    <string name="week">Semana</string>
-    <string name="minutes_format">%d min</string>
-    <string name="hours_minutes_format">%d h %d min</string>
-    <string name="less_than_minute">&lt; 1 min</string>
+    <!-- Language -->
+    <string name="lang_spanish">Español</string>
+    <string name="lang_english">Inglés</string>
     
-    <!-- Selection screen -->
-    <string name="select_interval">Seleccionar intervalo</string>
-    <string name="select_apps_title">Seleccionar aplicaciones</string>
-    <string name="search_apps_hint">Buscar apps...</string>
-    <string name="monitored_apps_title">Apps monitoreadas</string>
-    <string name="no_monitored_apps">No hay apps siendo monitoreadas</string>
-    
-    <!-- Intervals -->
+    <!-- Interval formats (deprecated but kept for compatibility) -->
     <string name="interval_10_seconds">10 segundos</string>
     <string name="interval_1_minute">1 minuto</string>
     <string name="interval_5_minutes">5 minutos</string>
     <string name="interval_15_minutes">15 minutos</string>
     <string name="interval_30_minutes">30 minutos</string>
     <string name="interval_1_hour">1 hora</string>
-    <string name="interval_custom">Personalizado</string>
-    
-    <!-- Interval display formats -->
     <string name="interval_every_10_seconds">Cada 10 segundos</string>
     <string name="interval_every_1_minute">Cada 1 minuto</string>
     <string name="interval_every_5_minutes">Cada 5 minutos</string>
     <string name="interval_every_15_minutes">Cada 15 minutos</string>
     <string name="interval_every_30_minutes">Cada 30 minutos</string>
     <string name="interval_every_1_hour">Cada 1 hora</string>
+    <string name="interval_custom">Personalizado</string>
     
-    <!-- Bubble and expanded view -->
-    <string name="badge_text_default">1</string>
+    <!-- Bubble -->
+    <string name="current_session_label">Sesión Actual</string>
     <string name="current_session_time_format">00:00</string>
-    <string name="total_today_time_format">00:00</string>
-    <string name="banner_app_label">App:</string>
-    <string name="banner_today_prefix">Hoy: </string>
+    <string name="bubble_today_screen_label">Tiempo de Pantalla Hoy</string>
+    <string name="total_today_time_format">0h 0m</string>
+    <string name="goal_progress_label">Progreso hacia la Meta</string>
+    <string name="goal_progress_format">%d%% de %d min</string>
+    <string name="close_app_button">Cerrar Aplicación</string>
+    <string name="collapse_bubble">Colapsar</string>
+    <string name="continue_button">Continuar</string>
+    <string name="badge_text_default">0</string>
+    <string name="close">Cerrar</string>
     
-    <!-- MODIFICADO: Nueva etiqueta para el tiempo total de pantalla del día -->
-    <string name="bubble_today_screen_label">Tiempo total de pantalla hoy</string>
+    <!-- Goal Notifications -->
+    <string name="goal_reached_title">🎯 ¡Meta Alcanzada!</string>
+    <string name="goal_reached_message">Has usado %s por %d minutos. ¿Quieres cerrarla ahora?</string>
+    <string name="goal_reached_action_close">Cerrar App</string>
+    <string name="goal_reached_action_continue">Seguir usando</string>
+    <string name="goal_notification_title">🎯 ¡Meta de tiempo alcanzada!</string>
+    <string name="goal_notification_text">Has usado %s por %d minutos</string>
     
-    <!-- Chart labels -->
-    <string name="chart_usage_label">Tiempo de uso (minutos)</string>
-    
-    <!-- Chart axis formatters -->
-    <string name="chart_day_format">Día %d</string>
-    
-    <!-- Package name display -->
-    <string name="package_name_format">%s</string>
-    
-    <!-- Session item -->
-    <string name="session_time_format">%02d:%02d</string>
-    <string name="session_time_hours_format">%02d:%02d:%02d</string>
-    
-    <!-- Notifications -->
-    <string name="notification_channel_name">Servicio de burbuja</string>
-    <string name="notification_channel_description">Muestra burbujas de monitoreo de apps</string>
-    <string name="notification_title">Monitoreo de apps activo</string>
-    <string name="notification_content">Las burbujas de notificación están activas</string>
-    
-    <!-- Permission messages -->
-    <string name="permission_usage_stats_required">Permiso de acceso a datos de uso requerido</string>
-    <string name="permission_usage_stats_instructions">Para un monitoreo preciso, habilita el acceso a datos de uso para %s</string>
-    <string name="permission_overlay_required">Permiso de superposición de pantalla requerido</string>
-    <string name="permission_notifications_required">Permiso de notificaciones requerido</string>
-    
-    <!-- Error messages -->
-    <string name="error_app_icon_not_found">Icono de app no encontrado</string>
-    <string name="error_loading_apps">Error al cargar aplicaciones</string>
-    <string name="error_no_permissions">Permisos necesarios no otorgados</string>
-    <string name="error_occurred">Ocurrió un error</string>
-    <string name="error_open_link">No se puede abrir el enlace</string>
-    <string name="error_loading_apps_timeout">Error al cargar apps. Intenta nuevamente.</string>
-    
-    <!-- Empty states -->
-    <string name="empty_state_no_apps">No hay apps siendo monitoreadas</string>
-    <string name="empty_state_no_results">No se encontraron resultados</string>
-    <string name="no_apps_installed">No se encontraron apps instaladas</string>
-    
-    <!-- Time units -->
-    <string name="unit_minutes">min</string>
-    <string name="unit_hours">h</string>
-    <string name="unit_seconds">s</string>
-    
-    <!-- Date formats -->
-    <string name="date_format_dd_mm">dd/MM</string>
-    <string name="time_format_hh_mm">HH:mm</string>
-    
-    <!-- Additional strings -->
-    <string name="total_time_format">Tiempo total: %s</string>
-    <string name="total_time_format_placeholder">Total: 0h 0m</string>
-    <string name="no_data">Sin datos</string>
-    
-    <!-- FAB -->
-    <string name="fab_service_control_description">Controlar servicio de monitoreo</string>
+    <!-- Goal Extras -->
 
-    <!-- Main Fragment messages -->
-    <string name="no_usage_today">Las apps seleccionadas no tienen uso hoy</string>
-    <string name="no_monitored_apps_data_today">Sin datos de apps monitoreadas hoy</string>
-    <string name="all_apps_less_than_minute">Todas las apps tienen menos de 1 minuto de uso</string>
-    <string name="service_started">Servicio iniciado</string>
-    <string name="service_stopped">Servicio detenido</string>
-
-    <!-- Time formats -->
-    <string name="minutes_seconds_format">%d m %d s</string>
-    <string name="seconds_format">%d s</string>
-
-    <!-- Footer strings -->
-    <string name="like_app_question">¿Te gusta la app? </string>
-    <string name="invite_coffee">¡Invítame un café!</string>
-    <string name="version_format">v%s</string>
-    <string name="version_format_placeholder">v1.0.0</string>
-
-    <!-- Email related strings -->
+<string name="goal_reached_subtitle">%s - meta %d min</string>
+<string name="goal_extras_add_5min">+5 min Extra</string>
+<string name="goal_extras_total_time">Total: %s</string>
+<string name="goal_extras_blocks">+%d bloques</string>
+<string name="goal_extras_blocks_added">+%d bloques (%d min)</string>
+<string name="goal_extras_remaining">Tiempo restante: %s</string>
+    
+    <!-- Notification -->
+    <string name="notification_channel_screen_time">Tiempo de Pantalla</string>
+    <string name="notification_channel_screen_time_description">Muestra el tiempo de pantalla actual</string>
+    <string name="notification_screen_time_title">Tiempo de pantalla</string>
+    <string name="notification_screen_time_initializing">Inicializando...</string>
+    <string name="notification_screen_time_text">%s</string>
+    
+    <!-- Permissions -->
+    <string name="permission_usage_stats_required">Permiso de Uso</string>
+    <string name="permission_usage_stats_instructions">%s necesita acceso al historial de uso para monitorear el tiempo de pantalla.\n\nActiva el permiso en la siguiente pantalla.</string>
+    <string name="permission_overlay_required">Permiso de Superposición</string>
+    <string name="permission_overlay_instructions">Para mostrar la burbuja flotante, %s necesita el permiso de superposición.\n\nActívalo en la siguiente pantalla.</string>
+    <string name="permission_notifications_required">Permiso de Notificaciones</string>
+    <string name="permission_notifications_instructions">Para mostrarte notificaciones cuando alcances tus metas, %s necesita permiso para enviar notificaciones.</string>
+    <string name="permission_usage_stats_required_short">Permiso de uso necesario</string>
+    <string name="configure_permissions">Configurar Permisos</string>
+    <string name="go_to_settings">Ir a Ajustes</string>
+    <string name="cancel">Cancelar</string>
+    <string name="accessibility_permission_title">Permiso de Accesibilidad</string>
+    <string name="accessibility_permission_message">Para detectar qué aplicación estás usando, necesitas activar el servicio de accesibilidad en Ajustes.</string>
+    
+    <!-- Accessibility Service -->
+    <string name="accessibility_service_description">Monitorea el uso de apps para mostrar una burbuja flotante con seguimiento de tiempo</string>
+    
+    <!-- About -->
+    <string name="about_version_format">Versión %s</string>
+    <string name="about_version_placeholder">Versión 1.0.0</string>
+    <string name="about_developed_by_label">Desarrollado por</string>
+    <string name="contact_email_button">✉️ Contactar por Email</string>
+    <string name="github_source_button">📂 Ver Código en GitHub</string>
+    <string name="buy_coffee_button">☕ Invítame un Café</string>
+    <string name="email_subject_support">Soporte AppsUsageMonitor</string>
+    <string name="github_url">https://github.com/gnzalobnites/AppsUsageMonitor</string>
+    <string name="buy_me_coffee_url">https://www.buymeacoffee.com/gnzalobnites</string>
+    <string name="update_check_button">🔍 Buscar Actualizaciones</string>
+    <string name="update_checking">Buscando...</string>
+    <string name="update_no_update_available">¡Ya tienes la última versión!</string>
+    <string name="update_check_error">Error al buscar actualizaciones</string>
+    <string name="update_dialog_title">Actualización Disponible</string>
+    <string name="update_dialog_message">Versión %s disponible para descargar.</string>
+    <string name="update_dialog_download">Descargar</string>
+    <string name="update_dialog_later">Más Tarde</string>
+    <string name="update_download_title">Descargando actualización</string>
+    <string name="update_download_description">AppsUsageMonitor se está actualizando...</string>
+    <string name="update_download_started">Descarga iniciada</string>
+    <string name="update_file_not_found">Archivo de actualización no encontrado</string>
+    <string name="update_no_installer">No se encontró una aplicación para instalar</string>
+    
+    <!-- Footer -->
     <string name="dashboard_footer_suggestions">¿Sugerencias o problemas?</string>
-    <string name="email_subject_suggestions">Sugerencia para Apps Usage Monitor</string>
-    <string name="error_no_email_app">No se encontró una app de correo</string>
-
-    <!-- Loading -->
-    <string name="loading_apps">Cargando apps…</string>
-
-    <!-- Image descriptions -->
-    <string name="item_app_icon_desc">Icono de la app</string>
+    <string name="like_app_question">¿Te gusta la app?</string>
+    <string name="invite_coffee">¡Invítame un café!</string>
+    <string name="version_format_placeholder">v1.0.0</string>
     
-    <!-- Splash screen -->
-    <string name="splash_author">por Gonzalo Gastón Benites</string>
-
-    <!-- Dialog selection strings -->
-    <string name="dialog_select_apps_title">Seleccionar aplicaciones</string>
-    <string name="dialog_apps_selected_count">%d seleccionadas</string>
-    <string name="dialog_select_all">Todas</string>
-    <string name="dialog_deselect_all">Ninguna</string>
+    <!-- Dialog -->
+    <string name="dialog_apps_selected_count">%d apps seleccionadas</string>
     <string name="dialog_cancel">Cancelar</string>
     <string name="dialog_confirm">Confirmar</string>
-    <string name="select_apps_dialog_title">Elige apps para monitorear</string>
-    <string name="no_apps_found">No se encontraron apps</string>
-    <string name="select_all">Seleccionar todas</string>
-    <string name="deselect_all">Deseleccionar todas</string>
+    <string name="select_all">Seleccionar Todo</string>
+    <string name="deselect_all">Deseleccionar Todo</string>
+    <string name="select_apps_dialog_title">Seleccionar Apps para Monitorear</string>
+    <string name="goal_extras_completed">¡Tiempo extra completado!</string>
 
-    <!-- New selection screen strings -->
-    <string name="select_apps_button">Seleccionar aplicaciones</string>
-    <string name="selected_apps_info">%d aplicaciones seleccionadas</string>
-    <string name="selected_apps_info_format">%d aplicaciones seleccionadas</string>
-    <string name="monitored_apps_count">Apps monitoreadas: %d</string>
-    
-    <!-- Log messages -->
-    <string name="log_test_banner">🧪 Banner de prueba</string>
-
-    <!-- Email and developer -->
-    <string name="developer_email">benitesgonzalogaston@gmail.com</string>
-    <string name="developer_name">Gonzalo Gastón Benites</string>
-
-    <!-- About fragment -->
-    <string name="app_icon_description">Icono de la app</string>
-    <string name="about_version_placeholder">Versión 1.2.4</string>
-    <string name="about_developed_by_label">Desarrollado por</string>
-    <string name="contact_email_button">Contactar por Email</string>
-    <string name="github_source_button">Código fuente (GitHub)</string>
-    <string name="buy_coffee_button">Invítame un café ☕</string>
-
-    <!-- Statistics fragment -->
-    <string name="statistics_select_app_label">Seleccionar aplicación:</string>
-    <string name="previous_week_description">Semana anterior</string>
-    <string name="next_week_description">Semana siguiente</string>
-    <string name="loading_text">Cargando...</string>
-    <string name="week_range_example">Feb 24 - Mar 02</string>
-
-    <!-- Nav header -->
-    <string name="nav_header_version_placeholder">Versión 1.0</string>
-
-    <!-- Additional formats -->
-    <string name="nav_header_version_format">Versión %s</string>
-    <string name="about_version_format">Versión %s</string>
-    <string name="week_range_format">dd MMM</string>
-    <string name="chart_date_format">EEE dd</string>
-
-    <!-- URLs -->
-    <string name="github_url">https://github.com/gnzalobnites/AppsUsageMonitor/tree/dev</string>
-    <string name="buy_me_coffee_url">https://buymeacoffee.com/gnzbenitesh</string>
-
-    <!-- Email subject -->
-    <string name="email_subject_support">Soporte de Apps Usage Monitor</string>
-
-    <!-- Time in minutes (for TimeValueFormatter) -->
-
-    <!-- ===== NEW ADDED STRINGS ===== -->
-    <!-- Preferences categories -->
-    <string name="pref_category_appearance">Apariencia</string>
-    <string name="pref_category_notifications">Notificaciones</string>
-
-    <!-- Preference titles -->
-    <string name="pref_theme_title">Tema</string>
-    <string name="pref_language_title">Idioma</string>
-    <string name="pref_persistent_notif_title">Notificación persistente</string>
-    <string name="pref_persistent_notif_summary">Mantener ícono en la barra de estado mientras se monitorea</string>
-
-    <!-- Navigation labels -->
-    <string name="nav_home_label">Hoy</string>
-    <string name="nav_app_selection_label">Seleccionar Apps</string>
-    <string name="nav_statistics_label">Estadísticas</string>
-    <string name="nav_settings_label">Ajustes</string>
-    <string name="nav_about_label">Acerca de</string>
-
-    <!-- Drawer menu titles -->
-    <string name="drawer_home">Inicio</string>
-    <string name="drawer_app_selection">Seleccionar Apps</string>
-    <string name="drawer_statistics">Estadísticas</string>
-    <string name="drawer_settings">Ajustes</string>
-    <string name="drawer_about">Acerca de</string>
-
-    <string name="theme_light">Claro</string>
-    <string name="theme_dark">Oscuro</string>
-    <string name="theme_system">Seguir sistema</string>
-    <string name="lang_spanish">Español</string>
-    <string name="lang_english">Inglés</string>
-
-    <!-- ===== NEW ACCESSIBILITY STRINGS ===== -->
-    <string name="accessibility_permission_title">Activar monitoreo</string>
-    <string name="accessibility_permission_message">Para monitorear apps, necesitas habilitar el servicio de accesibilidad en la configuración del sistema. Busca "Apps Usage Monitor" en la lista y actívalo.</string>
-    <string name="stop_monitoring_title">Detener monitoreo</string>
-    <string name="stop_monitoring_message">Para detener el monitoreo, debes deshabilitar el servicio de accesibilidad en la configuración del sistema.</string>
-    <string name="go_to_settings">Ir a configuración</string>
-    <string name="service_running">Servicio de monitoreo activo</string>
-
-    <string name="cancel">Cancelar</string>
-
-    <string name="loading_installed_apps">Cargando apps instaladas...</string>
-
-    <!-- Strings for Updates -->
-    <string name="pref_category_updates">Actualizaciones</string>
-    <string name="pref_auto_update_title">Buscar actualizaciones automáticamente</string>
-    <string name="pref_auto_update_summary">Buscar cada 24 horas al abrir la app</string>
-    
-    <string name="update_check_button">Buscar actualizaciones</string>
-    <string name="update_checking">Buscando…</string>
-    <string name="update_no_update_available">Ya tienes la última versión</string>
-    <string name="update_check_error">Error al buscar actualizaciones</string>
-    
-    <string name="update_dialog_title">¡Nueva actualización disponible!</string>
-    <string name="update_dialog_message">La versión %s ya está disponible. ¿Descargar ahora?</string>
-    <string name="update_dialog_download">Descargar</string>
-    <string name="update_dialog_later">Más tarde</string>
-    
-    <string name="update_download_title">Descargando actualización</string>
-    <string name="update_download_description">Descargando la última versión de Apps Usage Monitor…</string>
-    <string name="update_download_started">Descarga iniciada</string>
-    <string name="update_file_not_found">Error: Archivo de actualización no encontrado</string>
-    <string name="update_no_installer">No se encontró una app para instalar el APK</string>
-
-    <!-- New strings for the redesigned bubble -->
-    <string name="continue_button">Cerrar</string>
 </resources>

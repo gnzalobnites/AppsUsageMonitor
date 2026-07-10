@@ -18,7 +18,6 @@ import com.gnzalobnites.appsusagemonitor.R
 import com.gnzalobnites.appsusagemonitor.databinding.FragmentAppSelectionBinding
 import com.gnzalobnites.appsusagemonitor.ui.adapters.AppListAdapter
 import com.gnzalobnites.appsusagemonitor.ui.adapters.MonitoredAppsSimpleAdapter
-import com.gnzalobnites.appsusagemonitor.utils.Constants
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -46,7 +45,6 @@ class AppSelectionFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        // ✅ Verificar que el Fragment está adjunto antes de continuar
         if (!isAdded || context == null) return
         
         setupSpinner()
@@ -60,27 +58,19 @@ class AppSelectionFragment : Fragment() {
     }
 
     private fun setupSpinner() {
-        // ✅ Verificar que el Fragment está adjunto
         if (!isAdded || context == null) return
         
-        val intervals = listOf(
-            getString(R.string.interval_10_seconds),
-            getString(R.string.interval_1_minute),
-            getString(R.string.interval_5_minutes),
-            getString(R.string.interval_15_minutes),
-            getString(R.string.interval_30_minutes),
-            getString(R.string.interval_1_hour)
-        )
+        val goals = resources.getStringArray(R.array.goal_entries).toList()
         
         val ctx = requireContext()
-        val adapter = ArrayAdapter(ctx, android.R.layout.simple_spinner_item, intervals)
+        val adapter = ArrayAdapter(ctx, android.R.layout.simple_spinner_item, goals)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerInterval.adapter = adapter
-        binding.spinnerInterval.setSelection(1)
+        // Seleccionar 5 minutos por defecto (índice 2)
+        binding.spinnerInterval.setSelection(2)
     }
 
     private fun setupRecyclerViews() {
-        // ✅ Verificar que el Fragment está adjunto
         if (!isAdded || context == null) return
         
         val ctx = requireContext()
@@ -107,25 +97,20 @@ class AppSelectionFragment : Fragment() {
     }
     
     private fun setupSearch() {
-        // ✅ Verificar que el Fragment está adjunto
         if (!isAdded || context == null) return
         
-        // CORRECCIÓN: Usar event.x (relativo) en lugar de event.rawX (absoluto)
         binding.editSearch.setOnTouchListener { _, event ->
             val DRAWABLE_END = 2
             
             if (event.action == MotionEvent.ACTION_UP) {
                 val endDrawable = binding.editSearch.compoundDrawablesRelative[DRAWABLE_END]
                 if (endDrawable != null) {
-                    // Usar width en lugar de right
                     val touchableArea = binding.editSearch.width - binding.editSearch.paddingEnd - endDrawable.intrinsicWidth
                     
-                    // Usar event.x en lugar de event.rawX
                     if (event.x >= touchableArea) {
                         binding.editSearch.text.clear()
                         binding.editSearch.clearFocus()
                         
-                        // ✅ Verificar que el contexto existe
                         if (isAdded && context != null) {
                             val imm = requireContext().getSystemService(InputMethodManager::class.java)
                             imm.hideSoftInputFromWindow(binding.editSearch.windowToken, 0)
@@ -155,7 +140,6 @@ class AppSelectionFragment : Fragment() {
                 }
 
                 searchJob?.cancel()
-                // ✅ CORRECCIÓN: Usar viewLifecycleOwner.lifecycleScope en lugar de lifecycleScope
                 searchJob = viewLifecycleOwner.lifecycleScope.launch {
                     delay(300)
                     viewModel.filterApps(s?.toString() ?: "")
@@ -170,7 +154,6 @@ class AppSelectionFragment : Fragment() {
     }
     
     private fun setupObservers() {
-        // ✅ CORRECCIÓN: Usar viewLifecycleOwner.lifecycleScope en lugar de lifecycleScope
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.filteredApps.collect { apps ->
                 appsAdapter.submitList(apps)
@@ -184,7 +167,6 @@ class AppSelectionFragment : Fragment() {
             }
         }
 
-        // ✅ Este observer ya usa viewLifecycleOwner (está bien)
         viewModel.monitoredApps.observe(viewLifecycleOwner) { monitoredApps ->
             monitoredAdapter.submitList(monitoredApps)
             
@@ -199,7 +181,6 @@ class AppSelectionFragment : Fragment() {
     }
 
     private fun setupListeners() {
-        // ✅ Verificar que el Fragment está adjunto
         if (!isAdded || context == null) return
         
         binding.editSearch.setOnFocusChangeListener { _, hasFocus ->
@@ -212,7 +193,6 @@ class AppSelectionFragment : Fragment() {
                 if (newState == androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_DRAGGING && binding.editSearch.hasFocus()) {
                     binding.editSearch.clearFocus()
                     
-                    // ✅ Verificar que el contexto existe
                     if (isAdded && context != null) {
                         val imm = requireContext().getSystemService(InputMethodManager::class.java)
                         imm.hideSoftInputFromWindow(recyclerView.windowToken, 0)
@@ -222,7 +202,6 @@ class AppSelectionFragment : Fragment() {
         })
 
         binding.buttonAddSelected.setOnClickListener {
-            // ✅ Verificar que el Fragment está adjunto
             if (!isAdded || context == null) return@setOnClickListener
             
             binding.editSearch.clearFocus()
@@ -237,17 +216,19 @@ class AppSelectionFragment : Fragment() {
                 return@setOnClickListener
             }
             
-            val interval = when (binding.spinnerInterval.selectedItemPosition) {
-                0 -> Constants.INTERVAL_10_SECONDS
-                1 -> Constants.INTERVAL_1_MINUTE
-                2 -> Constants.INTERVAL_5_MINUTES
-                3 -> Constants.INTERVAL_15_MINUTES
-                4 -> Constants.INTERVAL_30_MINUTES
-                5 -> Constants.INTERVAL_1_HOUR
-                else -> Constants.INTERVAL_1_MINUTE
+            // Obtener la meta en minutos del Spinner
+            val goalMinutes = when (binding.spinnerInterval.selectedItemPosition) {
+                0 -> 1
+                1 -> 2
+                2 -> 5
+                3 -> 10
+                4 -> 15
+                5 -> 30
+                6 -> 60
+                else -> 5
             }
             
-            viewModel.addSelectedAppsToMonitor(interval)
+            viewModel.addSelectedAppsToMonitor(goalMinutes)
             Toast.makeText(ctx, R.string.apps_added, Toast.LENGTH_SHORT).show()
         }
     }
@@ -264,7 +245,6 @@ class AppSelectionFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
-        // Cancelar searchJob al pausar para ahorrar recursos
         searchJob?.cancel()
     }
 

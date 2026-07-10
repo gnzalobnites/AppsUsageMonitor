@@ -19,10 +19,12 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.ProgressBar
 import android.widget.LinearLayout
+import android.widget.ImageView
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceManager
+import com.gnzalobnites.appsusagemonitor.MyApplication
 import com.gnzalobnites.appsusagemonitor.R
 import com.gnzalobnites.appsusagemonitor.data.repository.AppRepository
 import com.gnzalobnites.appsusagemonitor.data.repository.UsageRepository
@@ -46,39 +48,63 @@ class BubbleService : LifecycleService() {
     private var expandedView: View? = null
     private var isExpanded = false
     private var currentPackageName: String? = null
-    private var currentBadgeCount: Int = 0
     private var sessionStartTime: Long = System.currentTimeMillis()
-    private var currentInterval: Long = Constants.INTERVAL_1_MINUTE
-    private val mainHandler = Handler(Looper.getMainLooper())
-    private var updateExpandedViewRunnable: Runnable? = null
-    private var isBubbleActive = false
-    private var isPersistent = false
-    private var isDestroying = false
-    private var isForegroundStarted = false
+    private var currentGoalMinutes: Int = 5
+    private var sessionDuration: Long = 0L
+    private var goalReached = false
     private var isPreviewMode = false
-
-    private var updateHandler = Handler(Looper.getMainLooper())
-    private var updateRunnable: Runnable? = null
+    private var isExtraTimeActive = false
+    
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var isBubbleActive = false
+    private var isForegroundStarted = false
+    
     private var updateJob: Job? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    // Cache de vistas para mejorar rendimiento
+    // Cache de vistas
     private var currentSessionTimeView: TextView? = null
     private var progressBarView: ProgressBar? = null
-    private var badgeTextView: TextView? = null
+    private var goalTextView: TextView? = null
     private var totalTodayTimeView: TextView? = null
     private var bubbleContainerView: LinearLayout? = null
     private var closeButton: Button? = null
+    private var collapseButton: Button? = null
+    private var closeAppButton: Button? = null
     private var bubbleIconView: View? = null
+    private var goalIconView: ImageView? = null
 
-    // Animaciones y estados
+    // Nuevas vistas para tiempo extra
+    private var extrasStatusView: TextView? = null
+    private var extrasTotalTimeView: TextView? = null
+    private var extrasBlocksView: TextView? = null
+    private var btnAddExtras: Button? = null
+
+    // ============================================================
+    // ESTADO DEL TIEMPO EXTRA - CORREGIDO
+    // ============================================================
+    // 1. ACUMULADO (solo para mostrar estadísticas)
+    private var totalExtrasBlocks = 0          // Número total de bloques añadidos
+    private var totalExtrasMinutes = 0         // Total de minutos extra acumulados
+    
+    // 2. BLOQUE ACTIVO (para el contador descendente)
+    private var currentExtraMinutes = 0        // Duración del bloque actual en minutos
+    private var currentExtraStartTime: Long = 0L  // Momento en que inició el bloque actual
+    
+    // 3. Control del job de tracking
+    private var extrasJob: Job? = null
+    private var extraTimeRemainingSeconds: Long = 0L
+    
+    private val EXTRAS_BLOCK_MINUTES = 5
+
+    // Animaciones
     private var pulseAnimation: ObjectAnimator? = null
+    private var goalPulseAnimation: ObjectAnimator? = null
     private var idleRunnable: Runnable? = null
     private val IDLE_ALPHA = 0.6f
     private val ACTIVE_ALPHA = 1.0f
     private val IDLE_DELAY_MS = 3000L
 
-    // CORREGIDO: Siempre usar WRAP_CONTENT para que el padding y sombras no se recorten
     private val bubbleParams: WindowManager.LayoutParams by lazy {
         WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -93,11 +119,8 @@ class BubbleService : LifecycleService() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.END
-
             val displayMetrics = resources.displayMetrics
-            val screenHeight = displayMetrics.heightPixels
-            y = screenHeight / 4
-
+            y = displayMetrics.heightPixels / 4
             x = 0
         }
     }
@@ -118,54 +141,74 @@ class BubbleService : LifecycleService() {
 
     companion object {
         private const val TAG = "BubbleService"
-        private const val PREVIEW_PACKAGE = "com.gnzalobnites.appsusagemonitor.preview"
+        const val ACTION_RESUME_MONITORING = "com.gnzalobnites.appsusagemonitor.RESUME_MONITORING"
     }
 
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "BubbleService created")
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        // ✅ CORREGIDO: Usar application en lugar de this para evitar fugas
-        appRepository = AppRepository(application)
-        usageRepository = UsageRepository(application)
+        appRepository = MyApplication.appRepository
+        usageRepository = MyApplication.usageRepository
         startForegroundService()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-
         Log.d(TAG, "onStartCommand: action=${intent?.action}")
 
         when (intent?.action) {
             Constants.ACTION_SHOW_BUBBLE -> {
                 val packageName = intent.getStringExtra(Constants.EXTRA_PACKAGE_NAME)
-                val badgeCount = intent.getIntExtra(Constants.EXTRA_BADGE_COUNT, 1)
-                val interval = intent.getLongExtra(Constants.EXTRA_INTERVAL, Constants.INTERVAL_1_MINUTE)
-                val sessionStart = intent.getLongExtra(Constants.EXTRA_SESSION_START_TIME, System.currentTimeMillis())
-                isPersistent = intent.getBooleanExtra(Constants.EXTRA_BUBBLE_PERSISTENT, false)
+                currentGoalMinutes = intent.getIntExtra(Constants.EXTRA_TIME_GOAL_MINUTES, 5)
+                sessionStartTime = intent.getLongExtra(Constants.EXTRA_SESSION_START_TIME, System.currentTimeMillis())
+                currentPackageName = packageName
+                goalReached = false
+                isPreviewMode = intent.getBooleanExtra("is_preview", false)
+                isExtraTimeActive = false
                 
-                isPreviewMode = packageName == PREVIEW_PACKAGE || packageName == this.packageName
-
-                currentInterval = interval
-                sessionStartTime = sessionStart
-
-                if (packageName != null) {
-                    currentPackageName = packageName
+                resetExtrasState()
+                
+                if (bubbleView == null) {
+                    createBubbleView(packageName)
+                    startTimeUpdater()
+                } else {
+                    updateBubbleContent()
                 }
-
-                showBubble(packageName, badgeCount)
+                isBubbleActive = true
+            }
+            Constants.ACTION_UPDATE_SESSION_TIME -> {
+                sessionDuration = intent.getLongExtra(Constants.EXTRA_DURATION, 0L)
+                updateTimeDisplay()
+            }
+            Constants.ACTION_UPDATE_PROGRESS -> {
+                val duration = intent.getLongExtra(Constants.EXTRA_DURATION, 0L)
+                val goal = intent.getIntExtra(Constants.EXTRA_TIME_GOAL_MINUTES, currentGoalMinutes)
+                updateProgressBar(duration, goal)
+            }
+            Constants.ACTION_BUBBLE_GOAL_REACHED -> {
+                val packageName = intent.getStringExtra(Constants.EXTRA_PACKAGE_NAME)
+                val goal = intent.getIntExtra(Constants.EXTRA_TIME_GOAL_MINUTES, currentGoalMinutes)
+                if (packageName == currentPackageName) {
+                    goalReached = true
+                    animateGoalReached()
+                }
             }
             Constants.ACTION_HIDE_BUBBLE -> {
-                Log.d(TAG, "Hiding bubble")
-                hideAllViews()
-                isBubbleActive = false
-                isPreviewMode = false
-                stopUpdatingTime()
-            }
-            Constants.ACTION_UPDATE_PREVIEW -> {
-                val size = intent.getIntExtra(Constants.EXTRA_PREVIEW_SIZE, -1)
-                val opacity = intent.getIntExtra(Constants.EXTRA_PREVIEW_OPACITY, -1)
-                updateBubbleAppearanceLive(size, opacity)
+                if (isPreviewMode) {
+                    mainHandler.postDelayed({
+                        if (!isExpanded) {
+                            hideAllViews()
+                            isBubbleActive = false
+                            stopTimeUpdater()
+                        }
+                    }, 2000)
+                } else {
+                    Log.d(TAG, "Hiding bubble")
+                    hideAllViews()
+                    isBubbleActive = false
+                    stopTimeUpdater()
+                }
             }
         }
 
@@ -209,45 +252,111 @@ class BubbleService : LifecycleService() {
             } else {
                 startForeground(notificationId, notification)
             }
-            Log.d(TAG, "Foreground service started with base notification")
-
+            Log.d(TAG, "Foreground service started")
         } catch (e: Exception) {
             Log.e(TAG, "Error starting foreground service", e)
-            try {
-                startForeground(notificationId, NotificationCompat.Builder(this, channelId).build())
-            } catch (e2: Exception) {
-                Log.e(TAG, "Fallback also failed", e2)
-            }
         }
     }
 
-    private fun showBubble(packageName: String?, badgeCount: Int) {
-        if (packageName == null) {
-            Log.e(TAG, "PackageName is null")
-            return
-        }
-
-        Log.d(TAG, "Attempting to show bubble for: $packageName, count: $badgeCount, persistent: $isPersistent")
-
+    private fun createBubbleView(packageName: String?) {
+        if (packageName == null) return
         if (!Settings.canDrawOverlays(this)) {
             Log.e(TAG, "No overlay permission")
             return
         }
 
-        if (isBubbleActive && bubbleView != null) {
-            updateBubbleContent(packageName, badgeCount)
-            return
-        }
-
-        currentPackageName = packageName
-        currentBadgeCount = badgeCount
-
         try {
-            createBubbleView(packageName, badgeCount)
-            isBubbleActive = true
-            startUpdatingTime()
+            bubbleView = LayoutInflater.from(this).inflate(R.layout.bubble_view, null)
+            setupBubbleContent(packageName)
+            setupBubbleTouchListener()
+            cacheBubbleViews()
+
+            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+            val savedSize = prefs.getInt("bubble_size", 60)
+            val savedOpacity = prefs.getInt("bubble_opacity", 80)
+            updateBubbleAppearance(savedSize, savedOpacity)
+
+            bubbleView?.setOnClickListener {
+                if (isExpanded) {
+                    collapseBubble()
+                } else {
+                    expandBubble()
+                }
+            }
+
+            windowManager.addView(bubbleView, bubbleParams)
+            Log.d(TAG, "Bubble view added")
+
+            animateBubbleIn()
+            resetIdleTimer()
+
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing bubble", e)
+            Log.e(TAG, "Error creating bubble view", e)
+        }
+    }
+
+    private fun setupBubbleContent(packageName: String) {
+        try {
+            val bubbleIcon = bubbleView?.findViewById<View>(R.id.bubble_icon)
+            val badgeText = bubbleView?.findViewById<TextView>(R.id.badge_text)
+            val bubbleContainer = bubbleView?.findViewById<LinearLayout>(R.id.bubble_container)
+
+            if (bubbleIcon == null || badgeText == null || bubbleContainer == null) {
+                Log.e(TAG, "Bubble views not found")
+                return
+            }
+
+            val pm = packageManager
+            val appIcon = pm.getApplicationIcon(packageName)
+            val bitmap = drawableToBitmap(appIcon)
+            val roundedBitmap = getRoundedBitmap(bitmap)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                bubbleIcon.background = BitmapDrawable(resources, roundedBitmap)
+            } else {
+                bubbleIcon.setBackgroundDrawable(BitmapDrawable(resources, roundedBitmap))
+            }
+
+            badgeText.text = "0"
+            badgeText.visibility = View.VISIBLE
+            bubbleContainer.visibility = View.VISIBLE
+
+        } catch (e: PackageManager.NameNotFoundException) {
+            Log.e(TAG, "App icon not found", e)
+            bubbleView?.findViewById<View>(R.id.bubble_icon)?.setBackgroundColor(Color.GRAY)
+        }
+    }
+
+    private fun updateBubbleContent() {
+        val badgeText = bubbleView?.findViewById<TextView>(R.id.badge_text)
+        if (sessionDuration > 0) {
+            badgeText?.text = TimeFormatter.formatDurationNoSeconds(sessionDuration)
+        }
+    }
+
+    private fun cacheBubbleViews() {
+        bubbleView?.let {
+            bubbleContainerView = it.findViewById(R.id.bubble_container)
+            val badgeText = it.findViewById<TextView>(R.id.badge_text)
+            bubbleIconView = it.findViewById(R.id.bubble_icon)
+        }
+    }
+
+    private fun cacheExpandedViews() {
+        expandedView?.let {
+            currentSessionTimeView = it.findViewById(R.id.current_session_time)
+            progressBarView = it.findViewById(R.id.session_progress_bar)
+            goalTextView = it.findViewById(R.id.goal_text)
+            totalTodayTimeView = it.findViewById(R.id.total_today_time)
+            closeButton = it.findViewById(R.id.close_button)
+            collapseButton = it.findViewById(R.id.btn_collapse)
+            closeAppButton = it.findViewById(R.id.btn_close_app)
+            goalIconView = it.findViewById(R.id.goal_icon)
+            
+            extrasStatusView = it.findViewById(R.id.extras_status)
+            extrasTotalTimeView = it.findViewById(R.id.extras_total_time)
+            extrasBlocksView = it.findViewById(R.id.extras_blocks)
+            btnAddExtras = it.findViewById(R.id.btn_add_extras)
         }
     }
 
@@ -333,107 +442,7 @@ class BubbleService : LifecycleService() {
         mainHandler.postDelayed(idleRunnable!!, IDLE_DELAY_MS)
     }
 
-    private fun createBubbleView(packageName: String, badgeCount: Int) {
-        try {
-            bubbleView = LayoutInflater.from(this).inflate(R.layout.bubble_view, null)
-            setupBubbleContent(packageName, badgeCount)
-            setupBubbleTouchListener()
-            cacheBubbleViews()
-
-            // Aplicar preferencias guardadas
-            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-            val savedSize = prefs.getInt("bubble_size", 60)
-            val savedOpacity = prefs.getInt("bubble_opacity", 80)
-            updateBubbleAppearanceLive(savedSize, savedOpacity)
-
-            bubbleView?.setOnClickListener {
-                Log.d(TAG, "Bubble clicked")
-                resetIdleTimer()
-                vibrate(30)
-                if (isExpanded) {
-                    hideExpandedView()
-                } else {
-                    showExpandedView()
-                }
-            }
-
-            windowManager.addView(bubbleView, bubbleParams)
-            Log.d(TAG, "Bubble view added to window manager at position y=${bubbleParams.y}")
-
-            animateBubbleIn()
-            resetIdleTimer()
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Error creating bubble view", e)
-        }
-    }
-
-    private fun cacheBubbleViews() {
-        bubbleView?.let {
-            // CORREGIDO: Obtener views correctamente
-            bubbleContainerView = it.findViewById(R.id.bubble_container)
-            badgeTextView = it.findViewById(R.id.badge_text)
-            bubbleIconView = it.findViewById(R.id.bubble_icon)
-        }
-    }
-
-    private fun cacheExpandedViews() {
-        expandedView?.let {
-            currentSessionTimeView = it.findViewById(R.id.current_session_time)
-            progressBarView = it.findViewById(R.id.session_progress_bar)
-            totalTodayTimeView = it.findViewById(R.id.total_today_time)
-            closeButton = it.findViewById(R.id.close_button)
-        }
-    }
-
-    private fun setupBubbleContent(packageName: String, badgeCount: Int) {
-        try {
-            val bubbleIcon = bubbleView?.findViewById<View>(R.id.bubble_icon)
-            val badgeText = bubbleView?.findViewById<TextView>(R.id.badge_text)
-            val bubbleContainer = bubbleView?.findViewById<LinearLayout>(R.id.bubble_container)
-
-            if (bubbleIcon == null || badgeText == null || bubbleContainer == null) {
-                Log.e(TAG, "Bubble views not found")
-                return
-            }
-
-            val pm = packageManager
-            val appIcon = pm.getApplicationIcon(packageName)
-
-            val bitmap = drawableToBitmap(appIcon)
-            val roundedBitmap = getRoundedBitmap(bitmap)
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                bubbleIcon.background = BitmapDrawable(resources, roundedBitmap)
-            } else {
-                bubbleIcon.setBackgroundDrawable(BitmapDrawable(resources, roundedBitmap))
-            }
-
-            badgeText.text = "0"
-            badgeText.visibility = View.VISIBLE
-            bubbleContainer.visibility = View.VISIBLE
-
-            Log.d(TAG, "Bubble content setup complete")
-
-        } catch (e: PackageManager.NameNotFoundException) {
-            Log.e(TAG, getString(R.string.error_app_icon_not_found), e)
-            bubbleView?.findViewById<View>(R.id.bubble_icon)?.setBackgroundColor(Color.GRAY)
-            bubbleView?.findViewById<TextView>(R.id.badge_text)?.text = "0"
-        } catch (e: Exception) {
-            Log.e(TAG, "Error setting up bubble content", e)
-        }
-    }
-
-    private fun updateBubbleContent(packageName: String, badgeCount: Int) {
-        try {
-            Log.d(TAG, "Bubble content update triggered. Interval count: $badgeCount")
-            updateExpandedViewTimes()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error updating bubble content", e)
-        }
-    }
-
-    private fun showExpandedView() {
+    private fun expandBubble() {
         try {
             if (expandedView == null) {
                 createExpandedView()
@@ -444,27 +453,44 @@ class BubbleService : LifecycleService() {
             bubbleContainerView?.visibility = View.GONE
             isExpanded = true
 
-            updateExpandedViewTimes()
+            if (goalReached) {
+                if (isExtraTimeActive) {
+                    showExtrasUIViews()
+                    updateExtrasTotalTime()
+                    updateExtrasBlocks()
+                } else {
+                    showGoalReachedUI()
+                }
+            } else {
+                hideExtrasUI()
+            }
+
+            updateExpandedView()
             startBreathingAnimation()
             resetIdleTimer()
             vibrate(50)
 
-            Log.d(TAG, "Expanded view shown")
+            Log.d(TAG, "Bubble expanded")
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing expanded view", e)
+            Log.e(TAG, "Error expanding bubble", e)
         }
     }
 
-    private fun hideExpandedView() {
+    private fun collapseBubble() {
         try {
             expandedView?.visibility = View.GONE
             bubbleContainerView?.visibility = View.VISIBLE
             isExpanded = false
             stopBreathingAnimation()
             resetIdleTimer()
-            Log.d(TAG, "Expanded view hidden")
+            
+            if (!isPreviewMode) {
+                notifyBubbleClosed()
+            }
+            
+            Log.d(TAG, "Bubble collapsed")
         } catch (e: Exception) {
-            Log.e(TAG, "Error hiding expanded view", e)
+            Log.e(TAG, "Error collapsing bubble", e)
         }
     }
 
@@ -481,8 +507,18 @@ class BubbleService : LifecycleService() {
                 expandedView?.setBackgroundResource(R.drawable.bg_elegant_bubble)
             }
 
+            expandedView?.findViewById<Button>(R.id.btn_collapse)?.setOnClickListener {
+                collapseBubble()
+            }
+
             expandedView?.findViewById<Button>(R.id.close_button)?.setOnClickListener {
-                closeCartel()
+                expandedView?.visibility = View.GONE
+                bubbleContainerView?.visibility = View.VISIBLE
+                isExpanded = false
+                stopBreathingAnimation()
+                resetIdleTimer()
+                
+                Log.d(TAG, "Bubble collapsed via close button")
             }
 
             windowManager.addView(expandedView, expandedParams)
@@ -491,117 +527,90 @@ class BubbleService : LifecycleService() {
         }
     }
 
-    private fun startUpdatingTime() {
-        stopUpdatingTime()
+    private fun startTimeUpdater() {
+        stopTimeUpdater()
         updateJob = serviceScope.launch {
-            while (isActive) {
-                updateExpandedViewTimes()
-                delay(1000)
+            while (isActive && isBubbleActive) {
+                updateExpandedView()
+                delay(1000L)
             }
         }
-        Log.d(TAG, "Time updates started")
     }
 
-    private fun stopUpdatingTime() {
+    private fun stopTimeUpdater() {
         updateJob?.cancel()
         updateJob = null
-        Log.d(TAG, "Time updates stopped")
     }
 
-    private fun updateExpandedViewTimes() {
-        if (currentPackageName == null) return
-
-        val now = System.currentTimeMillis()
-        val sessionDuration = now - sessionStartTime
-
-        if (isPreviewMode) {
-            badgeTextView?.text = "👁"
-        } else {
-            badgeTextView?.text = TimeFormatter.formatDuration(sessionDuration)
+    private fun updateTimeDisplay() {
+        val badgeText = bubbleView?.findViewById<TextView>(R.id.badge_text)
+        badgeText?.text = TimeFormatter.formatDurationNoSeconds(sessionDuration)
+        
+        if (isExpanded) {
+            currentSessionTimeView?.text = TimeFormatter.formatDuration(sessionDuration)
+            updateProgressBar(sessionDuration, currentGoalMinutes)
         }
+    }
 
+    private fun updateExpandedView() {
         if (!isExpanded || expandedView == null) return
 
         try {
-            currentSessionTimeView?.text = if (isPreviewMode) "Preview" else TimeFormatter.formatDuration(sessionDuration)
-
-            val totalScreenTimeToday = usageRepository.getExactScreenTimeToday()
-            totalTodayTimeView?.text = if (isPreviewMode) "Configuración" else TimeFormatter.formatDuration(totalScreenTimeToday)
-            totalTodayTimeView?.visibility = View.VISIBLE
-
-            val progressPercent = if (currentInterval > 0) {
-                ((sessionDuration % currentInterval).toFloat() / currentInterval.toFloat() * 100).toInt()
+            if (goalReached) {
+                updateExtrasTotalTime()
+                currentSessionTimeView?.text = TimeFormatter.formatDuration(sessionDuration)
             } else {
-                0
-            }
-
-            progressBarView?.let { progressBar ->
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    progressBar.setProgress(progressPercent, true)
-                } else {
-                    progressBar.progress = progressPercent
-                }
+                currentSessionTimeView?.text = TimeFormatter.formatDuration(sessionDuration)
+                val totalScreenTime = usageRepository.getExactScreenTimeToday()
+                totalTodayTimeView?.text = TimeFormatter.formatDuration(totalScreenTime)
+                updateProgressBar(sessionDuration, currentGoalMinutes)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating expanded view times", e)
+            Log.e(TAG, "Error updating expanded view", e)
         }
     }
 
-    /**
-     * CORREGIDO: Actualiza la apariencia de la burbuja en tiempo real
-     * - Ya no modifica bubbleParams (siempre WRAP_CONTENT)
-     * - Aplica opacidad a la vista raíz completa
-     * - Usa 60% del tamaño para el icono
-     * - Forza requestLayout e invalidate
-     */
-    private fun updateBubbleAppearanceLive(size: Int, opacity: Int) {
-        if (bubbleView == null || bubbleContainerView == null) return
+    private fun updateProgressBar(duration: Long, goalMinutes: Int) {
+        val goalMs = goalMinutes * 60_000L
+        val progress = ((duration.toFloat() / goalMs) * 100).toInt().coerceAtMost(100)
 
-        // CORRECCIÓN: Aplicar opacidad a la vista raíz completa
-        if (opacity != -1) {
-            val alphaValue = opacity / 100f
-            bubbleView?.alpha = alphaValue
-            Log.d(TAG, "Preview opacity updated: $opacity% -> alpha: $alphaValue")
-        }
-
-        // CORRECCIÓN: Tamaño - solo modificar el contenedor, no bubbleParams
-        if (size != -1) {
-            val scale = resources.displayMetrics.density
-            val baseSizeDp = 40
-            val maxSizeDp = 100
-            val additionalDp = ((size / 100f) * (maxSizeDp - baseSizeDp))
-            val finalSizeDp = baseSizeDp + additionalDp
-            val finalSizePx = (finalSizeDp * scale).toInt()
-
-            // CORRECCIÓN: Solo modificar el contenedor, no la ventana
-            val params = bubbleContainerView?.layoutParams
-            params?.width = finalSizePx
-            params?.height = finalSizePx
-            bubbleContainerView?.layoutParams = params
-
-            // Icono al 60% del tamaño del contenedor (más proporcionado)
-            val iconParams = bubbleIconView?.layoutParams
-            val iconSize = (finalSizePx * 0.60f).toInt()
-            iconParams?.width = iconSize
-            iconParams?.height = iconSize
-            bubbleIconView?.layoutParams = iconParams
-
-            // Forzar redibujado completo
-            bubbleContainerView?.requestLayout()
-            bubbleContainerView?.invalidate()
-            bubbleIconView?.requestLayout()
-            bubbleIconView?.invalidate()
-            bubbleView?.requestLayout()
-            bubbleView?.invalidate()
-
-            // Actualizar la ventana (solo posición, no tamaño)
-            try {
-                windowManager.updateViewLayout(bubbleView, bubbleParams)
-                Log.d(TAG, "Preview size updated: ${size}% -> ${finalSizeDp}dp (${finalSizePx}px)")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error actualizando el layout en tiempo real", e)
+        progressBarView?.let { progressBar ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                progressBar.setProgress(progress, true)
+            } else {
+                progressBar.progress = progress
             }
         }
+
+        goalTextView?.text = getString(R.string.goal_progress_format, progress, goalMinutes)
+    }
+
+    private fun updateBubbleAppearance(size: Int, opacity: Int) {
+        if (bubbleView == null || bubbleContainerView == null) return
+
+        val alphaValue = opacity / 100f
+        bubbleView?.alpha = alphaValue
+
+        val scale = resources.displayMetrics.density
+        val baseSizeDp = 40
+        val maxSizeDp = 100
+        val additionalDp = ((size / 100f) * (maxSizeDp - baseSizeDp))
+        val finalSizeDp = baseSizeDp + additionalDp
+        val finalSizePx = (finalSizeDp * scale).toInt()
+
+        val params = bubbleContainerView?.layoutParams
+        params?.width = finalSizePx
+        params?.height = finalSizePx
+        bubbleContainerView?.layoutParams = params
+
+        val iconParams = bubbleIconView?.layoutParams
+        val iconSize = (finalSizePx * 0.60f).toInt()
+        iconParams?.width = iconSize
+        iconParams?.height = iconSize
+        bubbleIconView?.layoutParams = iconParams
+
+        bubbleContainerView?.requestLayout()
+        bubbleContainerView?.invalidate()
     }
 
     private fun startBreathingAnimation() {
@@ -627,26 +636,364 @@ class BubbleService : LifecycleService() {
         expandedView?.scaleY = 1.0f
     }
 
-    private fun closeCartel() {
-        // Detener actualizaciones primero
-        stopUpdatingTime()
-        stopBreathingAnimation()
-        hideAllViews()
-        isExpanded = false
-        isBubbleActive = false
-        isPreviewMode = false
-        notifyBubbleClosed()
+    private fun animateGoalReached() {
+        bubbleContainerView?.let { view ->
+            goalPulseAnimation = ObjectAnimator.ofPropertyValuesHolder(
+                view,
+                PropertyValuesHolder.ofFloat("scaleX", 1.0f, 1.2f, 1.0f),
+                PropertyValuesHolder.ofFloat("scaleY", 1.0f, 1.2f, 1.0f)
+            ).apply {
+                duration = 600
+                repeatCount = 3
+                interpolator = OvershootInterpolator()
+                start()
+            }
+        }
+
+        bubbleContainerView?.setBackgroundColor(Color.parseColor("#FFD700"))
+        
+        mainHandler.postDelayed({
+            bubbleContainerView?.setBackgroundResource(R.drawable.bg_bubble_collapsed)
+            if (isExpanded) {
+                showGoalReachedUI()
+            }
+        }, 2000)
+
+        vibrate(100)
+    }
+
+    private fun showGoalReachedUI() {
+        if (isExpanded) {
+            goalIconView?.visibility = View.VISIBLE
+            progressBarView?.progressTintList = android.content.res.ColorStateList.valueOf(
+                Color.parseColor("#FFD700")
+            )
+            showExtrasUI()
+        }
+    }
+
+    private fun showExtrasUI() {
+        if (isExpanded) {
+            goalIconView?.visibility = View.VISIBLE
+            progressBarView?.progressTintList = android.content.res.ColorStateList.valueOf(
+                Color.parseColor("#FFD700")
+            )
+            // Solo iniciar tracking si no hay un bloque activo
+            val shouldStartTracking = !isExtraTimeActive || currentExtraMinutes == 0
+            isExtraTimeActive = true
+            showExtrasUIViews()
+            if (shouldStartTracking) {
+                // Si no hay bloque activo, no iniciamos tracking hasta que el usuario añada uno
+                // Pero si currentExtraMinutes > 0, reanudamos el tracking existente
+                if (currentExtraMinutes > 0) {
+                    startExtrasTracking()
+                }
+            } else {
+                updateExtrasTotalTime()
+                updateExtrasBlocks()
+            }
+        }
+    }
+
+    private fun showExtrasUIViews() {
+        extrasStatusView?.visibility = View.VISIBLE
+        extrasStatusView?.text = getString(R.string.goal_reached_title)
+        
+        val appName = try {
+            packageManager.getApplicationLabel(
+                packageManager.getApplicationInfo(currentPackageName ?: "", PackageManager.GET_META_DATA)
+            ).toString()
+        } catch (e: Exception) {
+            "App"
+        }
+        val subtitle = getString(R.string.goal_reached_subtitle, appName, currentGoalMinutes)
+        extrasStatusView?.append("\n$subtitle")
+        
+        extrasTotalTimeView?.visibility = View.VISIBLE
+        updateExtrasTotalTime()
+        
+        extrasBlocksView?.visibility = View.VISIBLE
+        updateExtrasBlocks()
+        
+        btnAddExtras?.visibility = View.VISIBLE
+        btnAddExtras?.setOnClickListener {
+            addExtraBlock()
+        }
+        
+        closeAppButton?.visibility = View.VISIBLE
+        closeAppButton?.setOnClickListener {
+            closeMonitoredApp()
+        }
+        
+        collapseButton?.visibility = View.VISIBLE
+        closeButton?.visibility = View.GONE
+    }
+
+    private fun hideExtrasUI() {
+        isExtraTimeActive = false
+        extrasStatusView?.visibility = View.GONE
+        extrasTotalTimeView?.visibility = View.GONE
+        extrasBlocksView?.visibility = View.GONE
+        btnAddExtras?.visibility = View.GONE
+        closeAppButton?.visibility = View.GONE
+        collapseButton?.visibility = View.VISIBLE
+        closeButton?.visibility = View.GONE
+    }
+
+    // ============================================================
+    // NUEVA LÓGICA DE TIEMPO EXTRA CON BLOQUES INDEPENDIENTES
+    // ============================================================
+
+    private fun startExtrasTracking() {
+        // Si no hay bloque activo, no hacer nada
+        if (currentExtraMinutes <= 0) {
+            Log.d(TAG, "No active extra block to track")
+            return
+        }
+        
+        // Si ya hay un job corriendo, no crear otro
+        if (extrasJob?.isActive == true) {
+            return
+        }
+        
+        extrasJob?.cancel()
+        extrasJob = serviceScope.launch {
+            while (isActive && isExtraTimeActive && currentExtraMinutes > 0) {
+                updateExtrasTotalTime()
+                
+                val currentExtraMs = currentExtraMinutes * 60_000L
+                val elapsedExtraMs = System.currentTimeMillis() - currentExtraStartTime
+                
+                if (elapsedExtraMs >= currentExtraMs) {
+                    onExtraTimeCompleted()
+                    break
+                }
+                
+                delay(1000L)
+            }
+        }
+    }
+
+    private fun onExtraTimeCompleted() {
+        isExtraTimeActive = false
+        
+        // Resetear el bloque activo
+        currentExtraMinutes = 0
+        currentExtraStartTime = 0L
+        extraTimeRemainingSeconds = 0L
+        
+        // Actualizar UI para mostrar "Completado"
+        updateExtrasTotalTime()
+        
+        notifyExtraTimeCompleted()
+        
+        currentPackageName?.let { pkg ->
+            val intent = Intent(this, MonitoringService::class.java).apply {
+                action = Constants.ACTION_EXTRA_TIME_COMPLETED
+                putExtra(Constants.EXTRA_PACKAGE_NAME, pkg)
+            }
+            startService(intent)
+        }
+        
+        currentPackageName?.let { pkg ->
+            val intent = Intent(this, BubbleService::class.java).apply {
+                action = Constants.ACTION_BUBBLE_GOAL_REACHED
+                putExtra(Constants.EXTRA_PACKAGE_NAME, pkg)
+                putExtra(Constants.EXTRA_TIME_GOAL_MINUTES, currentGoalMinutes)
+            }
+            startService(intent)
+        }
+        
+        mainHandler.postDelayed({
+            if (isExpanded) {
+                collapseBubble()
+            }
+        }, 1500)
+    }
+
+    private fun addExtraBlock() {
+        // 1. Actualizar estadísticas (acumulado)
+        totalExtrasBlocks++
+        totalExtrasMinutes += EXTRAS_BLOCK_MINUTES
+        
+        // 2. Configurar el nuevo bloque activo
+        currentExtraMinutes = EXTRAS_BLOCK_MINUTES
+        currentExtraStartTime = System.currentTimeMillis()
+        
+        // 3. Activar el modo extra si no lo está
+        if (!isExtraTimeActive) {
+            isExtraTimeActive = true
+        }
+        
+        // 4. Notificar a MonitoringService que se agregó tiempo extra
+        notifyExtraTimeAdded()
+        
+        // 5. Actualizar UI
+        updateExtrasTotalTime()
+        updateExtrasBlocks()
+        
+        // 6. Iniciar (o reiniciar) el tracking del bloque activo
+        startExtrasTracking()
+        
+        // 7. Feedback visual
+        btnAddExtras?.let { button ->
+            button.animate()
+                .scaleX(0.8f)
+                .scaleY(0.8f)
+                .setDuration(150)
+                .start()
+            
+            mainHandler.postDelayed({
+                button.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(150)
+                    .start()
+            }, 150)
+        }
+        
+        vibrate(30)
+        Log.d(TAG, "Added extra block: block=${EXTRAS_BLOCK_MINUTES}min, total=${totalExtrasMinutes}min, blocks=${totalExtrasBlocks}")
+    }
+
+    private fun updateExtrasTotalTime() {
+        val formattedTime = TimeFormatter.formatDuration(sessionDuration)
+        extrasTotalTimeView?.text = getString(R.string.goal_extras_total_time, formattedTime)
+        
+        when {
+            // Caso 1: Hay un bloque activo y el modo extra está activo
+            currentExtraMinutes > 0 && isExtraTimeActive -> {
+                val currentExtraMs = currentExtraMinutes * 60_000L
+                val elapsedExtraMs = System.currentTimeMillis() - currentExtraStartTime
+                val remainingMs = (currentExtraMs - elapsedExtraMs).coerceAtLeast(0)
+                extraTimeRemainingSeconds = remainingMs / 1000
+                
+                if (remainingMs > 0) {
+                    extrasStatusView?.text = "${getString(R.string.goal_reached_title)}\n${getString(R.string.goal_extras_remaining, TimeFormatter.formatDuration(remainingMs))}"
+                } else {
+                    extrasStatusView?.text = "${getString(R.string.goal_reached_title)}\n${getString(R.string.goal_extras_completed)}"
+                }
+                
+                val extraProgress = (100 - (remainingMs * 100 / currentExtraMs).toInt()).coerceIn(0, 100)
+                progressBarView?.let { bar ->
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        bar.setProgress(extraProgress, true)
+                    } else {
+                        bar.progress = extraProgress
+                    }
+                }
+            }
+            
+            // Caso 2: El modo extra está inactivo (completado o detenido)
+            !isExtraTimeActive && totalExtrasMinutes > 0 -> {
+                extrasStatusView?.text = "${getString(R.string.goal_reached_title)}\n${getString(R.string.goal_extras_completed)}"
+                progressBarView?.let { bar ->
+                    bar.progress = 100
+                }
+            }
+            
+            // Caso 3: No hay tiempo extra (nunca se añadió)
+            else -> {
+                // No mostrar nada, la UI ya está oculta
+            }
+        }
+    }
+
+    private fun updateExtrasBlocks() {
+        if (totalExtrasBlocks > 0) {
+            val blocksText = getString(R.string.goal_extras_blocks_added, totalExtrasBlocks, totalExtrasMinutes)
+            extrasBlocksView?.text = blocksText
+            extrasBlocksView?.visibility = View.VISIBLE
+        } else {
+            extrasBlocksView?.text = getString(R.string.goal_extras_blocks, 0)
+            extrasBlocksView?.visibility = View.VISIBLE
+        }
+    }
+
+    private fun resetExtrasState() {
+        if (isExtraTimeActive) {
+            notifyExtraTimeStopped()
+        }
+        // Resetear todo
+        totalExtrasBlocks = 0
+        totalExtrasMinutes = 0
+        currentExtraMinutes = 0
+        currentExtraStartTime = 0L
+        isExtraTimeActive = false
+        extraTimeRemainingSeconds = 0L
+        extrasJob?.cancel()
+        extrasJob = null
+        Log.d(TAG, "Extras state reset")
+    }
+
+    // ============================================================
+    // NOTIFICACIONES AL MONITORING SERVICE
+    // ============================================================
+
+    private fun notifyExtraTimeAdded() {
+        try {
+            val intent = Intent(this, MonitoringService::class.java).apply {
+                action = Constants.ACTION_EXTRA_TIME_ADDED
+                putExtra(Constants.EXTRA_EXTRA_BLOCKS, totalExtrasBlocks)
+                putExtra(Constants.EXTRA_EXTRA_MINUTES, totalExtrasMinutes)
+            }
+            startService(intent)
+            Log.d(TAG, "Notified: Extra time added - ${totalExtrasMinutes}min total, block ${currentExtraMinutes}min")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error notifying extra time added", e)
+        }
+    }
+
+    private fun notifyExtraTimeCompleted() {
+        try {
+            val intent = Intent(this, MonitoringService::class.java).apply {
+                action = Constants.ACTION_EXTRA_TIME_COMPLETED
+                putExtra(Constants.EXTRA_EXTRA_BLOCKS, totalExtrasBlocks)
+                putExtra(Constants.EXTRA_EXTRA_MINUTES, totalExtrasMinutes)
+            }
+            startService(intent)
+            Log.d(TAG, "Notified: Extra time completed - ${totalExtrasMinutes}min total")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error notifying extra time completed", e)
+        }
+    }
+
+    private fun notifyExtraTimeStopped() {
+        try {
+            val intent = Intent(this, MonitoringService::class.java).apply {
+                action = Constants.ACTION_EXTRA_TIME_STOPPED
+                putExtra(Constants.EXTRA_EXTRA_BLOCKS, totalExtrasBlocks)
+                putExtra(Constants.EXTRA_EXTRA_MINUTES, totalExtrasMinutes)
+            }
+            startService(intent)
+            Log.d(TAG, "Notified: Extra time stopped - ${totalExtrasMinutes}min total")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error notifying extra time stopped", e)
+        }
+    }
+
+    private fun closeMonitoredApp() {
+        try {
+            val intent = Intent(this, MonitoringService::class.java).apply {
+                action = Constants.ACTION_CLOSE_MONITORED_APP
+            }
+            startService(intent)
+            Log.d(TAG, "Requested closing monitored app")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error requesting app close", e)
+        }
     }
 
     private fun notifyBubbleClosed() {
-        try {
-            val intent = Intent(this, MonitoringService::class.java).apply {
-                action = Constants.ACTION_BUBBLE_CLOSED
+        if (!isPreviewMode) {
+            try {
+                val intent = Intent(this, MonitoringService::class.java).apply {
+                    action = Constants.ACTION_BUBBLE_CLOSED
+                }
+                startService(intent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error notifying bubble closed", e)
             }
-            startService(intent)
-            Log.d(TAG, "Bubble closed notification sent")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error notifying bubble closed", e)
         }
     }
 
@@ -691,14 +1038,13 @@ class BubbleService : LifecycleService() {
 
     private fun vibrate(duration: Long) {
         try {
+            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
                 if (vibrator.hasVibrator()) {
                     vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
                 }
             } else {
                 @Suppress("DEPRECATION")
-                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
                 vibrator.vibrate(duration)
             }
         } catch (e: Exception) {
@@ -724,25 +1070,32 @@ class BubbleService : LifecycleService() {
         }
         bubbleView = null
         expandedView = null
-        isBubbleActive = false
         isExpanded = false
-        isPreviewMode = false
         
         currentSessionTimeView = null
         progressBarView = null
-        badgeTextView = null
+        goalTextView = null
         totalTodayTimeView = null
         bubbleContainerView = null
         closeButton = null
+        collapseButton = null
+        closeAppButton = null
         bubbleIconView = null
+        goalIconView = null
+        
+        extrasStatusView = null
+        extrasTotalTimeView = null
+        extrasBlocksView = null
+        btnAddExtras = null
     }
 
     private fun hideAllViews() {
         try {
             Log.d(TAG, "Hiding all views")
-            stopUpdatingTime()
-            updateExpandedViewRunnable?.let { mainHandler.removeCallbacks(it) }
-            updateExpandedViewRunnable = null
+            stopTimeUpdater()
+            goalPulseAnimation?.cancel()
+            extrasJob?.cancel()
+            isExtraTimeActive = false
             idleRunnable?.let { mainHandler.removeCallbacks(it) }
             idleRunnable = null
             removeAllViews()
@@ -751,23 +1104,21 @@ class BubbleService : LifecycleService() {
         } finally {
             isBubbleActive = false
             isExpanded = false
-            isPreviewMode = false
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        isDestroying = true
         Log.d(TAG, "BubbleService destroyed")
-        stopUpdatingTime()
-        stopBreathingAnimation()
+        stopTimeUpdater()
+        goalPulseAnimation?.cancel()
+        extrasJob?.cancel()
+        isExtraTimeActive = false
         removeAllViews()
         serviceScope.cancel()
         mainHandler.removeCallbacksAndMessages(null)
-        updateHandler.removeCallbacksAndMessages(null)
         stopForeground(STOP_FOREGROUND_REMOVE)
         isForegroundStarted = false
-        isPreviewMode = false
     }
 
     override fun onBind(intent: Intent): IBinder? {
