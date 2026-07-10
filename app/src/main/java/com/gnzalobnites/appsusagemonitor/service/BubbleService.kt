@@ -5,9 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
-import android.graphics.*
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
+import android.graphics.Color
+import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
 import android.os.Handler
@@ -71,8 +70,10 @@ class BubbleService : LifecycleService() {
     private var closeButton: Button? = null
     private var collapseButton: Button? = null
     private var closeAppButton: Button? = null
-    private var bubbleIconView: View? = null
     private var goalIconView: ImageView? = null
+    private var bubbleProgressBar: ProgressBar? = null
+    private var bubbleIconTimer: TextView? = null
+    private var badgeTextView: TextView? = null
 
     // Nuevas vistas para tiempo extra
     private var extrasStatusView: TextView? = null
@@ -81,15 +82,15 @@ class BubbleService : LifecycleService() {
     private var btnAddExtras: Button? = null
 
     // ============================================================
-    // ESTADO DEL TIEMPO EXTRA - CORREGIDO
+    // ESTADO DEL TIEMPO EXTRA
     // ============================================================
     // 1. ACUMULADO (solo para mostrar estadísticas)
-    private var totalExtrasBlocks = 0          // Número total de bloques añadidos
-    private var totalExtrasMinutes = 0         // Total de minutos extra acumulados
+    private var totalExtrasBlocks = 0
+    private var totalExtrasMinutes = 0
     
     // 2. BLOQUE ACTIVO (para el contador descendente)
-    private var currentExtraMinutes = 0        // Duración del bloque actual en minutos
-    private var currentExtraStartTime: Long = 0L  // Momento en que inició el bloque actual
+    private var currentExtraMinutes = 0
+    private var currentExtraStartTime: Long = 0L
     
     // 3. Control del job de tracking
     private var extrasJob: Job? = null
@@ -267,14 +268,8 @@ class BubbleService : LifecycleService() {
 
         try {
             bubbleView = LayoutInflater.from(this).inflate(R.layout.bubble_view, null)
-            setupBubbleContent(packageName)
             setupBubbleTouchListener()
             cacheBubbleViews()
-
-            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-            val savedSize = prefs.getInt("bubble_size", 60)
-            val savedOpacity = prefs.getInt("bubble_opacity", 80)
-            updateBubbleAppearance(savedSize, savedOpacity)
 
             bubbleView?.setOnClickListener {
                 if (isExpanded) {
@@ -295,50 +290,16 @@ class BubbleService : LifecycleService() {
         }
     }
 
-    private fun setupBubbleContent(packageName: String) {
-        try {
-            val bubbleIcon = bubbleView?.findViewById<View>(R.id.bubble_icon)
-            val badgeText = bubbleView?.findViewById<TextView>(R.id.badge_text)
-            val bubbleContainer = bubbleView?.findViewById<LinearLayout>(R.id.bubble_container)
-
-            if (bubbleIcon == null || badgeText == null || bubbleContainer == null) {
-                Log.e(TAG, "Bubble views not found")
-                return
-            }
-
-            val pm = packageManager
-            val appIcon = pm.getApplicationIcon(packageName)
-            val bitmap = drawableToBitmap(appIcon)
-            val roundedBitmap = getRoundedBitmap(bitmap)
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                bubbleIcon.background = BitmapDrawable(resources, roundedBitmap)
-            } else {
-                bubbleIcon.setBackgroundDrawable(BitmapDrawable(resources, roundedBitmap))
-            }
-
-            badgeText.text = "0"
-            badgeText.visibility = View.VISIBLE
-            bubbleContainer.visibility = View.VISIBLE
-
-        } catch (e: PackageManager.NameNotFoundException) {
-            Log.e(TAG, "App icon not found", e)
-            bubbleView?.findViewById<View>(R.id.bubble_icon)?.setBackgroundColor(Color.GRAY)
-        }
-    }
-
     private fun updateBubbleContent() {
-        val badgeText = bubbleView?.findViewById<TextView>(R.id.badge_text)
-        if (sessionDuration > 0) {
-            badgeText?.text = TimeFormatter.formatDurationNoSeconds(sessionDuration)
-        }
+        badgeTextView?.text = TimeFormatter.formatDurationCollapsed(sessionDuration)
     }
 
     private fun cacheBubbleViews() {
         bubbleView?.let {
             bubbleContainerView = it.findViewById(R.id.bubble_container)
-            val badgeText = it.findViewById<TextView>(R.id.badge_text)
-            bubbleIconView = it.findViewById(R.id.bubble_icon)
+            badgeTextView = it.findViewById(R.id.badge_text)
+            bubbleProgressBar = it.findViewById(R.id.bubble_progress)
+            bubbleIconTimer = it.findViewById(R.id.bubble_icon_timer)
         }
     }
 
@@ -543,12 +504,25 @@ class BubbleService : LifecycleService() {
     }
 
     private fun updateTimeDisplay() {
-        val badgeText = bubbleView?.findViewById<TextView>(R.id.badge_text)
-        badgeText?.text = TimeFormatter.formatDurationNoSeconds(sessionDuration)
+        badgeTextView?.text = TimeFormatter.formatDurationCollapsed(sessionDuration)
+        
+        updateCollapsedProgress()
         
         if (isExpanded) {
             currentSessionTimeView?.text = TimeFormatter.formatDuration(sessionDuration)
             updateProgressBar(sessionDuration, currentGoalMinutes)
+        }
+    }
+
+    private fun updateCollapsedProgress() {
+        val goalMs = currentGoalMinutes * 60_000L
+        val progress = if (goalMs > 0) {
+            ((sessionDuration.toFloat() / goalMs) * 100).toInt().coerceIn(0, 100)
+        } else 0
+        
+        bubbleProgressBar?.let { bar ->
+            bar.progress = progress
+            bar.visibility = if (progress > 0) View.VISIBLE else View.GONE
         }
     }
 
@@ -585,34 +559,6 @@ class BubbleService : LifecycleService() {
         goalTextView?.text = getString(R.string.goal_progress_format, progress, goalMinutes)
     }
 
-    private fun updateBubbleAppearance(size: Int, opacity: Int) {
-        if (bubbleView == null || bubbleContainerView == null) return
-
-        val alphaValue = opacity / 100f
-        bubbleView?.alpha = alphaValue
-
-        val scale = resources.displayMetrics.density
-        val baseSizeDp = 40
-        val maxSizeDp = 100
-        val additionalDp = ((size / 100f) * (maxSizeDp - baseSizeDp))
-        val finalSizeDp = baseSizeDp + additionalDp
-        val finalSizePx = (finalSizeDp * scale).toInt()
-
-        val params = bubbleContainerView?.layoutParams
-        params?.width = finalSizePx
-        params?.height = finalSizePx
-        bubbleContainerView?.layoutParams = params
-
-        val iconParams = bubbleIconView?.layoutParams
-        val iconSize = (finalSizePx * 0.60f).toInt()
-        iconParams?.width = iconSize
-        iconParams?.height = iconSize
-        bubbleIconView?.layoutParams = iconParams
-
-        bubbleContainerView?.requestLayout()
-        bubbleContainerView?.invalidate()
-    }
-
     private fun startBreathingAnimation() {
         expandedView?.let { view ->
             pulseAnimation = ObjectAnimator.ofPropertyValuesHolder(
@@ -638,22 +584,45 @@ class BubbleService : LifecycleService() {
 
     private fun animateGoalReached() {
         bubbleContainerView?.let { view ->
+            view.setBackgroundColor(Color.parseColor("#FFD700"))
+            
+            // Cambiar color del icono y texto a negro para contraste
+            bubbleIconTimer?.setTextColor(Color.BLACK)
+            badgeTextView?.setTextColor(Color.BLACK)
+            
+            badgeTextView?.let { text ->
+                text.animate()
+                    .scaleX(1.2f)
+                    .scaleY(1.2f)
+                    .setDuration(300)
+                    .withEndAction {
+                        text.animate()
+                            .scaleX(1.0f)
+                            .scaleY(1.0f)
+                            .setDuration(300)
+                            .start()
+                    }
+                    .start()
+            }
+            
             goalPulseAnimation = ObjectAnimator.ofPropertyValuesHolder(
                 view,
-                PropertyValuesHolder.ofFloat("scaleX", 1.0f, 1.2f, 1.0f),
-                PropertyValuesHolder.ofFloat("scaleY", 1.0f, 1.2f, 1.0f)
+                PropertyValuesHolder.ofFloat("scaleX", 1.0f, 1.05f, 1.0f),
+                PropertyValuesHolder.ofFloat("scaleY", 1.0f, 1.05f, 1.0f)
             ).apply {
                 duration = 600
-                repeatCount = 3
+                repeatCount = 2
                 interpolator = OvershootInterpolator()
                 start()
             }
         }
 
-        bubbleContainerView?.setBackgroundColor(Color.parseColor("#FFD700"))
-        
         mainHandler.postDelayed({
-            bubbleContainerView?.setBackgroundResource(R.drawable.bg_bubble_collapsed)
+            // Restaurar fondo y colores
+            bubbleContainerView?.setBackgroundResource(R.drawable.bg_bubble_digital)
+            bubbleIconTimer?.setTextColor(Color.WHITE)
+            badgeTextView?.setTextColor(Color.WHITE)
+            
             if (isExpanded) {
                 showGoalReachedUI()
             }
@@ -678,13 +647,10 @@ class BubbleService : LifecycleService() {
             progressBarView?.progressTintList = android.content.res.ColorStateList.valueOf(
                 Color.parseColor("#FFD700")
             )
-            // Solo iniciar tracking si no hay un bloque activo
             val shouldStartTracking = !isExtraTimeActive || currentExtraMinutes == 0
             isExtraTimeActive = true
             showExtrasUIViews()
             if (shouldStartTracking) {
-                // Si no hay bloque activo, no iniciamos tracking hasta que el usuario añada uno
-                // Pero si currentExtraMinutes > 0, reanudamos el tracking existente
                 if (currentExtraMinutes > 0) {
                     startExtrasTracking()
                 }
@@ -741,17 +707,15 @@ class BubbleService : LifecycleService() {
     }
 
     // ============================================================
-    // NUEVA LÓGICA DE TIEMPO EXTRA CON BLOQUES INDEPENDIENTES
+    // LÓGICA DE TIEMPO EXTRA CON BLOQUES INDEPENDIENTES
     // ============================================================
 
     private fun startExtrasTracking() {
-        // Si no hay bloque activo, no hacer nada
         if (currentExtraMinutes <= 0) {
             Log.d(TAG, "No active extra block to track")
             return
         }
         
-        // Si ya hay un job corriendo, no crear otro
         if (extrasJob?.isActive == true) {
             return
         }
@@ -777,12 +741,10 @@ class BubbleService : LifecycleService() {
     private fun onExtraTimeCompleted() {
         isExtraTimeActive = false
         
-        // Resetear el bloque activo
         currentExtraMinutes = 0
         currentExtraStartTime = 0L
         extraTimeRemainingSeconds = 0L
         
-        // Actualizar UI para mostrar "Completado"
         updateExtrasTotalTime()
         
         notifyExtraTimeCompleted()
@@ -812,30 +774,23 @@ class BubbleService : LifecycleService() {
     }
 
     private fun addExtraBlock() {
-        // 1. Actualizar estadísticas (acumulado)
         totalExtrasBlocks++
         totalExtrasMinutes += EXTRAS_BLOCK_MINUTES
         
-        // 2. Configurar el nuevo bloque activo
         currentExtraMinutes = EXTRAS_BLOCK_MINUTES
         currentExtraStartTime = System.currentTimeMillis()
         
-        // 3. Activar el modo extra si no lo está
         if (!isExtraTimeActive) {
             isExtraTimeActive = true
         }
         
-        // 4. Notificar a MonitoringService que se agregó tiempo extra
         notifyExtraTimeAdded()
         
-        // 5. Actualizar UI
         updateExtrasTotalTime()
         updateExtrasBlocks()
         
-        // 6. Iniciar (o reiniciar) el tracking del bloque activo
         startExtrasTracking()
         
-        // 7. Feedback visual
         btnAddExtras?.let { button ->
             button.animate()
                 .scaleX(0.8f)
@@ -861,7 +816,6 @@ class BubbleService : LifecycleService() {
         extrasTotalTimeView?.text = getString(R.string.goal_extras_total_time, formattedTime)
         
         when {
-            // Caso 1: Hay un bloque activo y el modo extra está activo
             currentExtraMinutes > 0 && isExtraTimeActive -> {
                 val currentExtraMs = currentExtraMinutes * 60_000L
                 val elapsedExtraMs = System.currentTimeMillis() - currentExtraStartTime
@@ -884,7 +838,6 @@ class BubbleService : LifecycleService() {
                 }
             }
             
-            // Caso 2: El modo extra está inactivo (completado o detenido)
             !isExtraTimeActive && totalExtrasMinutes > 0 -> {
                 extrasStatusView?.text = "${getString(R.string.goal_reached_title)}\n${getString(R.string.goal_extras_completed)}"
                 progressBarView?.let { bar ->
@@ -892,9 +845,8 @@ class BubbleService : LifecycleService() {
                 }
             }
             
-            // Caso 3: No hay tiempo extra (nunca se añadió)
             else -> {
-                // No mostrar nada, la UI ya está oculta
+                // No mostrar nada
             }
         }
     }
@@ -914,7 +866,6 @@ class BubbleService : LifecycleService() {
         if (isExtraTimeActive) {
             notifyExtraTimeStopped()
         }
-        // Resetear todo
         totalExtrasBlocks = 0
         totalExtrasMinutes = 0
         currentExtraMinutes = 0
@@ -997,45 +948,6 @@ class BubbleService : LifecycleService() {
         }
     }
 
-    private fun drawableToBitmap(drawable: Drawable): Bitmap {
-        if (drawable is BitmapDrawable && drawable.bitmap != null) {
-            return drawable.bitmap
-        }
-
-        val width = drawable.intrinsicWidth.coerceAtLeast(100)
-        val height = drawable.intrinsicHeight.coerceAtLeast(100)
-        val size = Math.max(width, height)
-
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, canvas.width, canvas.height)
-        drawable.draw(canvas)
-        return bitmap
-    }
-
-    private fun getRoundedBitmap(bitmap: Bitmap): Bitmap {
-        val size = Math.min(bitmap.width, bitmap.height)
-        val output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(output)
-
-        val shader = BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
-        val dx = (size - bitmap.width) / 2f
-        val dy = (size - bitmap.height) / 2f
-        if (dx != 0f || dy != 0f) {
-            val matrix = android.graphics.Matrix()
-            matrix.setTranslate(dx, dy)
-            shader.setLocalMatrix(matrix)
-        }
-
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            this.shader = shader
-        }
-
-        val radius = size / 2f
-        canvas.drawCircle(radius, radius, radius, paint)
-        return output
-    }
-
     private fun vibrate(duration: Long) {
         try {
             val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
@@ -1080,8 +992,10 @@ class BubbleService : LifecycleService() {
         closeButton = null
         collapseButton = null
         closeAppButton = null
-        bubbleIconView = null
         goalIconView = null
+        bubbleProgressBar = null
+        bubbleIconTimer = null
+        badgeTextView = null
         
         extrasStatusView = null
         extrasTotalTimeView = null
