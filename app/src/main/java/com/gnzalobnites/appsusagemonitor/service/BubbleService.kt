@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
@@ -88,8 +89,13 @@ class BubbleService : LifecycleService() {
     private var glowView: View? = null
     private var bubbleDiameterPx: Int = 0
     private var currentBubbleColorState: BubbleColorState? = null
+    private var sessionTimeIconView: ImageView? = null
 
     private enum class BubbleColorState { NORMAL, WARNING, ALARM, EXTRA_ACTIVE }
+
+    // Bloqueo forzado al alcanzar la meta: scrim de pantalla completa
+    private var scrimView: View? = null
+    private var isForcedBlockActive = false
 
     // Nuevas vistas para tiempo extra
     private var extrasStatusView: TextView? = null
@@ -154,6 +160,24 @@ class BubbleService : LifecycleService() {
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         )
+    }
+
+    // Scrim de pantalla completa: a propósito NO tiene FLAG_NOT_TOUCHABLE
+    // ni FLAG_NOT_FOCUSABLE, para que absorba el toque y bloquee la
+    // interacción con la app monitoreada mientras está activo.
+    private val scrimParams: WindowManager.LayoutParams by lazy {
+        WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else
+                WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+        }
     }
 
     companion object {
@@ -222,6 +246,7 @@ class BubbleService : LifecycleService() {
                 if (packageName == currentPackageName) {
                     goalReached = true
                     animateGoalReached()
+                    enterForcedBlockMode()
                 }
             }
             Constants.ACTION_HIDE_BUBBLE -> {
@@ -458,10 +483,14 @@ class BubbleService : LifecycleService() {
     private fun cacheExpandedViews() {
         expandedView?.let {
             currentSessionTimeView = it.findViewById(R.id.current_session_time)
+            sessionTimeIconView = it.findViewById(R.id.session_time_icon)
             progressBarView = it.findViewById(R.id.session_progress_bar)
             goalTextView = it.findViewById(R.id.goal_text)
             totalTodayTimeView = it.findViewById(R.id.total_today_time)
-            closeButton = it.findViewById(R.id.close_button)
+            // closeButton ("Continuar") se eliminó del layout: quedaba
+            // muerto en el código (siempre GONE desde los parches del
+            // bloqueo forzado). El campo se deja sin asignar (null a
+            // propósito); todo lo que lo usa ya es null-safe (?.).
             collapseButton = it.findViewById(R.id.btn_collapse)
             closeAppButton = it.findViewById(R.id.btn_close_app)
             goalIconView = it.findViewById(R.id.goal_icon)
@@ -624,16 +653,6 @@ class BubbleService : LifecycleService() {
                 collapseBubble()
             }
 
-            expandedView?.findViewById<Button>(R.id.close_button)?.setOnClickListener {
-                expandedView?.visibility = View.GONE
-                bubbleContainerView?.visibility = View.VISIBLE
-                isExpanded = false
-                stopBreathingAnimation()
-                resetIdleTimer()
-                
-                Log.d(TAG, "Bubble collapsed via close button")
-            }
-
             windowManager.addView(expandedView, expandedParams)
         } catch (e: Exception) {
             Log.e(TAG, "Error creating expanded view", e)
@@ -682,6 +701,7 @@ class BubbleService : LifecycleService() {
         if (!isExpanded || expandedView == null) return
 
         try {
+            applyExpandedColorState()
             if (goalReached) {
                 updateExtrasTotalTime()
                 currentSessionTimeView?.text = TimeFormatter.formatDuration(sessionDuration)
@@ -693,6 +713,28 @@ class BubbleService : LifecycleService() {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error updating expanded view", e)
+        }
+    }
+
+    /**
+     * Aplica el mismo color de estado (normal/cerca de meta/alarma/tiempo
+     * extra) que ya usa el círculo colapsado, al texto del tiempo, el
+     * ícono chico y el gradiente de la barra de progreso de la vista
+     * expandida. Reutiliza computeBubbleColorState()/colorsForState().
+     */
+    private fun applyExpandedColorState() {
+        if (!isExpanded || expandedView == null) return
+
+        val colors = colorsForState(computeBubbleColorState())
+
+        currentSessionTimeView?.setTextColor(colors[0])
+        sessionTimeIconView?.setColorFilter(colors[0])
+
+        val drawable = progressBarView?.progressDrawable
+        if (drawable is LayerDrawable) {
+            val progressLayer = drawable.findDrawableByLayerId(android.R.id.progress)
+            val shape = (progressLayer as? ClipDrawable)?.drawable as? GradientDrawable
+            shape?.setColors(colors)
         }
     }
 
@@ -794,12 +836,67 @@ class BubbleService : LifecycleService() {
         }
     }
 
+    /**
+     * Agrega el scrim de pantalla completa (si no estaba) y fuerza la
+     * burbuja a expandida, por encima del scrim. Sin efecto si el modo
+     * bloqueo ya estaba activo (para no re-agregar la ventana en cada
+     * tick de 5s del modo alarma).
+     */
+    private fun enterForcedBlockMode() {
+        try {
+            if (isForcedBlockActive) return
+            isForcedBlockActive = true
+
+            if (scrimView == null) {
+                scrimView = View(this).apply {
+                    setBackgroundColor(Color.parseColor("#CC000000"))
+                    isClickable = true
+                    setOnClickListener { /* absorbe el toque a propósito, no hace nada */ }
+                }
+                windowManager.addView(scrimView, scrimParams)
+            }
+
+            // Asegurar que el panel expandido quede POR ENCIMA del scrim:
+            // si ya existía de antes, se remueve y se vuelve a agregar
+            // (así queda última en el stack de ventanas del mismo tipo).
+            if (expandedView == null) {
+                createExpandedView()
+                cacheExpandedViews()
+            } else if (expandedView?.isAttachedToWindow == true) {
+                windowManager.removeView(expandedView)
+                windowManager.addView(expandedView, expandedParams)
+            }
+
+            if (!isExpanded) {
+                expandBubble()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error entering forced block mode", e)
+        }
+    }
+
+    private fun exitForcedBlockMode() {
+        if (!isForcedBlockActive) return
+        isForcedBlockActive = false
+        try {
+            scrimView?.let {
+                if (it.isAttachedToWindow) {
+                    windowManager.removeView(it)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error removing scrim", e)
+        }
+        scrimView = null
+    }
+
     private fun showExtrasUI() {
         if (isExpanded) {
             goalIconView?.visibility = View.VISIBLE
-            progressBarView?.progressTintList = android.content.res.ColorStateList.valueOf(
-                Color.parseColor("#FFD700")
-            )
+            // El color (dorado en alarma real, verde si el tiempo extra está
+            // activo) ahora lo decide applyExpandedColorState() según el
+            // estado, en vez de un tinte fijo acá.
+            applyExpandedColorState()
             val shouldStartTracking = !isExtraTimeActive || currentExtraMinutes == 0
             isExtraTimeActive = true
             showExtrasUIViews()
@@ -844,7 +941,11 @@ class BubbleService : LifecycleService() {
             closeMonitoredApp()
         }
         
-        collapseButton?.visibility = View.VISIBLE
+        // Bloqueo forzado (scrim activo): las únicas salidas son agregar
+        // tiempo extra o cerrar la app monitoreada, así que se oculta
+        // Colapsar. Con tiempo extra ya activo (scrim afuera, uso normal),
+        // Colapsar vuelve a estar disponible.
+        collapseButton?.visibility = if (isForcedBlockActive) View.GONE else View.VISIBLE
         closeButton?.visibility = View.GONE
     }
 
@@ -911,6 +1012,9 @@ class BubbleService : LifecycleService() {
         }
         
         currentPackageName?.let { pkg ->
+            // Se re-envía ACTION_BUBBLE_GOAL_REACHED: como isForcedBlockActive
+            // ya está en false (se sacó al agregar el tiempo extra), esto
+            // vuelve a mostrar el scrim + expandir automáticamente.
             val intent = Intent(this, BubbleService::class.java).apply {
                 action = Constants.ACTION_BUBBLE_GOAL_REACHED
                 putExtra(Constants.EXTRA_PACKAGE_NAME, pkg)
@@ -918,12 +1022,6 @@ class BubbleService : LifecycleService() {
             }
             startService(intent)
         }
-        
-        mainHandler.postDelayed({
-            if (isExpanded) {
-                collapseBubble()
-            }
-        }, 1500)
     }
 
     private fun addExtraBlock() {
@@ -962,6 +1060,15 @@ class BubbleService : LifecycleService() {
         
         vibrate(30)
         Log.d(TAG, "Added extra block: block=${EXTRAS_BLOCK_MINUTES}min, total=${totalExtrasMinutes}min, blocks=${totalExtrasBlocks}")
+
+        // El usuario ya tomó una de las dos salidas: devolverle la pantalla
+        // (sacar el scrim y colapsar a la burbuja chica) mientras dure el bloque extra.
+        exitForcedBlockMode()
+        mainHandler.postDelayed({
+            if (isExpanded) {
+                collapseBubble()
+            }
+        }, 400)
     }
 
     private fun updateExtrasTotalTime() {
@@ -1019,6 +1126,7 @@ class BubbleService : LifecycleService() {
         if (isExtraTimeActive) {
             notifyExtraTimeStopped()
         }
+        exitForcedBlockMode()
         totalExtrasBlocks = 0
         totalExtrasMinutes = 0
         currentExtraMinutes = 0
@@ -1118,7 +1226,7 @@ class BubbleService : LifecycleService() {
     }
 
     private fun removeAllViews() {
-        listOf(bubbleView to bubbleParams, expandedView to expandedParams).forEach { (view, params) ->
+        listOf(bubbleView to bubbleParams, expandedView to expandedParams, scrimView to scrimParams).forEach { (view, params) ->
             view?.let {
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && it.isAttachedToWindow) {
@@ -1135,6 +1243,8 @@ class BubbleService : LifecycleService() {
         }
         bubbleView = null
         expandedView = null
+        scrimView = null
+        isForcedBlockActive = false
         isExpanded = false
         
         currentSessionTimeView = null

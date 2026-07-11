@@ -1,19 +1,25 @@
-<?xml version="1.0" encoding="utf-8"?> 
+<?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@android:id/background">
-        <shape>
-            <corners android:radius="8dp"/>
-            <solid android:color="#33FFFFFF"/>
+        <shape android:shape="rectangle">
+            <corners android:radius="5dp"/>
+            <solid android:color="#26FFFFFF"/>
         </shape>
     </item>
     <item android:id="@android:id/progress">
-        <clip>
-            <shape>
-                <corners android:radius="8dp"/>
+        <clip
+            android:clipOrientation="horizontal"
+            android:gravity="start">
+            <shape android:shape="rectangle">
+                <corners android:radius="5dp"/>
+                <!-- Colores placeholder: BubbleService.applyExpandedColorState()
+                     los reemplaza en tiempo de ejecución según el estado
+                     (normal/cerca de meta/alarma/tiempo extra). -->
                 <gradient
-                    android:startColor="#00E676"
-                    android:endColor="#69F0AE"
-                    android:angle="0"/>
+                    android:type="linear"
+                    android:angle="0"
+                    android:startColor="#3A4E7A"
+                    android:endColor="#3A4E7A"/>
             </shape>
         </clip>
     </item>
