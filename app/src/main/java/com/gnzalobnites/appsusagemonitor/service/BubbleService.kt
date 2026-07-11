@@ -3,6 +3,7 @@ package com.gnzalobnites.appsusagemonitor.service
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.graphics.Color
@@ -13,6 +14,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import android.util.TypedValue
 import android.view.*
 import android.widget.Button
 import android.widget.TextView
@@ -57,6 +59,11 @@ class BubbleService : LifecycleService() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var isBubbleActive = false
     private var isForegroundStarted = false
+
+    // Se guarda en un campo (no una lambda suelta): SharedPreferences guarda
+    // los listeners como WeakReference, así que sin una referencia fuerte
+    // externa el listener puede desaparecer solo.
+    private var appearancePrefsListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
     
     private var updateJob: Job? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -152,6 +159,19 @@ class BubbleService : LifecycleService() {
         appRepository = MyApplication.appRepository
         usageRepository = MyApplication.usageRepository
         startForegroundService()
+        registerAppearancePrefsListener()
+    }
+
+    private fun registerAppearancePrefsListener() {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        appearancePrefsListener = SharedPreferences.OnSharedPreferenceChangeListener { sharedPrefs, key ->
+            if (key == "bubble_size" || key == "bubble_opacity") {
+                val size = sharedPrefs.getInt("bubble_size", 60)
+                val opacity = sharedPrefs.getInt("bubble_opacity", 80)
+                updateBubbleAppearance(size, opacity)
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(appearancePrefsListener)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -271,6 +291,11 @@ class BubbleService : LifecycleService() {
             setupBubbleTouchListener()
             cacheBubbleViews()
 
+            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+            val savedSize = prefs.getInt("bubble_size", 60)
+            val savedOpacity = prefs.getInt("bubble_opacity", 80)
+            updateBubbleAppearance(savedSize, savedOpacity)
+
             bubbleView?.setOnClickListener {
                 if (isExpanded) {
                     collapseBubble()
@@ -292,6 +317,51 @@ class BubbleService : LifecycleService() {
 
     private fun updateBubbleContent() {
         badgeTextView?.text = TimeFormatter.formatDurationCollapsed(sessionDuration)
+    }
+
+    private fun updateBubbleAppearance(size: Int, opacity: Int) {
+        if (bubbleView == null || bubbleContainerView == null) return
+
+        val alphaValue = opacity / 100f
+        bubbleView?.alpha = alphaValue
+
+        val density = resources.displayMetrics.density
+        val sizeFraction = (size / 100f).coerceIn(0f, 1f)
+
+        // IMPORTANTE: el contenedor NO se fuerza a un ancho/alto exacto.
+        // bubble_view.xml le pone padding fijo + un icono + el texto del
+        // tiempo en una fila horizontal; si el ancho forzado por el slider
+        // queda por debajo de lo que ese contenido necesita, badge_text se
+        // parte en dos lineas para entrar. Por eso el "tamano" del slider
+        // ahora escala el CONTENIDO (texto e iconos) y el padding interno,
+        // y el contenedor se deja en wrap_content: siempre se ajusta a lo
+        // que realmente hace falta mostrar, sea cual sea el texto ("0:45",
+        // "12:34" o "1:23:45" en sesiones largas).
+        val params = bubbleContainerView?.layoutParams
+        params?.width = ViewGroup.LayoutParams.WRAP_CONTENT
+        params?.height = ViewGroup.LayoutParams.WRAP_CONTENT
+        bubbleContainerView?.layoutParams = params
+
+        val badgeTextSizeSp = 16f + sizeFraction * 10f
+        val iconTextSizeSp = 12f + sizeFraction * 6f
+        badgeTextView?.setTextSize(TypedValue.COMPLEX_UNIT_SP, badgeTextSizeSp)
+        badgeTextView?.maxLines = 1
+        bubbleIconTimer?.setTextSize(TypedValue.COMPLEX_UNIT_SP, iconTextSizeSp)
+        bubbleIconTimer?.maxLines = 1
+
+        val paddingHorizontalPx = ((10 + sizeFraction * 10) * density).toInt()
+        val paddingVerticalPx = ((6 + sizeFraction * 8) * density).toInt()
+        bubbleContainerView?.setPadding(
+            paddingHorizontalPx, paddingVerticalPx, paddingHorizontalPx, paddingVerticalPx
+        )
+
+        // minWidth (no width fijo): evita que la burbuja se vea demasiado
+        // chica en size=0, pero nunca le impide crecer si el texto lo pide.
+        val minWidthPx = ((60 + sizeFraction * 40) * density).toInt()
+        bubbleContainerView?.minimumWidth = minWidthPx
+
+        bubbleContainerView?.requestLayout()
+        bubbleContainerView?.invalidate()
     }
 
     private fun cacheBubbleViews() {
@@ -1028,6 +1098,10 @@ class BubbleService : LifecycleService() {
         goalPulseAnimation?.cancel()
         extrasJob?.cancel()
         isExtraTimeActive = false
+        appearancePrefsListener?.let {
+            PreferenceManager.getDefaultSharedPreferences(this).unregisterOnSharedPreferenceChangeListener(it)
+        }
+        appearancePrefsListener = null
         removeAllViews()
         serviceScope.cancel()
         mainHandler.removeCallbacksAndMessages(null)
