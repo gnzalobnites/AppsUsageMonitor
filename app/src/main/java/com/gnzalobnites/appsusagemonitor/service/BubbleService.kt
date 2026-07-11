@@ -8,6 +8,9 @@ import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.os.Build
 import android.os.IBinder
 import android.os.Handler
@@ -20,6 +23,7 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.ProgressBar
 import android.widget.LinearLayout
+import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
@@ -73,7 +77,7 @@ class BubbleService : LifecycleService() {
     private var progressBarView: ProgressBar? = null
     private var goalTextView: TextView? = null
     private var totalTodayTimeView: TextView? = null
-    private var bubbleContainerView: LinearLayout? = null
+    private var bubbleContainerView: FrameLayout? = null
     private var closeButton: Button? = null
     private var collapseButton: Button? = null
     private var closeAppButton: Button? = null
@@ -81,6 +85,11 @@ class BubbleService : LifecycleService() {
     private var bubbleProgressBar: ProgressBar? = null
     private var bubbleIconTimer: TextView? = null
     private var badgeTextView: TextView? = null
+    private var glowView: View? = null
+    private var bubbleDiameterPx: Int = 0
+    private var currentBubbleColorState: BubbleColorState? = null
+
+    private enum class BubbleColorState { NORMAL, WARNING, ALARM, EXTRA_ACTIVE }
 
     // Nuevas vistas para tiempo extra
     private var extrasStatusView: TextView? = null
@@ -297,6 +306,18 @@ class BubbleService : LifecycleService() {
             updateBubbleAppearance(savedSize, savedOpacity)
 
             bubbleView?.setOnClickListener {
+                // Micro-animación de rebote al tocar
+                bubbleContainerView?.animate()
+                    ?.scaleX(0.85f)?.scaleY(0.85f)
+                    ?.setDuration(80)
+                    ?.withEndAction {
+                        bubbleContainerView?.animate()
+                            ?.scaleX(1f)?.scaleY(1f)
+                            ?.setDuration(120)
+                            ?.start()
+                    }
+                    ?.start()
+
                 if (isExpanded) {
                     collapseBubble()
                 } else {
@@ -316,7 +337,7 @@ class BubbleService : LifecycleService() {
     }
 
     private fun updateBubbleContent() {
-        badgeTextView?.text = TimeFormatter.formatDurationCollapsed(sessionDuration)
+        badgeTextView?.text = "${sessionDuration / 60_000L}m"
     }
 
     private fun updateBubbleAppearance(size: Int, opacity: Int) {
@@ -328,48 +349,109 @@ class BubbleService : LifecycleService() {
         val density = resources.displayMetrics.density
         val sizeFraction = (size / 100f).coerceIn(0f, 1f)
 
-        // IMPORTANTE: el contenedor NO se fuerza a un ancho/alto exacto.
-        // bubble_view.xml le pone padding fijo + un icono + el texto del
-        // tiempo en una fila horizontal; si el ancho forzado por el slider
-        // queda por debajo de lo que ese contenido necesita, badge_text se
-        // parte en dos lineas para entrar. Por eso el "tamano" del slider
-        // ahora escala el CONTENIDO (texto e iconos) y el padding interno,
-        // y el contenedor se deja en wrap_content: siempre se ajusta a lo
-        // que realmente hace falta mostrar, sea cual sea el texto ("0:45",
-        // "12:34" o "1:23:45" en sesiones largas).
+        // Círculo minimalista: acá sí conviene un ancho/alto fijo (=diámetro)
+        // en vez de wrap_content, porque el contenido es un solo texto corto
+        // ("Xm") que siempre entra sin forzar el tamaño del círculo.
+        val diameterDp = 28f + sizeFraction * 60f // 28dp (size=0) .. 88dp (size=100)
+        val diameterPx = (diameterDp * density).toInt()
+
         val params = bubbleContainerView?.layoutParams
-        params?.width = ViewGroup.LayoutParams.WRAP_CONTENT
-        params?.height = ViewGroup.LayoutParams.WRAP_CONTENT
+        params?.width = diameterPx
+        params?.height = diameterPx
         bubbleContainerView?.layoutParams = params
 
-        val badgeTextSizeSp = 16f + sizeFraction * 10f
-        val iconTextSizeSp = 12f + sizeFraction * 6f
+        // Rango de texto más acotado que antes para que "Xm"/"XXm" siempre
+        // quepa dentro del círculo, incluso en el diámetro mínimo.
+        val badgeTextSizeSp = 10f + sizeFraction * 12f
         badgeTextView?.setTextSize(TypedValue.COMPLEX_UNIT_SP, badgeTextSizeSp)
         badgeTextView?.maxLines = 1
-        bubbleIconTimer?.setTextSize(TypedValue.COMPLEX_UNIT_SP, iconTextSizeSp)
-        bubbleIconTimer?.maxLines = 1
 
-        val paddingHorizontalPx = ((10 + sizeFraction * 10) * density).toInt()
-        val paddingVerticalPx = ((6 + sizeFraction * 8) * density).toInt()
-        bubbleContainerView?.setPadding(
-            paddingHorizontalPx, paddingVerticalPx, paddingHorizontalPx, paddingVerticalPx
-        )
-
-        // minWidth (no width fijo): evita que la burbuja se vea demasiado
-        // chica en size=0, pero nunca le impide crecer si el texto lo pide.
-        val minWidthPx = ((60 + sizeFraction * 40) * density).toInt()
-        bubbleContainerView?.minimumWidth = minWidthPx
+        bubbleDiameterPx = diameterPx
+        val glowDiameterPx = (diameterPx * 1.6f).toInt()
+        val glowParams = glowView?.layoutParams
+        glowParams?.width = glowDiameterPx
+        glowParams?.height = glowDiameterPx
+        glowView?.layoutParams = glowParams
 
         bubbleContainerView?.requestLayout()
         bubbleContainerView?.invalidate()
+        glowView?.requestLayout()
+
+        // El diámetro cambió: reconstruir los drawables (dependen de él)
+        applyBubbleVisualState(force = true)
+    }
+
+    private fun computeBubbleColorState(): BubbleColorState {
+        if (goalReached) {
+            return if (isExtraTimeActive) BubbleColorState.EXTRA_ACTIVE else BubbleColorState.ALARM
+        }
+        val goalMs = currentGoalMinutes * 60_000L
+        val fraction = if (goalMs > 0) (sessionDuration.toFloat() / goalMs).coerceIn(0f, 1f) else 0f
+        return if (fraction >= 0.8f) BubbleColorState.WARNING else BubbleColorState.NORMAL
+    }
+
+    private fun colorsForState(state: BubbleColorState): IntArray = when (state) {
+        BubbleColorState.NORMAL -> intArrayOf(Color.parseColor("#3A4E7A"), Color.parseColor("#141A2E"))
+        BubbleColorState.WARNING -> intArrayOf(Color.parseColor("#FFC24A"), Color.parseColor("#8A5A00"))
+        BubbleColorState.ALARM -> intArrayOf(Color.parseColor("#F0554F"), Color.parseColor("#7A1315"))
+        BubbleColorState.EXTRA_ACTIVE -> intArrayOf(Color.parseColor("#4CAF82"), Color.parseColor("#1B4D3A"))
+    }
+
+    /**
+     * Reconstruye el gradiente radial + brillo superior (glass) del círculo
+     * y el halo de atrás, según el estado actual (normal/cerca de meta/
+     * alarma/tiempo extra). Por defecto solo reconstruye si el estado
+     * cambió, para no recrear drawables en cada tick de 1s sin necesidad.
+     */
+    private fun applyBubbleVisualState(force: Boolean = false) {
+        if (bubbleContainerView == null || bubbleDiameterPx <= 0) return
+
+        val state = computeBubbleColorState()
+        if (!force && state == currentBubbleColorState) return
+        currentBubbleColorState = state
+
+        val colors = colorsForState(state)
+        val density = resources.displayMetrics.density
+
+        // Círculo principal: gradiente radial (profundidad)
+        val base = GradientDrawable()
+        base.setShape(GradientDrawable.OVAL)
+        base.setGradientType(GradientDrawable.RADIAL_GRADIENT)
+        base.setGradientRadius(bubbleDiameterPx / 2f)
+        base.setColors(colors)
+        base.setStroke((1.5f * density).toInt(), Color.parseColor("#55FFFFFF"))
+
+        // Brillo superior (glass): gradiente blanco -> transparente,
+        // recortado a la mitad superior del círculo con setLayerInset.
+        val highlight = GradientDrawable()
+        highlight.setShape(GradientDrawable.OVAL)
+        highlight.setColors(intArrayOf(Color.parseColor("#40FFFFFF"), Color.parseColor("#00FFFFFF")))
+
+        val insetSide = (bubbleDiameterPx * 0.14f).toInt()
+        val insetTop = (bubbleDiameterPx * 0.08f).toInt()
+        val insetBottom = (bubbleDiameterPx * 0.42f).toInt()
+        val layered = LayerDrawable(arrayOf<Drawable>(base, highlight))
+        layered.setLayerInset(1, insetSide, insetTop, insetSide, insetBottom)
+        bubbleContainerView?.background = layered
+
+        // Halo detrás: mismo tono del estado, radial, se desvanece hacia afuera
+        val glow = GradientDrawable()
+        glow.setShape(GradientDrawable.OVAL)
+        glow.setGradientType(GradientDrawable.RADIAL_GRADIENT)
+        glow.setGradientRadius(bubbleDiameterPx * 0.8f)
+        glow.setColors(intArrayOf(colors[0], Color.TRANSPARENT))
+        glow.setAlpha(110)
+        glowView?.background = glow
     }
 
     private fun cacheBubbleViews() {
         bubbleView?.let {
             bubbleContainerView = it.findViewById(R.id.bubble_container)
             badgeTextView = it.findViewById(R.id.badge_text)
-            bubbleProgressBar = it.findViewById(R.id.bubble_progress)
-            bubbleIconTimer = it.findViewById(R.id.bubble_icon_timer)
+            glowView = it.findViewById(R.id.bubble_glow)
+            // bubbleProgressBar / bubbleIconTimer: ya no existen en el círculo
+            // minimalista (bubble_view.xml). Quedan siempre en null a propósito;
+            // todo el código que los usa es null-safe (?.).
         }
     }
 
@@ -574,9 +656,9 @@ class BubbleService : LifecycleService() {
     }
 
     private fun updateTimeDisplay() {
-        badgeTextView?.text = TimeFormatter.formatDurationCollapsed(sessionDuration)
-        
-        updateCollapsedProgress()
+        // Burbuja colapsada: círculo minimalista, solo minutos, sin barra de progreso.
+        badgeTextView?.text = "${sessionDuration / 60_000L}m"
+        applyBubbleVisualState()
         
         if (isExpanded) {
             currentSessionTimeView?.text = TimeFormatter.formatDuration(sessionDuration)
@@ -688,8 +770,9 @@ class BubbleService : LifecycleService() {
         }
 
         mainHandler.postDelayed({
-            // Restaurar fondo y colores
-            bubbleContainerView?.setBackgroundResource(R.drawable.bg_bubble_digital)
+            // Restaurar el drawable dinámico según el estado actual (alarma/extra)
+            currentBubbleColorState = null // fuerza reconstrucción aunque el estado no cambie
+            applyBubbleVisualState(force = true)
             bubbleIconTimer?.setTextColor(Color.WHITE)
             badgeTextView?.setTextColor(Color.WHITE)
             
